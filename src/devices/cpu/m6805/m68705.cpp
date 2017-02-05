@@ -1,3 +1,5 @@
+// license:BSD-3-Clause
+// copyright-holders:Vas Crabb
 #include "emu.h"
 #include "m68705.h"
 #include "m6805defs.h"
@@ -6,6 +8,7 @@
  * Configurable logging
  ****************************************************************************/
 
+#define LOG_GENERAL (1U <<  0)
 #define LOG_INT     (1U <<  1)
 #define LOG_IOPORT  (1U <<  2)
 #define LOG_TIMER   (1U <<  3)
@@ -60,13 +63,22 @@ ROM_END
 
 ROM_START( m68705r3 )
 	ROM_REGION(0x0078, "bootstrap", 0)
-	ROM_LOAD("bootstrap.bin", 0x0000, 0x0078, CRC(5946479b) SHA1(834ea00aef5de12dbcd6421a6e21d5ea96cfbf37) BAD_DUMP)
+	ROM_LOAD("bootstrap.bin", 0x0000, 0x0078, CRC(5946479b) SHA1(834ea00aef5de12dbcd6421a6e21d5ea96cfbf37))
 ROM_END
 
 ROM_START( m68705u3 )
 	ROM_REGION(0x0078, "bootstrap", 0)
 	ROM_LOAD("bootstrap.bin", 0x0000, 0x0078, CRC(5946479b) SHA1(834ea00aef5de12dbcd6421a6e21d5ea96cfbf37))
 ROM_END
+
+constexpr u16 M68705_VECTOR_BOOTSTRAP   = 0xfff6;
+constexpr u16 M68705_VECTOR_TIMER       = 0xfff8;
+//constexpr u16 M68705_VECTOR_INT2        = 0xfff8;
+constexpr u16 M68705_VECTOR_INT         = 0xfffa;
+constexpr u16 M68705_VECTOR_SWI         = 0xfffc;
+constexpr u16 M68705_VECTOR_RESET       = 0xfffe;
+
+constexpr u16 M68705_INT_MASK           = 0x03;
 
 } // anonymous namespace
 
@@ -82,7 +94,7 @@ device_type const M68705U3 = &device_creator<m68705u3_device>;
 
 
 /****************************************************************************
- * MC68705 base device
+ * M68705 base device
  ****************************************************************************/
 
 /*
@@ -184,7 +196,17 @@ m68705_device::m68705_device(
 		address_map_delegate internal_map,
 		char const *shortname,
 		char const *source)
-	: m6805_base_device(mconfig, tag, owner, clock, type, name, addr_width, internal_map, shortname, source)
+	: m6805_base_device(
+			mconfig,
+			tag,
+			owner,
+			clock,
+			type,
+			name,
+			{ s_hmos_ops, s_hmos_cycles, addr_width, 0x007f, 0x0060, M68705_VECTOR_SWI },
+			internal_map,
+			shortname,
+			source)
 	, device_nvram_interface(mconfig, *this)
 	, m_user_rom(*this, DEVICE_SELF, u32(1) << addr_width)
 	, m_port_open_drain{ false, false, false, false }
@@ -229,7 +251,7 @@ template <offs_t B> WRITE8_MEMBER(m68705_device::eprom_w)
 		else
 		{
 			// this causes undefined behaviour, which is bad when EPROM programming is involved
-			logerror("warning: write to EPROM when /PGE = 0 (%x = %x)\n", B + offset, data);
+			logerror("warning: write to EPROM when /PGE = 0 (%04X = %02X)\n", B + offset, data);
 		}
 	}
 }
@@ -253,7 +275,7 @@ template <std::size_t N> READ8_MEMBER(m68705_device::port_r)
 		u8 const newval(m_port_cb_r[N](space, 0, ~m_port_ddr[N] & ~m_port_mask[N]) & ~m_port_mask[N]);
 		if (newval != m_port_input[N])
 		{
-			LOGIOPORT("read PORT%c: new input = %02X & %02X (was %02x)\n",
+			LOGIOPORT("read PORT%c: new input = %02X & %02X (was %02X)\n",
 					char('A' + N), newval, ~m_port_ddr[N] & ~m_port_mask[N], m_port_input[N]);
 		}
 		m_port_input[N] = newval;
@@ -266,7 +288,7 @@ template <std::size_t N> WRITE8_MEMBER(m68705_device::port_latch_w)
 	data &= ~m_port_mask[N];
 	u8 const diff = m_port_latch[N] ^ data;
 	if (diff)
-		LOGIOPORT("write PORT%c latch: %02X & %02X (was %02x)\n", char('A' + N), data, m_port_ddr[N], m_port_latch[N]);
+		LOGIOPORT("write PORT%c latch: %02X & %02X (was %02X)\n", char('A' + N), data, m_port_ddr[N], m_port_latch[N]);
 	m_port_latch[N] = data;
 	if (diff & m_port_ddr[N])
 		port_cb_w<N>();
@@ -277,7 +299,7 @@ template <std::size_t N> WRITE8_MEMBER(m68705_device::port_ddr_w)
 	data &= ~m_port_mask[N];
 	if (data != m_port_ddr[N])
 	{
-		LOGIOPORT("write DDR%c: %02X (was %02x)\n", char('A' + N), data, m_port_ddr[N]);
+		LOGIOPORT("write DDR%c: %02X (was %02X)\n", char('A' + N), data, m_port_ddr[N]);
 		m_port_ddr[N] = data;
 		port_cb_w<N>();
 	}
@@ -499,7 +521,12 @@ void m68705_device::device_reset()
 	if (CLEAR_LINE != m_vihtp)
 	{
 		LOG("loading bootstrap vector\n");
-		RM16(0xfff6, &m_pc);
+		rm16(M68705_VECTOR_BOOTSTRAP, m_pc);
+	}
+	else
+	{
+		LOG("loading reset vector\n");
+		rm16(M68705_VECTOR_RESET, m_pc);
 	}
 }
 
@@ -547,10 +574,10 @@ void m68705_device::interrupt()
 	{
 		if ((CC & IFLAG) == 0)
 		{
-			PUSHWORD(m_pc);
-			PUSHBYTE(m_x);
-			PUSHBYTE(m_a);
-			PUSHBYTE(m_cc);
+			pushword(m_pc);
+			pushbyte(m_x);
+			pushbyte(m_a);
+			pushbyte(m_cc);
 			SEI;
 			standard_irq_callback(0);
 
@@ -558,20 +585,20 @@ void m68705_device::interrupt()
 			{
 				LOGINT("servicing /INT interrupt\n");
 				m_pending_interrupts &= ~(1 << M68705_IRQ_LINE);
-				RM16(0xfffa, &m_pc);
+				rm16(M68705_VECTOR_INT, m_pc);
 			}
 			else if (BIT(m_pending_interrupts, M68705_INT_TIMER))
 			{
 				LOGINT("servicing timer/counter interrupt\n");
-				RM16(0xfff8, &m_pc);
+				rm16(M68705_VECTOR_TIMER, m_pc);
 			}
 			else
 			{
 				throw emu_fatalerror("Unknown pending interrupt");
 			}
+			m_icount -= 11;
+			burn_cycles(11);
 		}
-		m_icount -= 11;
-		burn_cycles(11);
 	}
 }
 

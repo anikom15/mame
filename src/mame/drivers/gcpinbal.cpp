@@ -23,8 +23,6 @@ TODO
 ----
 
  - Screen flipping support
- - Understand role of bit 5 of IN1
- - Hook up 93C46 EEPROM
  - Hook up ES-8712
  - Sort out the IOC commands for the M6585 & ES-8712
  - Is SW3 actually used?
@@ -64,7 +62,7 @@ ES-9209B
    CPU: TMP68HC000P-16
  Sound: OKI M6295
         OKI M6585
-        Ecxellent ES-8712
+        Excellent ES-8712
    OSC: 32MHz, 14.31818MHz & 1056kHz, 640kHz resonators
    RAM: Sony CXK5864BSP-10L 8K x 8bit high speed CMOS SRAM
         Alliance AS7C256-20PC 32K x 8bit CMOS SRAM
@@ -189,8 +187,11 @@ WRITE16_MEMBER(gcpinbal_state::ioc_w)
 			m_oki->set_rom_bank((data & 0x800) >> 11);
 			break;
 
+		// 93C46 serial EEPROM (status read at D80087)
 		case 0x45:
-			//m_adpcm_idle = 1;
+			m_eeprom->di_write(BIT(data >> 8, 2));
+			m_eeprom->clk_write(BIT(data >> 8, 1));
+			m_eeprom->cs_write(BIT(data >> 8, 0));
 			break;
 
 		// OKIM6295
@@ -254,6 +255,8 @@ WRITE16_MEMBER(gcpinbal_state::ioc_w)
 /* Controlled through ioc? */
 WRITE_LINE_MEMBER(gcpinbal_state::gcp_adpcm_int)
 {
+	if (!state)
+		return;
 	if (m_adpcm_idle)
 		m_msm->reset_w(1);
 	if (m_adpcm_start >= 0x200000 || m_adpcm_start > m_adpcm_end)
@@ -266,8 +269,8 @@ WRITE_LINE_MEMBER(gcpinbal_state::gcp_adpcm_int)
 	{
 		uint8_t *ROM = memregion("msm")->base();
 
-		m_adpcm_data = ((m_adpcm_trigger ? (ROM[m_adpcm_start] & 0x0f) : (ROM[m_adpcm_start] & 0xf0) >> 4));
-		m_msm->data_w(m_adpcm_data & 0xf);
+		m_adpcm_select->ab_w(ROM[m_adpcm_start]);
+		m_adpcm_select->select_w(m_adpcm_trigger);
 		m_adpcm_trigger ^= 1;
 		if (m_adpcm_trigger == 0)
 			m_adpcm_start++;
@@ -366,7 +369,7 @@ static INPUT_PORTS_START( gcpinbal )
 	PORT_BIT( 0x0004, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x0008, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x0010, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x0020, IP_ACTIVE_LOW, IPT_UNKNOWN )  // This bit gets tested (search for d8 00 87)
+	PORT_BIT( 0x0020, IP_ACTIVE_HIGH, IPT_SPECIAL ) PORT_READ_LINE_DEVICE_MEMBER("eeprom", eeprom_serial_93cxx_device, do_read)
 	PORT_BIT( 0x0040, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x0080, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x0100, IP_ACTIVE_LOW, IPT_COIN1 )
@@ -443,7 +446,6 @@ void gcpinbal_state::machine_start()
 	save_item(NAME(m_adpcm_end));
 	save_item(NAME(m_adpcm_idle));
 	save_item(NAME(m_adpcm_trigger));
-	save_item(NAME(m_adpcm_data));
 }
 
 void gcpinbal_state::machine_reset()
@@ -460,7 +462,6 @@ void gcpinbal_state::machine_reset()
 	m_adpcm_start = 0;
 	m_adpcm_end = 0;
 	m_adpcm_trigger = 0;
-	m_adpcm_data = 0;
 	m_bg0_gfxset = 0;
 	m_bg1_gfxset = 0;
 	m_msm_start = 0;
@@ -474,6 +475,8 @@ static MACHINE_CONFIG_START( gcpinbal, gcpinbal_state )
 	MCFG_CPU_ADD("maincpu", M68000, XTAL_32MHz/2) /* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(gcpinbal_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", gcpinbal_state,  gcpinbal_interrupt)
+
+	MCFG_EEPROM_SERIAL_93C46_ADD("eeprom")
 
 	/* video hardware */
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -496,6 +499,9 @@ static MACHINE_CONFIG_START( gcpinbal, gcpinbal_state )
 
 	MCFG_OKIM6295_ADD("oki", XTAL_1_056MHz, OKIM6295_PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.30)
+
+	MCFG_DEVICE_ADD("adpcm_select", HCT157, 0)
+	MCFG_74157_OUT_CB(DEVWRITE8("msm", msm6585_device, data_w))
 
 	MCFG_SOUND_ADD("msm", MSM6585, XTAL_640kHz)
 	MCFG_MSM6585_VCLK_CB(WRITELINE(gcpinbal_state, gcp_adpcm_int))      /* VCK function */

@@ -56,6 +56,7 @@ public:
 	{ return downcast<m68705_device &>(device).m_port_cb_w[N].set_callback(std::forward<Object>(obj)); }
 
 protected:
+	// state index constants
 	enum
 	{
 		M68705_A = M6805_A,
@@ -351,7 +352,6 @@ protected:
  * 68705 section
  ****************************************************************************/
 
-#define M68705_INT_MASK             0x03
 #define M68705_IRQ_LINE             (M6805_IRQ_LINE + 0)
 #define M68705_INT_TIMER            (M6805_IRQ_LINE + 1)
 #define M68705_VPP_LINE             (M6805_IRQ_LINE + 2)

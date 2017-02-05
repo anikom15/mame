@@ -21,13 +21,11 @@ extern const device_type HD63705;
 // Used by core CPU interface
 class m6805_base_device : public cpu_device
 {
-public:
-	// construction/destruction
-	m6805_base_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, const device_type type, const char *name, uint32_t addr_width, const char *shortname, const char *source);
-
 protected:
+	// addressing mode selector for opcode handler templates
 	enum class addr_mode { IM, DI, EX, IX, IX1, IX2 };
 
+	// state index constants
 	enum
 	{
 		M6805_PC = 1,
@@ -38,7 +36,77 @@ protected:
 		M6805_IRQ_STATE
 	};
 
-	m6805_base_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock, const device_type type, const char *name, uint32_t addr_width, address_map_delegate internal_map, const char *shortname, const char *source);
+	// CC masks      H INZC
+	//            7654 3210
+	enum
+	{
+		CFLAG = 0x01,
+		ZFLAG = 0x02,
+		NFLAG = 0x04,
+		IFLAG = 0x08,
+		HFLAG = 0x10
+	};
+
+	typedef void (m6805_base_device::*op_handler_func)();
+	typedef op_handler_func const op_handler_table[256];
+	typedef u8 const cycle_count_table[256];
+
+	struct configuration_params
+	{
+		configuration_params(
+				op_handler_table &ops,
+				cycle_count_table &cycles,
+				u32 addr_width,
+				u32 sp_mask,
+				u32 sp_floor,
+				u16 swi_vector)
+			: m_ops(ops)
+			, m_cycles(cycles)
+			, m_addr_width(addr_width)
+			, m_sp_mask(sp_mask)
+			, m_sp_floor(sp_floor)
+			, m_swi_vector(swi_vector)
+		{
+		}
+
+		op_handler_table &m_ops;
+		cycle_count_table &m_cycles;
+		u32 m_addr_width;
+		u32 m_sp_mask;
+		u32 m_sp_floor;
+		u16 m_swi_vector;
+	};
+
+	// opcode tables
+	static op_handler_table s_hmos_ops;
+	static op_handler_table s_cmos_ops;
+	static op_handler_table s_hc_ops;
+	static cycle_count_table s_hmos_cycles;
+	static cycle_count_table s_cmos_cycles;
+	static cycle_count_table s_hc_cycles;
+
+	// construction/destruction
+	m6805_base_device(
+			machine_config const &mconfig,
+			char const *tag,
+			device_t *owner,
+			uint32_t clock,
+			device_type const type,
+			char const *name,
+			configuration_params const &params,
+			char const *shortname,
+			char const *source);
+	m6805_base_device(
+			machine_config const &mconfig,
+			char const *tag,
+			device_t *owner,
+			uint32_t clock,
+			device_type const type,
+			char const *name,
+			configuration_params const &params,
+			address_map_delegate internal_map,
+			char const *shortname,
+			char const *source);
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -67,11 +135,39 @@ protected:
 	// for devices with timing-sensitive peripherals
 	virtual void burn_cycles(unsigned count) { }
 
-	void rd_s_handler_b(uint8_t *b);
-	void rd_s_handler_w(PAIR *p);
-	void wr_s_handler_b(uint8_t *b);
-	void wr_s_handler_w(PAIR *p);
-	void RM16(uint32_t addr, PAIR *p);
+	void clr_nz()   { m_cc &= ~(NFLAG | ZFLAG); }
+	void clr_nzc()  { m_cc &= ~(NFLAG | ZFLAG | CFLAG); }
+	void clr_hc()   { m_cc &= ~(HFLAG | CFLAG); }
+	void clr_hnzc() { m_cc &= ~(HFLAG | NFLAG | ZFLAG | CFLAG); }
+
+	// macros for CC -- CC bits affected should be reset before calling
+	void set_z8(u8 a)                       { if (!a) m_cc |= ZFLAG; }
+	void set_n8(u8 a)                       { m_cc |= (a & 0x80) >> 5; }
+	void set_h(u8 a, u8 b, u8 r)            { m_cc |= (a ^ b ^ r) & 0x10; }
+	void set_c8(u16 a)                      { m_cc |= BIT(a, 8); }
+
+	// combos
+	void set_nz8(u8 a)                      { set_n8(a); set_z8(a); }
+	void set_nzc8(u16 a)                    { set_nz8(a); set_c8(a); }
+	void set_hnzc8(u8 a, u8 b, u16 r)       { set_h(a, b, r); set_nzc8(r); }
+
+	unsigned    rdmem(u32 addr)             { return unsigned(m_program->read_byte(addr)); }
+	void        wrmem(u32 addr, u8 value)   { m_program->write_byte(addr, value); }
+	unsigned    rdop(u32 addr)              { return unsigned(m_direct->read_byte(addr)); }
+	unsigned    rdop_arg(u32 addr)          { return unsigned(m_direct->read_byte(addr)); }
+
+	unsigned    rm(u32 addr)                { return rdmem(addr); }
+	void        rm16(u32 addr, PAIR &p);
+	void        wm(u32 addr, u8 value)      { wrmem(addr, value); }
+
+	void        pushbyte(u8 b);
+	void        pushword(PAIR const &p);
+	void        pullbyte(u8 &b);
+	void        pullword(PAIR &p);
+
+	template <typename T> void immbyte(T &b);
+	void immword(PAIR &w);
+	void skipbyte();
 
 	template <unsigned B> void brset();
 	template <unsigned B> void brclr();
@@ -102,6 +198,7 @@ protected:
 	template <addr_mode M> void clr();
 
 	void nega();
+	void mul();
 	void coma();
 	void lsra();
 	void rora();
@@ -127,7 +224,9 @@ protected:
 
 	void rti();
 	void rts();
-	virtual void swi();
+	void swi();
+	void stop();
+	void wait();
 
 	void tax();
 	void txa();
@@ -162,21 +261,19 @@ protected:
 	virtual void interrupt();
 	virtual void interrupt_vector();
 
-	const char *m_tag;
+	configuration_params const m_params;
 
 	// address spaces
-	const address_space_config m_program_config;
+	address_space_config const m_program_config;
 
 	// CPU registers
-	PAIR    m_ea;           /* effective address */
+	PAIR    m_ea;           // effective address (should really be a temporary in opcode handlers)
 
-	uint32_t  m_sp_mask;      /* Stack pointer address mask */
-	uint32_t  m_sp_low;       /* Stack pointer low water mark (or floor) */
-	PAIR    m_pc;           /* Program counter */
-	PAIR    m_s;            /* Stack pointer */
-	uint8_t   m_a;            /* Accumulator */
-	uint8_t   m_x;            /* Index register */
-	uint8_t   m_cc;           /* Condition codes */
+	PAIR    m_pc;           // Program counter
+	PAIR    m_s;            // Stack pointer
+	u8      m_a;            // Accumulator
+	u8      m_x;            // Index register
+	u8      m_cc;           // Condition codes
 
 	uint16_t  m_pending_interrupts; /* MB */
 
@@ -189,15 +286,6 @@ protected:
 	// address spaces
 	address_space *m_program;
 	direct_read_data *m_direct;
-
-private:
-	typedef void (m6805_base_device::*op_handler_func)();
-
-	// opcode/condition tables
-	static const op_handler_func m_ophndlr[256];
-	static const uint8_t m_flags8i[256];
-	static const uint8_t m_flags8d[256];
-	static const uint8_t m_cycles1[256];
 };
 
 
@@ -207,8 +295,7 @@ class m6805_device : public m6805_base_device
 {
 public:
 	// construction/destruction
-	m6805_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-		: m6805_base_device(mconfig, tag, owner, clock, M6805, "M6805", 12, "m6805", __FILE__) { }
+	m6805_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 protected:
 	virtual void execute_set_input(int inputnum, int state) override;
@@ -221,8 +308,7 @@ class m68hc05eg_device : public m6805_base_device
 {
 public:
 	// construction/destruction
-	m68hc05eg_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-		: m6805_base_device(mconfig, tag, owner, clock, M68HC05EG, "M68HC05EG", 13, "m68hc05eg", __FILE__) { }
+	m68hc05eg_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 protected:
 	// device-level overrides
@@ -239,8 +325,7 @@ class hd63705_device : public m6805_base_device
 {
 public:
 	// construction/destruction
-	hd63705_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-		: m6805_base_device(mconfig, tag, owner, clock, HD63705, "HD63705", 16, "hd63705", __FILE__) { }
+	hd63705_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 protected:
 	// device-level overrides
@@ -253,7 +338,6 @@ protected:
 	// opcodes
 	virtual void bil() override;
 	virtual void bih() override;
-	virtual void swi() override;
 };
 
 #define M6805_IRQ_LINE      0
@@ -293,5 +377,7 @@ protected:
 #define HD63705_INT_NMI             0x08
 
 CPU_DISASSEMBLE( m6805 );
+CPU_DISASSEMBLE( m146805 );
+CPU_DISASSEMBLE( m68hc05 );
 
 #endif // MAME_CPU_M6805_M6805_H

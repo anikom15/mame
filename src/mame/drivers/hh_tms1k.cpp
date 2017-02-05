@@ -19,6 +19,7 @@
  @CP0904A  TMS0970   1977, Milton Bradley Comp IV
  @MP0905B  TMS0970   1977, Parker Brothers Codename Sector
  *MP0057   TMS1000   1978, APH Student Speech+ (same ROM contents as TSI Speech+?)
+ @MP0154   TMS1000   1979, Fonas 2 Player Baseball
  @MP0158   TMS1000   1979, Entex Soccer (6003)
  @MP0163   TMS1000   1979, A-One LSI Match Number/LJN Electronic Concentration
  @MP0168   TMS1000   1979, Conic Multisport/Tandy Sports Arena (model 60-2158)
@@ -80,7 +81,7 @@
  @MP3476   TMS1100   1979, Milton Bradley Super Simon
   MP3479   TMS1100   1980, MicroVision cartridge: Baseball
   MP3481   TMS1100   1979, MicroVision cartridge: Connect Four
- *MP3491   TMS1100   1980, Mattel Horserace Analyzer
+ @MP3491   TMS1100   1979, Mattel Thoroughbred Horse Race Analyzer
   MP3496   TMS1100   1980, MicroVision cartridge: Sea Duel
   M34009   TMS1100   1981, MicroVision cartridge: Alien Raiders (note: MP3498, MP3499, M3400x..)
  @M34012   TMS1100   1980, Mattel Dungeons & Dragons - Computer Labyrinth Game
@@ -132,6 +133,7 @@
 
 #include "includes/hh_tms1k.h"
 #include "machine/tms1024.h"
+#include "video/hlcd0515.h"
 #include "sound/beep.h"
 #include "sound/sn76477.h"
 #include "sound/s14001a.h"
@@ -165,12 +167,14 @@
 #include "elecdet.lh"
 #include "esbattle.lh"
 #include "esoccer.lh"
+#include "f2pbball.lh"
 #include "fxmcr165.lh" // clickable
 #include "gjackpot.lh"
 #include "gpoker.lh"
 #include "h2hbaseb.lh"
 #include "h2hboxing.lh"
 #include "h2hfootb.lh"
+#include "horseran.lh"
 #include "lostreas.lh" // clickable
 #include "matchnum.lh" // clickable
 #include "mathmagi.lh"
@@ -517,7 +521,7 @@ static const s16 matchnum_speaker_levels[4] = { 0, 0x7fff, -0x8000, 0 };
 static MACHINE_CONFIG_START( matchnum, matchnum_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 325000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 325000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(matchnum_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(matchnum_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(matchnum_state, write_o))
@@ -697,7 +701,7 @@ static const u16 mathmagi_output_pla[0x20] =
 static MACHINE_CONFIG_START( mathmagi, mathmagi_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 175000) // approximation - RC osc. R=68K, C=82pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 175000) // approximation - RC osc. R=68K, C=82pF
 	MCFG_TMS1XXX_OUTPUT_PLA(mathmagi_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(mathmagi_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(mathmagi_state, write_r))
@@ -803,7 +807,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( bcheetah, bcheetah_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 100000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 100000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(bcheetah_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(bcheetah_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(bcheetah_state, write_o))
@@ -930,7 +934,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( amaztron, amaztron_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 300000) // approximation - RC osc. R=33K?, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 300000) // approximation - RC osc. R=33K?, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(amaztron_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(amaztron_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(amaztron_state, write_o))
@@ -1107,7 +1111,7 @@ static const u16 zodiac_output_pla[0x20] =
 static MACHINE_CONFIG_START( zodiac, zodiac_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 500000) // approximation - RC osc. R=18K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 500000) // approximation - RC osc. R=18K, C=100pF
 	MCFG_TMS1XXX_OUTPUT_PLA(zodiac_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(zodiac_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(zodiac_state, write_r))
@@ -1223,7 +1227,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( cqback, cqback_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 310000) // approximation - RC osc. R=33K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 310000) // approximation - RC osc. R=33K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(cqback_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(cqback_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(cqback_state, write_o))
@@ -1341,7 +1345,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( h2hfootb, h2hfootb_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 310000) // approximation - RC osc. R=39K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 310000) // approximation - RC osc. R=39K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(h2hfootb_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(h2hfootb_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(h2hfootb_state, write_o))
@@ -1464,10 +1468,9 @@ INPUT_CHANGED_MEMBER(h2hbaseb_state::skill_switch)
 	set_clock();
 }
 
-
 void h2hbaseb_state::set_clock()
 {
-	// MCU clock is from an RC circuit with C=47pf, and R value is depending on
+	// MCU clock is from an RC circuit with C=47pF, and R value is depending on
 	// skill switch: R=51K(1) or 43K(2)
 	m_maincpu->set_unscaled_clock((m_inp_matrix[5]->read() & 1) ? 400000 : 350000);
 }
@@ -1593,7 +1596,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( h2hboxing, h2hboxing_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 350000) // approximation - RC osc. R=39K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 350000) // approximation - RC osc. R=39K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(h2hboxing_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(h2hboxing_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(h2hboxing_state, write_o))
@@ -1746,7 +1749,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( tc4, tc4_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1400, 450000) // approximation - RC osc. R=27.3K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1400, 450000) // approximation - RC osc. R=27.3K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(tc4_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(tc4_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(tc4_state, write_o))
@@ -1855,7 +1858,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( cnbaskb, cnbaskb_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 400000) // approximation - RC osc. R=39K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 400000) // approximation - RC osc. R=39K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(cnbaskb_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(cnbaskb_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(cnbaskb_state, write_o))
@@ -1968,7 +1971,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( cmsport, cmsport_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 375000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 375000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(cmsport_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(cmsport_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(cmsport_state, write_o))
@@ -2094,7 +2097,7 @@ static const s16 cnfball_speaker_levels[4] = { 0, 0x7fff, -0x8000, 0 };
 static MACHINE_CONFIG_START( cnfball, cnfball_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 400000) // approximation - RC osc. R=39K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 400000) // approximation - RC osc. R=39K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(cnfball_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(cnfball_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(cnfball_state, write_o))
@@ -2220,7 +2223,7 @@ static const u16 cnfball2_output_pla[0x20] =
 static MACHINE_CONFIG_START( cnfball2, cnfball2_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_OUTPUT_PLA(cnfball2_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(cnfball2_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(cnfball2_state, write_r))
@@ -2326,7 +2329,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( esoccer, esoccer_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 350000) // approximation - RC osc. R=47K, C=33pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 350000) // approximation - RC osc. R=47K, C=33pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(esoccer_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(esoccer_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(esoccer_state, write_o))
@@ -2460,7 +2463,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( ebball, ebball_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 375000) // approximation - RC osc. R=43K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 375000) // approximation - RC osc. R=43K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(ebball_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(ebball_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(ebball_state, write_o))
@@ -2583,7 +2586,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( ebball2, ebball2_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 350000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 350000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(ebball2_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(ebball2_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(ebball2_state, write_o))
@@ -2746,10 +2749,9 @@ INPUT_CHANGED_MEMBER(ebball3_state::skill_switch)
 	set_clock();
 }
 
-
 void ebball3_state::set_clock()
 {
-	// MCU clock is from an RC circuit(R=47K, C=33pf) oscillating by default at ~340kHz,
+	// MCU clock is from an RC circuit(R=47K, C=33pF) oscillating by default at ~340kHz,
 	// but on PRO, the difficulty switch adds an extra 150K resistor to Vdd to speed
 	// it up to around ~440kHz.
 	m_maincpu->set_unscaled_clock((m_inp_matrix[3]->read() & 1) ? 440000 : 340000);
@@ -2875,7 +2877,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( esbattle, esbattle_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 425000) // approximation - RC osc. R=47K, C=33pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 425000) // approximation - RC osc. R=47K, C=33pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(esbattle_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(esbattle_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(esbattle_state, write_o))
@@ -2967,10 +2969,9 @@ INPUT_CHANGED_MEMBER(einvader_state::skill_switch)
 	set_clock();
 }
 
-
 void einvader_state::set_clock()
 {
-	// MCU clock is from an RC circuit(R=47K, C=56pf) oscillating by default at ~320kHz,
+	// MCU clock is from an RC circuit(R=47K, C=56pF) oscillating by default at ~320kHz,
 	// but on PRO, the difficulty switch adds an extra 180K resistor to Vdd to speed
 	// it up to around ~400kHz.
 	m_maincpu->set_unscaled_clock((m_inp_matrix[0]->read() & 8) ? 400000 : 320000);
@@ -3105,7 +3106,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( efootb4, efootb4_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1670, 475000) // approximation - RC osc. R=42K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1670, 475000) // approximation - RC osc. R=42K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(efootb4_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(efootb4_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(efootb4_state, write_o))
@@ -3226,7 +3227,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( ebaskb2, ebaskb2_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 360000) // approximation - RC osc. R=33K, C=82pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 360000) // approximation - RC osc. R=33K, C=82pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(ebaskb2_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(ebaskb2_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(ebaskb2_state, write_o))
@@ -3262,6 +3263,8 @@ MACHINE_CONFIG_END
     7 = 4.1   17 = 7.2   27 = 6.4   37 = 8.1
     8 = 4.2   18 = 7.3   28 = 8.4   38 = 8.2
     9 = 4.3   19 = -     29 = 9.4   39 = 8.3
+
+  NOTE!: MAME external artwork is required
 
 ***************************************************************************/
 
@@ -3343,10 +3346,9 @@ INPUT_CHANGED_MEMBER(raisedvl_state::skill_switch)
 	set_clock();
 }
 
-
 void raisedvl_state::set_clock()
 {
-	// MCU clock is from an RC circuit with C=47pf, R=47K by default. Skills
+	// MCU clock is from an RC circuit with C=47pF, R=47K by default. Skills
 	// 2 and 3 add a 150K resistor in parallel, and skill 4 adds a 100K one.
 	// 0:   R=47K  -> ~350kHz
 	// 2,3: R=35K8 -> ~425kHz (combined)
@@ -3371,6 +3373,137 @@ static MACHINE_CONFIG_START( raisedvl, raisedvl_state )
 
 	MCFG_TIMER_DRIVER_ADD_PERIODIC("display_decay", hh_tms1k_state, display_decay_tick, attotime::from_msec(1))
 	MCFG_DEFAULT_LAYOUT(layout_raisedvl)
+
+	/* sound hardware */
+	MCFG_SPEAKER_STANDARD_MONO("mono")
+	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
+	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
+
+
+
+
+
+/***************************************************************************
+
+  Fonas 2 Player Baseball
+  * TMS1000NLL MP0154 (die label 1000B, MP0154)
+  * 4 7seg LEDs, 37 other LEDs, 1-bit sound
+
+  known releases:
+  - World: 2 Player Baseball
+  - USA: 2 Player Baseball, distributed by Sears
+  - Canada: 2 Player Baseball, distributed by Talbot Electronics
+
+  led translation table: led zz from game PCB = MAME y.x:
+
+    0 = -     10 = 2.2   20 = 4.0   30 = 4.4
+    1 = 2.3   11 = 3.3   21 = 2.7   31 = 3.7
+    2 = 0.4   12 = 1.2   22 = 0.0   32 = 4.3
+    3 = 3.2   13 = 2.4   23 = 4.1   33 = 4.6
+    4 = 0.5   14 = 1.0   24 = 3.1   34 = 3.5
+    5 = 0.3   15 = 2.1   25 = 0.2   35 = 4.5
+    6 = 3.4   16 = 1.1   26 = 0.1
+    7 = 1.3   17 = 4.7   27 = 4.2
+    8 = 1.4   18 = 2.0   28 = 3.0
+    9 = 1.7   19 = 0.7   29 = 1.5
+
+***************************************************************************/
+
+class f2pbball_state : public hh_tms1k_state
+{
+public:
+	f2pbball_state(const machine_config &mconfig, device_type type, const char *tag)
+		: hh_tms1k_state(mconfig, type, tag)
+	{ }
+
+	void prepare_display();
+	DECLARE_WRITE16_MEMBER(write_r);
+	DECLARE_WRITE16_MEMBER(write_o);
+	DECLARE_READ8_MEMBER(read_k);
+
+	DECLARE_INPUT_CHANGED_MEMBER(reset_button);
+};
+
+// handlers
+
+void f2pbball_state::prepare_display()
+{
+	// R5-R8 are 7segs
+	set_display_segmask(0x1e0, 0x7f);
+	display_matrix(8, 9, m_o, m_r);
+}
+
+WRITE16_MEMBER(f2pbball_state::write_r)
+{
+	// R4,R9,R10: input mux
+	m_inp_mux = (data >> 4 & 1) | (data >> 8 & 6);
+
+	// R9,R10(ANDed together): speaker out
+	m_speaker->level_w(data >> 10 & data >> 9 & 1);
+
+	// R0-R8: led select
+	m_r = data;
+	prepare_display();
+}
+
+WRITE16_MEMBER(f2pbball_state::write_o)
+{
+	// O0-O7: led state
+	m_o = BITSWAP8(data,0,7,6,5,4,3,2,1);
+	prepare_display();
+}
+
+READ8_MEMBER(f2pbball_state::read_k)
+{
+	// K: multiplexed inputs
+	return read_inputs(3);
+}
+
+
+// config
+
+static INPUT_PORTS_START( f2pbball )
+	PORT_START("IN.0") // R4
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_COCKTAIL PORT_NAME("P2 Pick Off")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_CONFNAME( 0x0c, 0x04, "Players" )
+	PORT_CONFSETTING(    0x04, "1" )
+	PORT_CONFSETTING(    0x00, "Practice" )
+	PORT_CONFSETTING(    0x08, "2" )
+
+	PORT_START("IN.1") // R9
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_NAME("P1 Score")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON3 ) PORT_NAME("P1 Steal")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_NAME("P1 Pitch")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_NAME("P1 Swing")
+
+	PORT_START("IN.2") // R10
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON5 ) PORT_COCKTAIL PORT_NAME("P2 Curve Left")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_BUTTON2 ) PORT_COCKTAIL PORT_NAME("P2 Slow")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_COCKTAIL PORT_NAME("P2 Curve Right")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_BUTTON4 ) PORT_COCKTAIL PORT_NAME("P2 Fast")
+
+	PORT_START("RESET")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_BUTTON5 ) PORT_NAME("P1 Reset") PORT_CHANGED_MEMBER(DEVICE_SELF, f2pbball_state, reset_button, 0)
+INPUT_PORTS_END
+
+INPUT_CHANGED_MEMBER(f2pbball_state::reset_button)
+{
+	// reset button is directly wired to TMS1000 INIT pin
+	m_maincpu->set_input_line(INPUT_LINE_RESET, newval ? ASSERT_LINE : CLEAR_LINE);
+}
+
+static MACHINE_CONFIG_START( f2pbball, f2pbball_state )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", TMS1000, 325000) // approximation - RC osc. R=51K, C=39pF
+	MCFG_TMS1XXX_READ_K_CB(READ8(f2pbball_state, read_k))
+	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(f2pbball_state, write_r))
+	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(f2pbball_state, write_o))
+
+	MCFG_TIMER_DRIVER_ADD_PERIODIC("display_decay", hh_tms1k_state, display_decay_tick, attotime::from_msec(1))
+	MCFG_DEFAULT_LAYOUT(layout_f2pbball)
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
@@ -3508,7 +3641,7 @@ void gpoker_state::machine_reset()
 static MACHINE_CONFIG_START( gpoker, gpoker_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1370, 350000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1370, 350000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(gpoker_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(gpoker_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(gpoker_state, write_o))
@@ -3621,7 +3754,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( gjackpot, gjackpot_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1670, 450000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1670, 450000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(gpoker_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(gjackpot_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(gpoker_state, write_o))
@@ -3682,7 +3815,7 @@ WRITE16_MEMBER(ginv1000_state::write_r)
 
 	// R8,R15: input mux
 	m_inp_mux = (data >> 8 & 1) | (data >> 14 & 2);
-	
+
 	// R1-R10: VFD matrix grid
 	// R11-R14: VFD matrix plate
 	m_grid = data >> 1 & 0x3ff;
@@ -4125,7 +4258,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( starwbc, starwbc_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 325000) // approximation - RC osc. R=51K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 325000) // approximation - RC osc. R=51K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(starwbc_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(starwbc_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(starwbc_state, write_o))
@@ -4252,7 +4385,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( astro, astro_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1470, 450000) // approximation - RC osc. R=4.7K, C=33pf
+	MCFG_CPU_ADD("maincpu", TMS1470, 450000) // approximation - RC osc. R=4.7K, C=33pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(astro_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(astro_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(astro_state, write_o))
@@ -4417,7 +4550,7 @@ static const u16 elecbowl_output_pla[0x20] =
 static MACHINE_CONFIG_START( elecbowl, elecbowl_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 350000) // approximation - RC osc. R=33K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 350000) // approximation - RC osc. R=33K, C=100pF
 	MCFG_TMS1XXX_OUTPUT_PLA(elecbowl_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(elecbowl_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(elecbowl_state, write_r))
@@ -4430,6 +4563,157 @@ static MACHINE_CONFIG_START( elecbowl, elecbowl_state )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
+MACHINE_CONFIG_END
+
+
+
+
+
+/***************************************************************************
+
+  Mattel Thoroughbred Horse Race Analyzer
+  * PCB label 1670-4619D
+  * TMS1100NLL MP3491-N2 (die label 1100E MP3491)
+  * HLCD0569, 67-segment LCD panel, no sound
+
+  This handheld is not a toy, read the manual for more information. In short,
+  it is a device for prediciting the winning chance of a gambling horserace.
+
+  known releases:
+  - USA: Thoroughbred Horse Race Analyzer
+  - China/Canada: Thoroughbred Horse Race Analyzer, distributed in 1994 by
+    Advanced Handicapping Technologies, Inc.
+
+***************************************************************************/
+
+class horseran_state : public hh_tms1k_state
+{
+public:
+	horseran_state(const machine_config &mconfig, device_type type, const char *tag)
+		: hh_tms1k_state(mconfig, type, tag),
+		m_lcd(*this, "lcd")
+	{ }
+
+	required_device<hlcd0569_device> m_lcd;
+
+	DECLARE_WRITE32_MEMBER(lcd_output_w);
+	DECLARE_WRITE16_MEMBER(write_r);
+	DECLARE_READ8_MEMBER(read_k);
+};
+
+// handlers
+
+WRITE32_MEMBER(horseran_state::lcd_output_w)
+{
+	// only 3 rows used
+	if (offset > 2)
+		return;
+
+	// output segments (lamp row*100 + col)
+	for (int i = 0; i < 24; i++)
+		output().set_lamp_value(offset*100 + i+1, data >> i & 1);
+
+	// col5-11 and col13-19 are 7segs
+	for (int i = 0; i < 2; i++)
+		output().set_digit_value(offset << 1 | i, BITSWAP8(data >> (4+8*i),7,3,5,2,0,1,4,6) & 0x7f);
+}
+
+WRITE16_MEMBER(horseran_state::write_r)
+{
+	// R0: HLCD0569 clock
+	// R1: HLCD0569 data in
+	// R2: HLCD0569 _CS
+	m_lcd->write_cs(data >> 2 & 1);
+	m_lcd->write_data(data >> 1 & 1);
+	m_lcd->write_clock(data & 1);
+
+	// R3-R10: input mux
+	m_inp_mux = data >> 3 & 0xff;
+}
+
+READ8_MEMBER(horseran_state::read_k)
+{
+	// K: multiplexed inputs
+	return read_inputs(8);
+}
+
+
+// config
+
+/* physical button layout and labels is like this:
+
+    [PURSE]      [DIST.]      [P. POSN.]   [DAYS]       [R.S.L.]     [7]     [8]     [9]
+    [RACES]      [WINS]       [PLACES]     [SHOWS]      [EARNINGS]   [4]     [5]     [6]
+    [DISTANCE]   [L.E.B. 1st] [L.E.B. 2nd] [L.E.B. 3rd] [FIN. POSN.] [1]     [2]     [3]
+    [L.E.B. Fin] [SPD. RTG.]  [SPD. RTG.]  [ANALYZE]    [NEXT]       [C/H]   [C/E]   [0]
+
+    R.S.L. = Races Since (Last) Layoff
+    L.E.B. = Last Race / Lengths Back
+*/
+
+static INPUT_PORTS_START( horseran )
+	PORT_START("IN.0") // R3
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_B) PORT_NAME("Next")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_G) PORT_NAME("Final Position")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_T) PORT_NAME("Earnings")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_5) PORT_NAME("R.S.L.")
+
+	PORT_START("IN.1") // R4
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_V) PORT_NAME("Analyze")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_F) PORT_NAME("L.E.B. 3rd")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_R) PORT_NAME("Shows")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_4) PORT_NAME("Days")
+
+	PORT_START("IN.2") // R5
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_C) PORT_NAME("Speed Rating (right)")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_D) PORT_NAME("L.E.B. 2nd")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_E) PORT_NAME("Places")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_3) PORT_NAME("Post Position")
+
+	PORT_START("IN.3") // R6
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_X) PORT_NAME("Speed Rating (left)")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_S) PORT_NAME("L.E.B. 1st")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_W) PORT_NAME("Wins")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_2) PORT_NAME("Distance (L.E.B.)")
+
+	PORT_START("IN.4") // R7
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_Z) PORT_NAME("L.E.B. Finish")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_A) PORT_NAME("Distance")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_Q) PORT_NAME("Races")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_1) PORT_NAME("Purse")
+
+	PORT_START("IN.5") // R8
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_COMMA) PORT_CODE(KEYCODE_0_PAD) PORT_NAME("0")
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_K) PORT_CODE(KEYCODE_3_PAD) PORT_NAME("3")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_I) PORT_CODE(KEYCODE_6_PAD) PORT_NAME("6")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_8) PORT_CODE(KEYCODE_9_PAD) PORT_NAME("9")
+
+	PORT_START("IN.6") // R9
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_M) PORT_NAME("C/E") // Clear Entry
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_J) PORT_CODE(KEYCODE_2_PAD) PORT_NAME("2")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_U) PORT_CODE(KEYCODE_5_PAD) PORT_NAME("5")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_7) PORT_CODE(KEYCODE_8_PAD) PORT_NAME("8")
+
+	PORT_START("IN.7") // R10
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_N) PORT_NAME("C/H") // Clear Horse Information
+	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_H) PORT_CODE(KEYCODE_1_PAD) PORT_NAME("1")
+	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_Y) PORT_CODE(KEYCODE_4_PAD) PORT_NAME("4")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_6) PORT_CODE(KEYCODE_7_PAD) PORT_NAME("7")
+INPUT_PORTS_END
+
+static MACHINE_CONFIG_START( horseran, horseran_state )
+
+	/* basic machine hardware */
+	MCFG_CPU_ADD("maincpu", TMS1100, 300000) // approximation - RC osc. R=56K, C=47pF
+	MCFG_TMS1XXX_READ_K_CB(READ8(horseran_state, read_k))
+	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(horseran_state, write_r))
+
+	/* video hardware */
+	MCFG_DEVICE_ADD("lcd", HLCD0569, 1100) // C=0.022uF
+	MCFG_HLCD0515_WRITE_COLS_CB(WRITE32(horseran_state, lcd_output_w))
+	MCFG_DEFAULT_LAYOUT(layout_horseran)
+
+	/* no sound! */
 MACHINE_CONFIG_END
 
 
@@ -4598,7 +4882,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( mdndclab, mdndclab_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 475000) // approximation - RC osc. R=27K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 475000) // approximation - RC osc. R=27K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(mdndclab_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(mdndclab_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(mdndclab_state, write_o))
@@ -4668,7 +4952,6 @@ WRITE16_MEMBER(comp4_state::write_o)
 	// O0: leds common
 	// other bits: N/C
 	m_o = data;
-	display_matrix(11, 1, m_r, m_o);
 }
 
 READ8_MEMBER(comp4_state::read_k)
@@ -4853,7 +5136,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( bship, bship_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 200000) // approximation - RC osc. R=100K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 200000) // approximation - RC osc. R=100K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(bship_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(bship_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(bship_state, write_o))
@@ -4956,7 +5239,7 @@ READ8_MEMBER(bshipb_state::read_k)
 static MACHINE_CONFIG_START( bshipb, bshipb_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 200000) // approximation - RC osc. R=100K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 200000) // approximation - RC osc. R=100K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(bshipb_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(bshipb_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(bshipb_state, write_o))
@@ -5073,7 +5356,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( simon, simon_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 350000) // approximation - RC osc. R=33K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 350000) // approximation - RC osc. R=33K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(simon_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(simon_state, write_r))
 
@@ -5195,10 +5478,9 @@ INPUT_CHANGED_MEMBER(ssimon_state::speed_switch)
 	set_clock();
 }
 
-
 void ssimon_state::set_clock()
 {
-	// MCU clock is from an RC circuit with C=100pf, R=x depending on speed switch:
+	// MCU clock is from an RC circuit with C=100pF, R=x depending on speed switch:
 	// 0 Simple: R=51K -> ~200kHz
 	// 1 Normal: R=37K -> ~275kHz
 	// 2 Super:  R=22K -> ~400kHz
@@ -5395,7 +5677,7 @@ static const s16 bigtrak_speaker_levels[8] = { 0, 0x7fff/3, 0x7fff/3, 0x7fff/3*2
 static MACHINE_CONFIG_START( bigtrak, bigtrak_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 200000) // approximation - RC osc. R=83K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 200000) // approximation - RC osc. R=83K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(bigtrak_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(bigtrak_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(bigtrak_state, write_o))
@@ -5628,7 +5910,7 @@ void mbdtower_state::machine_start()
 static MACHINE_CONFIG_START( mbdtower, mbdtower_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1400, 425000) // approximation - RC osc. R=43K, C=56pf
+	MCFG_CPU_ADD("maincpu", TMS1400, 425000) // approximation - RC osc. R=43K, C=56pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(mbdtower_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(mbdtower_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(mbdtower_state, write_o))
@@ -5720,28 +6002,28 @@ static INPUT_PORTS_START( cnsector )
 	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_Z) PORT_NAME("Range")
 
 	PORT_START("IN.1") // O1
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_X) PORT_NAME("Aim")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_S) PORT_NAME("Right")
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_UNUSED )
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_X) PORT_NAME("Aim")
 
 	PORT_START("IN.2") // O2
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_C) PORT_NAME("Fire")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_E) PORT_NAME("Recall")
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_J) PORT_NAME("Evasive Sub") // expert button
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_UNUSED )
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_E) PORT_NAME("Recall")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_C) PORT_NAME("Fire")
 
 	PORT_START("IN.3") // O3
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_M) PORT_NAME("Sub Finder") // expert button
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_UNUSED )
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_F) PORT_NAME("Slower")
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_UNUSED )
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_UNUSED )
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_M) PORT_NAME("Sub Finder") // expert button
 
 	PORT_START("IN.4") // O4
-	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_B) PORT_NAME("Teach Mode")
+	PORT_BIT( 0x01, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_T) PORT_NAME("Move Ship")
 	PORT_BIT( 0x02, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_G) PORT_NAME("Faster")
 	PORT_BIT( 0x04, IP_ACTIVE_HIGH, IPT_UNUSED )
-	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_T) PORT_NAME("Move Ship")
+	PORT_BIT( 0x08, IP_ACTIVE_HIGH, IPT_KEYPAD ) PORT_CODE(KEYCODE_B) PORT_NAME("Teach Mode")
 INPUT_PORTS_END
 
 static MACHINE_CONFIG_START( cnsector, cnsector_state )
@@ -5861,7 +6143,7 @@ static const s16 merlin_speaker_levels[8] = { 0, 0x7fff/3, 0x7fff/3, 0x7fff/3*2,
 static MACHINE_CONFIG_START( merlin, merlin_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 350000) // approximation - RC osc. R=33K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 350000) // approximation - RC osc. R=33K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(merlin_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(merlin_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(merlin_state, write_o))
@@ -5925,7 +6207,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( mmerlin, mmerlin_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1400, 425000) // approximation - RC osc. R=30K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1400, 425000) // approximation - RC osc. R=30K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(mmerlin_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(mmerlin_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(mmerlin_state, write_o))
@@ -6149,7 +6431,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( bankshot, bankshot_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1400, 475000) // approximation - RC osc. R=24K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1400, 475000) // approximation - RC osc. R=24K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(bankshot_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(bankshot_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(bankshot_state, write_o))
@@ -6260,7 +6542,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( splitsec, splitsec_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1400, 475000) // approximation - RC osc. R=24K, C=100pf
+	MCFG_CPU_ADD("maincpu", TMS1400, 475000) // approximation - RC osc. R=24K, C=100pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(splitsec_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(splitsec_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(splitsec_state, write_o))
@@ -6378,7 +6660,7 @@ static const s16 lostreas_speaker_levels[16] =
 static MACHINE_CONFIG_START( lostreas, lostreas_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 425000) // approximation - RC osc. R=39K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 425000) // approximation - RC osc. R=39K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(lostreas_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(lostreas_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(lostreas_state, write_o))
@@ -6488,7 +6770,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( tcfball, tcfball_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=56K, C=24pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=56K, C=24pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(tcfball_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(tcfball_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(tcfball_state, write_o))
@@ -6552,7 +6834,7 @@ static const u16 tcfballa_output_pla[0x20] =
 static MACHINE_CONFIG_START( tcfballa, tcfballa_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=50pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=50pF
 	MCFG_TMS1XXX_OUTPUT_PLA(tcfballa_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(tcfballa_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(tcfballa_state, write_r))
@@ -6716,7 +6998,7 @@ static const u16 tandy12_output_pla[0x20] =
 static MACHINE_CONFIG_START( tandy12, tandy12_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 400000) // approximation - RC osc. R=39K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 400000) // approximation - RC osc. R=39K, C=47pF
 	MCFG_TMS1XXX_OUTPUT_PLA(tandy12_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(tandy12_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(tandy12_state, write_r))
@@ -6825,7 +7107,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( monkeysee, monkeysee_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 250000) // approximation - RC osc. R=68K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 250000) // approximation - RC osc. R=68K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(monkeysee_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(monkeysee_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(monkeysee_state, write_o))
@@ -6974,7 +7256,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( speechp, speechp_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 400000) // approximation - RC osc. R=39K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 400000) // approximation - RC osc. R=39K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(speechp_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(speechp_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(speechp_state, write_o))
@@ -7079,7 +7361,7 @@ static const s16 copycat_speaker_levels[4] = { 0, 0x7fff, -0x8000, 0 };
 static MACHINE_CONFIG_START( copycat, copycat_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1000, 320000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1000, 320000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(copycat_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(copycat_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(copycat_state, write_o))
@@ -7155,7 +7437,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( copycatm2, copycatm2_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1730, 275000) // approximation - RC osc. R=100K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1730, 275000) // approximation - RC osc. R=100K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(IOPORT("IN.0"))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(copycatm2_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(copycatm2_state, write_o))
@@ -7226,7 +7508,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( ditto, ditto_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1730, 275000) // approximation - RC osc. R=100K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1730, 275000) // approximation - RC osc. R=100K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(IOPORT("IN.0"))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(ditto_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(ditto_state, write_o))
@@ -7341,7 +7623,7 @@ INPUT_PORTS_END
 static MACHINE_CONFIG_START( ss7in1, ss7in1_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1400, 450000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1400, 450000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(ss7in1_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(ss7in1_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(ss7in1_state, write_o))
@@ -7509,7 +7791,6 @@ INPUT_CHANGED_MEMBER(tbreakup_state::skill_switch)
 	set_clock();
 }
 
-
 void tbreakup_state::set_clock()
 {
 	// MCU clock is from an analog circuit with resistor of 73K, PRO2 adds 100K
@@ -7662,11 +7943,10 @@ INPUT_CHANGED_MEMBER(phpball_state::flipper_button)
 	output().set_lamp_value(90 + (int)(uintptr_t)param, newval);
 }
 
-
 static MACHINE_CONFIG_START( phpball, phpball_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_READ_K_CB(READ8(phpball_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(phpball_state, write_r))
 	MCFG_TMS1XXX_WRITE_O_CB(WRITE16(phpball_state, write_o))
@@ -7801,7 +8081,7 @@ static const u16 ssports4_output_pla[0x20] =
 static MACHINE_CONFIG_START( ssports4, ssports4_state )
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=47pf
+	MCFG_CPU_ADD("maincpu", TMS1100, 375000) // approximation - RC osc. R=47K, C=47pF
 	MCFG_TMS1XXX_OUTPUT_PLA(ssports4_output_pla)
 	MCFG_TMS1XXX_READ_K_CB(READ8(ssports4_state, read_k))
 	MCFG_TMS1XXX_WRITE_R_CB(WRITE16(ssports4_state, write_r))
@@ -8082,6 +8362,17 @@ ROM_START( raisedvl )
 ROM_END
 
 
+ROM_START( f2pbball )
+	ROM_REGION( 0x0400, "maincpu", 0 )
+	ROM_LOAD( "mp0154", 0x0000, 0x0400, CRC(c5b45ace) SHA1(b2de32e83ab447b22d6828f0081843f364040b01) )
+
+	ROM_REGION( 867, "maincpu:mpla", 0 )
+	ROM_LOAD( "tms1000_common2_micro.pla", 0, 867, CRC(d33da3cf) SHA1(13c4ebbca227818db75e6db0d45b66ba5e207776) )
+	ROM_REGION( 365, "maincpu:opla", 0 )
+	ROM_LOAD( "tms1000_f2pbball_output.pla", 0, 365, CRC(30c2f28f) SHA1(db969b22475f37f083c3594f5e4f5759048377b8) )
+ROM_END
+
+
 ROM_START( gpoker )
 	ROM_REGION( 0x0800, "maincpu", 0 )
 	ROM_LOAD( "mp2105", 0x0000, 0x0800, CRC(95a8f5b4) SHA1(d14f00ba9f57e437264d972baa14a14a28ff8719) )
@@ -8131,7 +8422,7 @@ ROM_END
 
 ROM_START( elecdet )
 	ROM_REGION( 0x1000, "maincpu", 0 )
-	ROM_LOAD( "mp6100a", 0x0000, 0x1000, CRC(6f396bb8) SHA1(1f104d4ca9bee0d4572be4779b7551dfe20c4f04) )
+	ROM_LOAD( "mp6100a", 0x0000, 0x1000, CRC(9522fb2d) SHA1(240bdb44b7d67d3b13ebf75851635ac4b4ca2bfd) )
 
 	ROM_REGION( 1246, "maincpu:ipla", 0 )
 	ROM_LOAD( "tms0980_common1_instr.pla", 0, 1246, CRC(42db9a38) SHA1(2d127d98028ec8ec6ea10c179c25e447b14ba4d0) )
@@ -8184,6 +8475,17 @@ ROM_START( elecbowl )
 	ROM_LOAD( "tms1100_common3_micro.pla", 0, 867, BAD_DUMP CRC(03574895) SHA1(04407cabfb3adee2ee5e4218612cb06c12c540f4) ) // not verified
 	ROM_REGION( 365, "maincpu:opla", 0 )
 	ROM_LOAD( "tms1100_elecbowl_output.pla", 0, 365, NO_DUMP )
+ROM_END
+
+
+ROM_START( horseran )
+	ROM_REGION( 0x0800, "maincpu", 0 )
+	ROM_LOAD( "mp3491", 0x0000, 0x0800, CRC(a0081671) SHA1(a5a07b502c69d429e5bcd1d313e86b6ee057cda6) )
+
+	ROM_REGION( 867, "maincpu:mpla", 0 )
+	ROM_LOAD( "tms1100_common1_micro.pla", 0, 867, CRC(62445fc9) SHA1(d6297f2a4bc7a870b76cc498d19dbb0ce7d69fec) )
+	ROM_REGION( 365, "maincpu:opla", 0 ) // unused
+	ROM_LOAD( "tms1100_horseran_output.pla", 0, 365, CRC(0fea09b0) SHA1(27a56fcf2b490e9a7dbbc6ad48cc8aaca4cada94) )
 ROM_END
 
 
@@ -8539,7 +8841,9 @@ CONS( 1979, esbattle,  0,        0, esbattle,  esbattle,  driver_device, 0, "Ent
 CONS( 1980, einvader,  0,        0, einvader,  einvader,  driver_device, 0, "Entex", "Space Invader (Entex, TMS1100 version)", MACHINE_SUPPORTS_SAVE )
 CONS( 1980, efootb4 ,  0,        0, efootb4,   efootb4,   driver_device, 0, "Entex", "Color Football 4 (Entex)", MACHINE_SUPPORTS_SAVE )
 CONS( 1980, ebaskb2 ,  0,        0, ebaskb2,   ebaskb2,   driver_device, 0, "Entex", "Electronic Basketball 2 (Entex)", MACHINE_SUPPORTS_SAVE )
-CONS( 1980, raisedvl,  0,        0, raisedvl,  raisedvl,  driver_device, 0, "Entex", "Raise The Devil", MACHINE_SUPPORTS_SAVE )
+CONS( 1980, raisedvl,  0,        0, raisedvl,  raisedvl,  driver_device, 0, "Entex", "Raise The Devil", MACHINE_SUPPORTS_SAVE | MACHINE_REQUIRES_ARTWORK )
+
+CONS( 1979, f2pbball,  0,        0, f2pbball,  f2pbball,  driver_device, 0, "Fonas", "2 Player Baseball (Fonas)", MACHINE_SUPPORTS_SAVE )
 
 CONS( 1979, gpoker,    0,        0, gpoker,    gpoker,    driver_device, 0, "Gakken", "Poker (Gakken, 1979 version)", MACHINE_SUPPORTS_SAVE )
 CONS( 1980, gjackpot,  0,        0, gjackpot,  gjackpot,  driver_device, 0, "Gakken", "Jackpot: Gin Rummy & Black Jack", MACHINE_SUPPORTS_SAVE )
@@ -8555,6 +8859,7 @@ COMP( 1979, astro,     0,        0, astro,     astro,     driver_device, 0, "Kos
 
 CONS( 1978, elecbowl,  0,        0, elecbowl,  elecbowl,  driver_device, 0, "Marx", "Electronic Bowling (Marx)", MACHINE_SUPPORTS_SAVE | MACHINE_IMPERFECT_SOUND | MACHINE_MECHANICAL | MACHINE_NOT_WORKING ) // ***
 
+COMP( 1979, horseran,  0,        0, horseran,  horseran,  driver_device, 0, "Mattel", "Thoroughbred Horse Race Analyzer", MACHINE_SUPPORTS_SAVE | MACHINE_NO_SOUND_HW )
 CONS( 1980, mdndclab,  0,        0, mdndclab,  mdndclab,  driver_device, 0, "Mattel", "Dungeons & Dragons - Computer Labyrinth Game", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK ) // ***
 
 CONS( 1977, comp4,     0,        0, comp4,     comp4,     driver_device, 0, "Milton Bradley", "Comp IV", MACHINE_SUPPORTS_SAVE | MACHINE_CLICKABLE_ARTWORK | MACHINE_NO_SOUND_HW )
