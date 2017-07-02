@@ -36,10 +36,6 @@ The startup screen varies across each company:
 - Modular Micros: "ZORBA" graphical logo with "MODULAR MICROS, INC." below in normal text
 - Gemini: "GEMINI ZORBA" graphical logo
 
-Strangely, the Zorba configures its keyboard UART for 8N2 but the keyboard we're emulating sends 8N1.
-If you type too fast or hold down a key until it repeats, characters will be dropped/corrupted.  It's
-possible we have a dump of a different CP/M-compatible keyboard, not the one supplied with the Zorba.
-
 Status:
 - Boots up, and the keyboard works
 
@@ -70,7 +66,9 @@ ToDo:
 #include "machine/latch.h"
 #include "machine/pit8253.h"
 
+#include "screen.h"
 #include "softlist.h"
+#include "speaker.h"
 
 
 namespace {
@@ -95,7 +93,7 @@ ADDRESS_MAP_START( zorba_io, AS_IO, 8, zorba_state )
 	AM_RANGE(0x25, 0x25) AM_DEVREADWRITE("uart2", i8251_device, status_r, control_w)
 	AM_RANGE(0x26, 0x26) AM_WRITE(intmask_w)
 	AM_RANGE(0x30, 0x30) AM_DEVREADWRITE("dma", z80dma_device, read, write)
-	AM_RANGE(0x40, 0x43) AM_DEVREADWRITE("fdc", fd1793_t, read, write)
+	AM_RANGE(0x40, 0x43) AM_DEVREADWRITE("fdc", fd1793_device, read, write)
 	AM_RANGE(0x50, 0x53) AM_DEVREADWRITE("pia0", pia6821_device, read, write)
 	AM_RANGE(0x60, 0x63) AM_DEVREADWRITE("pia1", pia6821_device, read, write)
 ADDRESS_MAP_END
@@ -133,7 +131,7 @@ GFXDECODE_START( zorba )
 GFXDECODE_END
 
 
-MACHINE_CONFIG_START( zorba, zorba_state )
+MACHINE_CONFIG_START( zorba )
 	// basic machine hardware
 	MCFG_CPU_ADD("maincpu", Z80, XTAL_24MHz / 6)
 	MCFG_CPU_PROGRAM_MAP(zorba_mem)
@@ -259,7 +257,6 @@ MACHINE_CONFIG_START( zorba, zorba_state )
 	// J6 TTL-level serial keyboard
 	MCFG_DEVICE_ADD("keyboard", ZORBA_KEYBOARD, 0)
 	MCFG_ZORBA_KEYBOARD_RXD_CB(DEVWRITELINE("uart2", i8251_device, write_rxd))
-	MCFG_QUANTUM_PERFECT_CPU("keyboard:mcu")
 
 	MCFG_SOFTWARE_LIST_ADD("flop_list", "zorba")
 MACHINE_CONFIG_END
@@ -318,7 +315,7 @@ MACHINE_RESET_MEMBER( zorba_state, zorba )
 
 READ8_MEMBER( zorba_state::ram_r )
 {
-	if (!space.debugger_access())
+	if (!machine().side_effect_disabled())
 		m_read_bank->set_entry(0);
 	return 0;
 }
@@ -330,7 +327,7 @@ WRITE8_MEMBER( zorba_state::ram_w )
 
 READ8_MEMBER( zorba_state::rom_r )
 {
-	if (!space.debugger_access())
+	if (!machine().side_effect_disabled())
 		m_read_bank->set_entry(1);
 	return 0;
 }
@@ -399,14 +396,12 @@ WRITE_LINE_MEMBER( zorba_state::busreq_w )
 
 READ8_MEMBER(zorba_state::memory_read_byte)
 {
-	address_space& prog_space = m_maincpu->space(AS_PROGRAM);
-	return prog_space.read_byte(offset);
+	return m_maincpu->space(AS_PROGRAM).read_byte(offset);
 }
 
 WRITE8_MEMBER(zorba_state::memory_write_byte)
 {
-	address_space& prog_space = m_maincpu->space(AS_PROGRAM);
-	prog_space.write_byte(offset, data);
+	m_maincpu->space(AS_PROGRAM).write_byte(offset, data);
 }
 
 READ8_MEMBER(zorba_state::io_read_byte)
@@ -569,5 +564,5 @@ ROM_END
 COMP( 1984?, zorba, 0, 0, zorba, zorba, zorba_state, zorba, "Modular Micros", "Zorba (Modular Micros)", MACHINE_NOT_WORKING | MACHINE_SUPPORTS_SAVE )
 
 // Undumped versions (see startup screen notes at top of file)
-// COMP( 1983, zorbat, zorba, 0, zorba, zorba, zorba_state, zorba, "Telcon Industries", "Zorba (Telcon Industries)", MACHINE_NOT_WORKING )
+// COMP( 1983, zorbat, zorba, 0, zorba, zorba, zorba_state, zorba, "Telcon Industries",  "Zorba (Telcon Industries)",  MACHINE_NOT_WORKING )
 // COMP( 1984, zorbag, zorba, 0, zorba, zorba, zorba_state, zorba, "Gemini Electronics", "Zorba (Gemini Electronics)", MACHINE_NOT_WORKING )

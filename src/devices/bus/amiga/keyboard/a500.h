@@ -27,8 +27,8 @@
 
 ***************************************************************************/
 
-#ifndef DEVICES_BUS_AMIGA_KEYBOARD_A500_H
-#define DEVICES_BUS_AMIGA_KEYBOARD_A500_H
+#ifndef MAME_BUS_AMIGA_KEYBOARD_A500_H
+#define MAME_BUS_AMIGA_KEYBOARD_A500_H
 
 #pragma once
 
@@ -42,14 +42,11 @@ namespace bus { namespace amiga { namespace keyboard {
 //  TYPE DEFINITIONS
 //**************************************************************************
 
-// ======================> a500_kbd_us_device
+// ======================> a500_kbd_device
 
-class a500_kbd_us_device : public device_t, public device_amiga_keyboard_interface
+class a500_kbd_device : public device_t, public device_amiga_keyboard_interface
 {
 public:
-	// construction/destruction
-	a500_kbd_us_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
-
 	// from host
 	virtual DECLARE_WRITE_LINE_MEMBER(kdat_w) override;
 
@@ -70,20 +67,16 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(check_reset);
 
 protected:
-	a500_kbd_us_device(
+	a500_kbd_device(
 			const machine_config &mconfig,
 			const char *tag,
 			device_t *owner,
 			uint32_t clock,
-			device_type type,
-			const char *name,
-			const char *shortname,
-			const char *file);
+			device_type type);
 
 	// device-level overrides
 	virtual const tiny_rom_entry *device_rom_region() const override;
-	virtual machine_config_constructor device_mconfig_additions() const override;
-	virtual ioport_constructor device_input_ports() const override;
+	virtual void device_add_mconfig(machine_config &config) override;
 	virtual void device_start() override;
 	virtual void device_reset() override;
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
@@ -129,12 +122,111 @@ private:
 	uint8_t m_control;
 };
 
+// ======================> a500_kbd_us_device
+
+class a500_kbd_us_device : public a500_kbd_device
+{
+public:
+	a500_kbd_us_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
 // ======================> a500_kbd_de_device
 
-class a500_kbd_de_device : public a500_kbd_us_device
+class a500_kbd_de_device : public a500_kbd_device
 {
 public:
 	a500_kbd_de_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_fr_device
+
+class a500_kbd_fr_device : public a500_kbd_device
+{
+public:
+	a500_kbd_fr_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_it_device
+
+class a500_kbd_it_device : public a500_kbd_device
+{
+public:
+	a500_kbd_it_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_se_device
+
+class a500_kbd_se_device : public a500_kbd_device
+{
+public:
+	a500_kbd_se_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_es_device
+
+class a500_kbd_es_device : public a500_kbd_device
+{
+public:
+	a500_kbd_es_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_dk_device
+
+class a500_kbd_dk_device : public a500_kbd_device
+{
+public:
+	a500_kbd_dk_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_ch_device
+
+class a500_kbd_ch_device : public a500_kbd_device
+{
+public:
+	a500_kbd_ch_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_no_device
+
+class a500_kbd_no_device : public a500_kbd_device
+{
+public:
+	a500_kbd_no_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
+
+protected:
+	virtual ioport_constructor device_input_ports() const override;
+};
+
+// ======================> a500_kbd_gb_device
+
+class a500_kbd_gb_device : public a500_kbd_device
+{
+public:
+	a500_kbd_gb_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
 protected:
 	virtual ioport_constructor device_input_ports() const override;
@@ -144,7 +236,15 @@ protected:
 
 
 // device type definition
-extern const device_type A500_KBD_US;
-extern const device_type A500_KBD_DE;
+DECLARE_DEVICE_TYPE_NS(A500_KBD_US, bus::amiga::keyboard, a500_kbd_us_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_DE, bus::amiga::keyboard, a500_kbd_de_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_FR, bus::amiga::keyboard, a500_kbd_fr_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_IT, bus::amiga::keyboard, a500_kbd_it_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_SE, bus::amiga::keyboard, a500_kbd_se_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_ES, bus::amiga::keyboard, a500_kbd_es_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_DK, bus::amiga::keyboard, a500_kbd_dk_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_CH, bus::amiga::keyboard, a500_kbd_ch_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_NO, bus::amiga::keyboard, a500_kbd_no_device)
+DECLARE_DEVICE_TYPE_NS(A500_KBD_GB, bus::amiga::keyboard, a500_kbd_gb_device)
 
-#endif // DEVICES_BUS_AMIGA_KEYBOARD_A500_H
+#endif // MAME_BUS_AMIGA_KEYBOARD_A500_H

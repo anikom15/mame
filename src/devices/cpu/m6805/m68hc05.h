@@ -14,9 +14,9 @@
 //  GLOBAL VARIABLES
 //**************************************************************************
 
-extern device_type const M68HC05C4;
-extern device_type const M68HC05C8;
-extern device_type const M68HC705C8A;
+DECLARE_DEVICE_TYPE(M68HC05C4,   m68hc05c4_device)
+DECLARE_DEVICE_TYPE(M68HC05C8,   m68hc05c8_device)
+DECLARE_DEVICE_TYPE(M68HC705C8A, m68hc705c8a_device)
 
 
 //**************************************************************************
@@ -108,10 +108,7 @@ protected:
 			device_t *owner,
 			u32 clock,
 			device_type type,
-			char const *name,
-			address_map_delegate internal_map,
-			char const *shortname,
-			char const *source);
+			address_map_delegate internal_map);
 
 	void set_port_bits(std::array<u8, PORT_COUNT> const &bits);
 	void set_port_interrupt(std::array<u8, PORT_COUNT> const &interrupt);
@@ -149,6 +146,7 @@ protected:
 			u32 options) override;
 
 	virtual void interrupt() override;
+	virtual bool test_il() override;
 	virtual void burn_cycles(unsigned count) override;
 
 	void add_port_state(std::array<bool, PORT_COUNT> const &ddr);
@@ -215,10 +213,7 @@ protected:
 			device_t *owner,
 			u32 clock,
 			device_type type,
-			char const *name,
-			address_map_delegate internal_map,
-			char const *shortname,
-			char const *source);
+			address_map_delegate internal_map);
 };
 
 

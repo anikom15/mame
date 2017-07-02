@@ -14,6 +14,7 @@
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
+#include "screen.h"
 
 
 class c10_state : public driver_device
@@ -28,18 +29,17 @@ public:
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
 		, m_p_videoram(*this, "videoram")
-		{ }
+		, m_p_chargen(*this, "chargen")
+	{ }
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_DRIVER_INIT(c10);
+
 private:
 	required_device<cpu_device> m_maincpu;
-	const uint8_t *m_p_chargen;
 	required_shared_ptr<uint8_t> m_p_videoram;
+	required_region_ptr<u8> m_p_chargen;
 	virtual void machine_reset() override;
-	virtual void video_start() override;
-
-protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 };
 
@@ -79,11 +79,6 @@ void c10_state::machine_reset()
 {
 	membank("boot")->set_entry(1);
 	timer_set(attotime::from_usec(4), TIMER_RESET);
-}
-
-void c10_state::video_start()
-{
-	m_p_chargen = memregion("chargen")->base();
 }
 
 /* This system appears to have inline attribute bytes of unknown meaning.
@@ -154,7 +149,7 @@ static GFXDECODE_START( c10 )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( c10, c10_state )
+static MACHINE_CONFIG_START( c10 )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, XTAL_16MHz / 4)
 	MCFG_CPU_PROGRAM_MAP(c10_mem)
@@ -189,5 +184,5 @@ ROM_END
 
 /* Driver */
 
-/*   YEAR   NAME    PARENT  COMPAT   MACHINE  INPUT  INIT        COMPANY   FULLNAME       FLAGS */
-COMP( 1982, c10,    0,      0,       c10,     c10, c10_state,    c10,     "Cromemco", "C-10", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+/*   YEAR   NAME    PARENT  COMPAT   MACHINE  INPUT  STATE        INIT    COMPANY     FULLNAME  FLAGS */
+COMP( 1982, c10,    0,      0,       c10,     c10,   c10_state,   c10,    "Cromemco", "C-10",   MACHINE_NOT_WORKING | MACHINE_NO_SOUND)

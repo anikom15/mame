@@ -11,8 +11,8 @@
 #define MAT_CR_H_
 
 #include <algorithm>
-#include "plib/pconfig.h"
-#include "plib/palloc.h"
+#include "../plib/pconfig.h"
+#include "../plib/palloc.h"
 
 template<std::size_t N, typename C = uint16_t, typename T = double>
 struct mat_cr_t
@@ -22,13 +22,13 @@ struct mat_cr_t
 
 	C diag[N];      // diagonal index pointer n
 	C ia[N+1];      // row index pointer n + 1
-	C ja[N*N];		 // column index array nz_num, initially (n * n)
-	T A[N*N];  	 // Matrix elements nz_num, initially (n * n)
+	C ja[N*N];       // column index array nz_num, initially (n * n)
+	T A[N*N];    // Matrix elements nz_num, initially (n * n)
 
 	std::size_t size;
 	std::size_t nz_num;
 
-	mat_cr_t(const std::size_t n)
+	explicit mat_cr_t(const std::size_t n)
 	: size(n)
 	, nz_num(0)
 	{

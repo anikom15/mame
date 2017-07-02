@@ -12,12 +12,12 @@
 
 #include <algorithm>
 
-#include "plib/pdynlib.h"
-#include "solver/mat_cr.h"
-#include "solver/nld_ms_direct.h"
-#include "solver/nld_solver.h"
-#include "solver/vector_base.h"
-#include "plib/pstream.h"
+#include "../plib/pdynlib.h"
+#include "mat_cr.h"
+#include "nld_ms_direct.h"
+#include "nld_solver.h"
+#include "vector_base.h"
+#include "../plib/pstream.h"
 
 namespace netlist
 {
@@ -33,11 +33,11 @@ public:
 		: matrix_solver_t(anetlist, name, matrix_solver_t::ASCENDING, params)
 		, m_dim(size)
 		, mat(size)
-		, m_proc(nullptr)
+		, m_proc()
 		{
 		}
 
-	virtual ~matrix_solver_GCR_t()
+	virtual ~matrix_solver_GCR_t() override
 	{
 	}
 
@@ -63,7 +63,8 @@ private:
 	std::vector<unsigned> m_term_cr[storage_N];
 	mat_cr_t<storage_N> mat;
 
-	extsolver m_proc;
+	//extsolver m_proc;
+	plib::dynproc<void, double * RESTRICT, double * RESTRICT, double * RESTRICT> m_proc;
 
 };
 
@@ -153,11 +154,19 @@ void matrix_solver_GCR_t<m_N, storage_N>::vsetup(analog_net_t::list_t &nets)
 	if (netlist().lib().isLoaded())
 	{
 		pstring symname = static_compile_name();
+#if 0
 		m_proc = this->netlist().lib().template getsym<extsolver>(symname);
 		if (m_proc != nullptr)
 			this->log().verbose("External static solver {1} found ...", symname);
 		else
 			this->log().warning("External static solver {1} not found ...", symname);
+#else
+		m_proc.load(this->netlist().lib(), symname);
+		if (m_proc.resolved())
+			this->log().warning("External static solver {1} found ...", symname);
+		else
+			this->log().warning("External static solver {1} not found ...", symname);
+#endif
 	}
 
 }
@@ -341,7 +350,7 @@ unsigned matrix_solver_GCR_t<m_N, storage_N>::vsolve_non_dynamic(const bool newt
 			gtot_t += gt[i];
 			RHS_t += Idr[i];
 		}
-		
+
 		for (std::size_t i = railstart; i < term_count; i++)
 			RHS_t += go[i] * *other_cur_analog[i];
 
@@ -355,10 +364,12 @@ unsigned matrix_solver_GCR_t<m_N, storage_N>::vsolve_non_dynamic(const bool newt
 	}
 #else
 		for (std::size_t i = 0; i < railstart; i++)
-		{
 			mat.A[tcr[i]] -= go[i];
-			gtot_t = gtot_t + gt[i];
-			RHS_t = RHS_t + Idr[i];
+
+		for (std::size_t i = 0; i < railstart; i++)
+		{
+			gtot_t        += gt[i];
+			RHS_t         += Idr[i];
 		}
 
 		for (std::size_t i = railstart; i < term_count; i++)
@@ -375,10 +386,11 @@ unsigned matrix_solver_GCR_t<m_N, storage_N>::vsolve_non_dynamic(const bool newt
 
 	/* now solve it */
 
-	if (m_proc != nullptr)
+	//if (m_proc != nullptr)
+	if (m_proc.resolved())
 	{
 		//static_solver(m_A, RHS);
-		m_proc(mat.A, RHS, new_V);
+		m_proc(&mat.A[0], &RHS[0], &new_V[0]);
 	}
 	else
 	{
@@ -438,19 +450,9 @@ unsigned matrix_solver_GCR_t<m_N, storage_N>::vsolve_non_dynamic(const bool newt
 
 	this->m_stat_calculations++;
 
-	if (newton_raphson)
-	{
-		nl_double err = this->delta(new_V);
-
-		this->store(new_V);
-
-		return (err > this->m_params.m_accuracy) ? 2 : 1;
-	}
-	else
-	{
-		this->store(new_V);
-		return 1;
-	}
+	const nl_double err = (newton_raphson ? delta(new_V) : 0.0);
+	store(new_V);
+	return (err > this->m_params.m_accuracy) ? 2 : 1;
 }
 
 	} //namespace devices

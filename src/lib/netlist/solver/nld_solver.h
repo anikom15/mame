@@ -10,9 +10,9 @@
 
 #include <map>
 
-#include "nl_base.h"
-#include "plib/pstream.h"
-#include "solver/nld_matrix_solver.h"
+#include "../nl_base.h"
+#include "../plib/pstream.h"
+#include "nld_matrix_solver.h"
 
 //#define ATTR_ALIGNED(N) __attribute__((aligned(N)))
 #define ATTR_ALIGNED(N) ATTR_ALIGN
@@ -56,13 +56,14 @@ NETLIB_OBJECT(solver)
 	, m_dynamic_min_ts(*this, "DYNAMIC_MIN_TIMESTEP", 1e-6)   // nl_double timestep resolution
 
 	, m_log_stats(*this, "LOG_STATS", 1)   // nl_double timestep resolution
+	, m_params()
 	{
 		// internal staff
 
 		connect(m_fb_step, m_Q_step);
 	}
 
-	virtual ~NETLIB_NAME(solver)();
+	virtual ~NETLIB_NAME(solver)() override;
 
 	void post_start();
 	void stop();

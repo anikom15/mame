@@ -8,12 +8,11 @@
 
 *********************************************************************/
 
+#ifndef MAME_BUS_IEEE488_HP9895_H
+#define MAME_BUS_IEEE488_HP9895_H
+
 #pragma once
 
-#ifndef _HP9895_H_
-#define _HP9895_H_
-
-#include "emu.h"
 #include "ieee488.h"
 #include "cpu/z80/z80.h"
 #include "machine/phi.h"
@@ -27,14 +26,6 @@ public:
 	// construction/destruction
 	hp9895_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
 
-	// device-level overrides
-	virtual ioport_constructor device_input_ports() const override;
-	virtual void device_start() override;
-	virtual void device_reset() override;
-	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
-	virtual const tiny_rom_entry *device_rom_region() const override;
-	virtual machine_config_constructor device_mconfig_additions() const override;
-
 	// device_ieee488_interface overrides
 	virtual void ieee488_eoi(int state) override;
 	virtual void ieee488_dav(int state) override;
@@ -45,6 +36,37 @@ public:
 	virtual void ieee488_atn(int state) override;
 	virtual void ieee488_ren(int state) override;
 
+	// Floppy interface
+	DECLARE_WRITE8_MEMBER(data_w);
+	DECLARE_WRITE8_MEMBER(clock_w);
+	DECLARE_WRITE8_MEMBER(reset_w);
+	DECLARE_WRITE8_MEMBER(leds_w);
+	DECLARE_WRITE8_MEMBER(cntl_w);
+	DECLARE_WRITE8_MEMBER(drv_w);
+	DECLARE_WRITE8_MEMBER(xv_w);
+	DECLARE_READ8_MEMBER(data_r);
+	DECLARE_READ8_MEMBER(clock_r);
+	DECLARE_READ8_MEMBER(drivstat_r);
+	DECLARE_READ8_MEMBER(switches_r);
+	DECLARE_READ8_MEMBER(switches2_r);
+
+	// PHI register read
+	DECLARE_READ8_MEMBER(phi_reg_r);
+
+	// Floppy drive interface
+	void floppy_ready_cb(floppy_image_device *floppy , int state);
+
+protected:
+	virtual void device_start() override;
+	virtual void device_reset() override;
+	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
+
+	// device-level overrides
+	virtual ioport_constructor device_input_ports() const override;
+	virtual const tiny_rom_entry *device_rom_region() const override;
+	virtual void device_add_mconfig(machine_config &config) override;
+
+private:
 	// PHI write CBs
 	DECLARE_WRITE_LINE_MEMBER(phi_eoi_w);
 	DECLARE_WRITE_LINE_MEMBER(phi_dav_w);
@@ -62,28 +84,9 @@ public:
 	// PHI IRQ/Z80 NMI
 	DECLARE_WRITE_LINE_MEMBER(phi_int_w);
 
-	// PHI register read & Z80 IRQ
-	DECLARE_READ8_MEMBER(phi_reg_r);
+	// Z80 IRQ
 	DECLARE_WRITE16_MEMBER(z80_m1_w);
 
-	// Floppy interface
-	DECLARE_WRITE8_MEMBER(data_w);
-	DECLARE_WRITE8_MEMBER(clock_w);
-	DECLARE_WRITE8_MEMBER(reset_w);
-	DECLARE_WRITE8_MEMBER(leds_w);
-	DECLARE_WRITE8_MEMBER(cntl_w);
-	DECLARE_WRITE8_MEMBER(drv_w);
-	DECLARE_WRITE8_MEMBER(xv_w);
-	DECLARE_READ8_MEMBER(data_r);
-	DECLARE_READ8_MEMBER(clock_r);
-	DECLARE_READ8_MEMBER(drivstat_r);
-	DECLARE_READ8_MEMBER(switches_r);
-	DECLARE_READ8_MEMBER(switches2_r);
-
-	// Floppy drive interface
-	void floppy_ready_cb(floppy_image_device *floppy , int state);
-
-private:
 	required_device<z80_device> m_cpu;
 	required_device<phi_device> m_phi;
 	required_device<floppy_connector> m_drives[ 2 ];
@@ -93,20 +96,20 @@ private:
 	floppy_image_device *m_current_drive;
 	unsigned m_current_drive_idx;
 	bool m_dskchg[ 2 ];
-	uint16_t m_crc;	// U77
+	uint16_t m_crc; // U77
 	bool m_crcerr_syn;
 	bool m_overrun;
 	bool m_accdata;
 	bool m_timeout;
-	uint8_t m_cntl_reg;	// U31
-	uint8_t m_clock_sr;	// U22 & U4
-	uint8_t m_clock_reg;	// U23 & U5
-	uint8_t m_data_sr;	// U24 & U6
+	uint8_t m_cntl_reg; // U31
+	uint8_t m_clock_sr; // U22 & U4
+	uint8_t m_clock_reg;    // U23 & U5
+	uint8_t m_data_sr;  // U24 & U6
 	uint8_t m_wr_context;
 	bool m_had_transition;
 	bool m_lckup;
 	bool m_amdt;
-	uint8_t m_sync_cnt;	// U28 & U73
+	uint8_t m_sync_cnt; // U28 & U73
 	bool m_hiden;
 	bool m_mgnena;
 
@@ -130,6 +133,6 @@ private:
 };
 
 // device type definition
-extern const device_type HP9895;
+DECLARE_DEVICE_TYPE(HP9895, hp9895_device)
 
-#endif /* _HP9895_H_ */
+#endif // MAME_BUS_IEEE488_HP9895_H

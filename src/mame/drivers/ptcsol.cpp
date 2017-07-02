@@ -111,14 +111,20 @@
 ****************************************************************************/
 
 #include "emu.h"
+
 #include "cpu/i8085/i8085.h"
-#include "machine/keyboard.h"
-#include "sound/speaker.h"
-#include "sound/wave.h"
 #include "imagedev/cassette.h"
 #include "machine/ay31015.h"
-#include "formats/sol_cas.h"
+#include "machine/keyboard.h"
+#include "sound/spkrdev.h"
+#include "sound/wave.h"
+
+#include "screen.h"
 #include "softlist.h"
+#include "speaker.h"
+
+#include "formats/sol_cas.h"
+
 
 struct cass_data_t {
 	struct {
@@ -150,6 +156,7 @@ public:
 		, m_uart(*this, "uart")
 		, m_uart_s(*this, "uart_s")
 		, m_p_videoram(*this, "videoram")
+		, m_p_chargen(*this, "chargen")
 		, m_iop_arrows(*this, "ARROWS")
 		, m_iop_config(*this, "CONFIG")
 		, m_iop_s1(*this, "S1")
@@ -172,7 +179,7 @@ public:
 	DECLARE_WRITE8_MEMBER( sol20_fb_w );
 	DECLARE_WRITE8_MEMBER( sol20_fd_w );
 	DECLARE_WRITE8_MEMBER( sol20_fe_w );
-	DECLARE_WRITE8_MEMBER( kbd_put );
+	void kbd_put(u8 data);
 	DECLARE_DRIVER_INIT(sol20);
 	TIMER_CALLBACK_MEMBER(sol20_cassette_tc);
 	TIMER_CALLBACK_MEMBER(sol20_boot);
@@ -183,10 +190,8 @@ private:
 	uint8_t m_sol20_fa;
 	virtual void machine_reset() override;
 	virtual void machine_start() override;
-	virtual void video_start() override;
 	uint8_t m_sol20_fc;
 	uint8_t m_sol20_fe;
-	const uint8_t *m_p_chargen;
 	uint8_t m_framecnt;
 	cass_data_t m_cass_data;
 	emu_timer *m_cassette_timer;
@@ -197,6 +202,7 @@ private:
 	required_device<ay31015_device> m_uart;
 	required_device<ay31015_device> m_uart_s;
 	required_shared_ptr<uint8_t> m_p_videoram;
+	required_region_ptr<u8> m_p_chargen;
 	required_ioport m_iop_arrows;
 	required_ioport m_iop_config;
 	required_ioport m_iop_s1;
@@ -626,11 +632,6 @@ DRIVER_INIT_MEMBER(sol20_state,sol20)
 	membank("boot")->configure_entries(0, 2, &RAM[0x0000], 0xc000);
 }
 
-void sol20_state::video_start()
-{
-	m_p_chargen = memregion("chargen")->base();
-}
-
 uint32_t sol20_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 // Visible screen is 64 x 16, with start position controlled by scroll register.
@@ -721,7 +722,7 @@ static GFXDECODE_START( sol20 )
 	GFXDECODE_ENTRY( "chargen", 0x0000, sol20_charlayout, 0, 1 )
 GFXDECODE_END
 
-WRITE8_MEMBER( sol20_state::kbd_put )
+void sol20_state::kbd_put(u8 data)
 {
 	if (data)
 	{
@@ -730,7 +731,7 @@ WRITE8_MEMBER( sol20_state::kbd_put )
 	}
 }
 
-static MACHINE_CONFIG_START( sol20, sol20_state )
+static MACHINE_CONFIG_START( sol20 )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu",I8080, XTAL_14_31818MHz/7)
 	MCFG_CPU_PROGRAM_MAP(sol20_mem)
@@ -776,7 +777,7 @@ static MACHINE_CONFIG_START( sol20, sol20_state )
 	MCFG_AY31015_TX_CLOCK(4800.0)
 	MCFG_AY31015_RX_CLOCK(4800.0)
 	MCFG_DEVICE_ADD("keyboard", GENERIC_KEYBOARD, 0)
-	MCFG_GENERIC_KEYBOARD_CB(WRITE8(sol20_state, kbd_put))
+	MCFG_GENERIC_KEYBOARD_CB(PUT(sol20_state, kbd_put))
 
 	MCFG_SOFTWARE_LIST_ADD("cass_list", "sol20_cass")
 MACHINE_CONFIG_END
@@ -804,5 +805,5 @@ ROM_START( sol20 )
 ROM_END
 
 /* Driver */
-/*    YEAR  NAME    PARENT  COMPAT  MACHINE  INPUT  CLASS        INIT               COMPANY                 FULLNAME  FLAGS */
+//    YEAR  NAME    PARENT  COMPAT  MACHINE  INPUT  CLASS        INIT   COMPANY                             FULLNAME  FLAGS
 COMP( 1976, sol20,  0,      0,      sol20,   sol20, sol20_state, sol20, "Processor Technology Corporation", "SOL-20", 0 )

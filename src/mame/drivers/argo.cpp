@@ -25,6 +25,7 @@
 
 #include "emu.h"
 #include "cpu/z80/z80.h"
+#include "screen.h"
 
 
 class argo_state : public driver_device
@@ -39,7 +40,8 @@ public:
 		: driver_device(mconfig, type, tag)
 		, m_maincpu(*this, "maincpu")
 		, m_p_videoram(*this, "videoram")
-		{ }
+		, m_p_chargen(*this, "chargen")
+	{ }
 
 	DECLARE_WRITE8_MEMBER(argo_videoram_w);
 	DECLARE_READ8_MEMBER(argo_io_r);
@@ -50,16 +52,13 @@ public:
 private:
 	required_device<cpu_device> m_maincpu;
 	required_shared_ptr<uint8_t> m_p_videoram;
-	const uint8_t *m_p_chargen;
+	required_region_ptr<u8> m_p_chargen;
 	uint8_t m_framecnt;
 	uint8_t m_cursor_pos[3];
 	uint8_t m_p_cursor_pos;
 	bool m_ram_ctrl;
 	uint8_t m_scroll_ctrl;
 	virtual void machine_reset() override;
-	virtual void video_start() override;
-
-protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 };
 
@@ -83,7 +82,7 @@ READ8_MEMBER(argo_state::argo_io_r)
 	{
 	case 0xA1: // keyboard
 		char kbdrow[6];
-		sprintf(kbdrow,"X%X",offset>>8);
+		sprintf(kbdrow,"X%X",uint8_t(offset>>8));
 		return ioport(kbdrow)->read();
 
 	case 0xE8: // wants bit 4 low then high
@@ -115,7 +114,7 @@ WRITE8_MEMBER(argo_state::argo_io_w)
 		{
 			uint8_t *RAM = memregion("videoram")->base();
 			m_scroll_ctrl = 0;
-			memcpy(RAM, RAM+80, 24*80);
+			memmove(RAM, RAM+80, 24*80);
 		}
 		break;
 
@@ -285,11 +284,6 @@ DRIVER_INIT_MEMBER(argo_state,argo)
 	membank("boot")->configure_entries(0, 2, &RAM[0x0000], 0xf800);
 }
 
-void argo_state::video_start()
-{
-	m_p_chargen = memregion("chargen")->base();
-}
-
 uint32_t argo_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
 {
 	uint8_t y,ra,chr,gfx;
@@ -348,7 +342,7 @@ uint32_t argo_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, 
 	return 0;
 }
 
-static MACHINE_CONFIG_START( argo, argo_state )
+static MACHINE_CONFIG_START( argo )
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 3500000)
 	MCFG_CPU_PROGRAM_MAP(argo_mem)
@@ -381,5 +375,5 @@ ROM_END
 
 /* Driver */
 
-/*    YEAR  NAME    PARENT  COMPAT   MACHINE    INPUT    INIT    COMPANY           FULLNAME       FLAGS */
-COMP( 1986, argo,  0,      0,       argo,     argo, argo_state,    argo,     "<unknown>",   "Argo", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+/*    YEAR  NAME   PARENT  COMPAT   MACHINE   INPUT  STATE        INIT    COMPANY        FULLNAME  FLAGS */
+COMP( 1986, argo,  0,      0,       argo,     argo,  argo_state,  argo,   "<unknown>",   "Argo",   MACHINE_NOT_WORKING | MACHINE_NO_SOUND)

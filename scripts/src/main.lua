@@ -269,7 +269,7 @@ if (STANDALONE~=true) then
 	}
 if (_OPTIONS["osd"] ~= "uwp") then
 	links {
-		"linenoise-ng",
+		"linenoise",
 	}
 end
 end
@@ -301,6 +301,7 @@ end
 	end
 	links {
 		"bgfx",
+		"bx",
 		"ocore_" .. _OPTIONS["osd"],
 	}
 

@@ -14,6 +14,7 @@
 
 ***************************************************************************/
 
+#include "emu.h"
 #include "includes/hh_ucom4.h"
 
 #include "tb303.lh"
@@ -245,7 +246,7 @@ void tb303_state::machine_start()
 	save_item(NAME(m_ram_we));
 }
 
-static MACHINE_CONFIG_START( tb303, tb303_state )
+static MACHINE_CONFIG_START( tb303 )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", NEC_D650, TP2_HZ)
@@ -285,4 +286,4 @@ ROM_START( tb303 )
 ROM_END
 
 
-CONS( 1982, tb303, 0, 0, tb303, tb303, driver_device, 0, "Roland", "TB-303 Bass Line", MACHINE_NOT_WORKING | MACHINE_NO_SOUND | MACHINE_SUPPORTS_SAVE )
+CONS( 1982, tb303, 0, 0, tb303, tb303, tb303_state, 0, "Roland", "TB-303 Bass Line", MACHINE_NOT_WORKING | MACHINE_NO_SOUND | MACHINE_SUPPORTS_SAVE )

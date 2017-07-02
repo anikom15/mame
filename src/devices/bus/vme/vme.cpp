@@ -76,17 +76,15 @@
 
 #define LOG_GENERAL 0x01
 #define LOG_SETUP   0x02
-#define LOG_PRINTF  0x04
 
-#define VERBOSE 0 //(LOG_PRINTF | LOG_SETUP  | LOG_GENERAL)
+//#define VERBOSE (LOG_SETUP | LOG_GENERAL)
 
-#define LOGMASK(mask, ...)   do { if (VERBOSE & mask) logerror(__VA_ARGS__); } while (0)
-#define LOGLEVEL(mask, level, ...) do { if ((VERBOSE & mask) >= level) logerror(__VA_ARGS__); } while (0)
+#define LOG_OUTPUT_FUNC printf // logerror is not available here
 
-#define LOG(...)      LOGMASK(LOG_GENERAL, __VA_ARGS__)
-#define LOGSETUP(...) LOGMASK(LOG_SETUP,   __VA_ARGS__)
+#include "logmacro.h"
 
-#define logerror printf // logerror is not available here
+#define LOG(...)      LOGMASKED(LOG_GENERAL, __VA_ARGS__)
+#define LOGSETUP(...) LOGMASKED(LOG_SETUP,   __VA_ARGS__)
 
 #ifdef _MSC_VER
 #define FUNCNAME __func__
@@ -98,31 +96,36 @@
 //  GLOBAL VARIABLES
 //**************************************************************************
 
-const device_type VME_SLOT = &device_creator<vme_slot_device>;
+DEFINE_DEVICE_TYPE(VME_SLOT, vme_slot_device, "vme_slot", "VME slot")
 
 //-------------------------------------------------
 //  vme_slot_device - constructor
 //-------------------------------------------------
-vme_slot_device::vme_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
-		device_t(mconfig, VME_SLOT, "VME_SLOT", tag, owner, clock, "vme_slot", __FILE__)
-		,device_slot_interface(mconfig, *this)
-		,m_vme_tag(nullptr)
-		,m_vme_slottag(nullptr)
-		,m_vme_j1_callback(*this)
+vme_slot_device::vme_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: vme_slot_device(mconfig, VME_SLOT, tag, owner, clock)
 {
 }
 
-vme_slot_device::vme_slot_device(const machine_config &mconfig, device_type type, const char *name, const char *tag, device_t *owner, uint32_t clock, const char *shortname, const char *source) :
-		device_t(mconfig, type, name, tag, owner, clock, shortname, source),
-		device_slot_interface(mconfig, *this)
-		,m_vme_tag(nullptr)
-		,m_vme_slottag(nullptr)
-		,m_vme_j1_callback(*this)
+vme_slot_device::vme_slot_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, type, tag, owner, clock)
+	, device_slot_interface(mconfig, *this)
+	, m_vme_tag(nullptr)
+	, m_vme_slottag(nullptr)
+	, m_vme_j1_callback(*this)
 {
+	LOG("%s %s\n", tag, FUNCNAME);
 }
 
 //-------------------------------------------------
-//  device_start - device-specific startup
+//  static_update_vme_chains
+//-------------------------------------------------
+void vme_slot_device::static_update_vme_chains(device_t &device, uint32_t slot_nbr)
+{
+	LOG("%s %s - %d\n", FUNCNAME, device.tag(), slot_nbr);
+}
+
+//-------------------------------------------------
+//  static_set_vme_slot
 //-------------------------------------------------
 void vme_slot_device::static_set_vme_slot(device_t &device, const char *tag, const char *slottag)
 {
@@ -200,97 +203,191 @@ SLOT_INTERFACE_END
 // VME device P1
 //
 
-const device_type VME = &device_creator<vme_device>;
+DEFINE_DEVICE_TYPE(VME, vme_device, "vme", "VME bus")
 
-vme_device::vme_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
-	device_t(mconfig, VME, "VME", tag, owner, clock, "vme", __FILE__)
+// static_set_cputag - used to be able to lookup the CPU owning this VME bus
+void vme_device::static_set_cputag(device_t &device, const char *tag)
+{
+	vme_device &vme = downcast<vme_device &>(device);
+	vme.m_cputag = tag;
+}
+
+// static_set_use_owner_spaces - disables use of the memory interface and use the address spaces
+// of the owner instead. This is useful for VME buses where no address modifiers or arbitration is
+// being used and gives some gain in performance.
+void vme_device::static_use_owner_spaces(device_t &device)
+{
+	LOG("%s %s\n", device.tag(), FUNCNAME);
+	vme_device &vme = downcast<vme_device &>(device);
+
+	vme.m_allocspaces = false;
+}
+
+vme_device::vme_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
+	: vme_device(mconfig, VME, tag, owner, clock)
 {
 }
 
-vme_device::vme_device(const machine_config &mconfig, device_type type, const char *name, const char *tag, device_t *owner, uint32_t clock, const char *shortname, const char *source) :
-	device_t(mconfig, type, name, tag, owner, clock, shortname, source)
+vme_device::vme_device(const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock)
+	: device_t(mconfig, type, tag, owner, clock)
+	, device_memory_interface(mconfig, *this)
+	, m_a32_config("VME A32", ENDIANNESS_BIG, 32, 32, 0, nullptr)
+	, m_allocspaces(true)
+	, m_cputag("maincpu")
 {
+	LOG("%s %s\n", tag, FUNCNAME);
 }
 
 vme_device::~vme_device()
 {
+	LOG("%s %s\n", tag(), FUNCNAME);
 	m_device_list.detach_all();
 }
 
 void vme_device::device_start()
 {
+	LOG("%s %s %s\n", owner()->tag(), tag(), FUNCNAME);
+	if (m_allocspaces)
+	{
+		LOG(" - using my own memory spaces\n");
+		m_prgspace = &space(AS_PROGRAM);
+		m_prgwidth = m_prgspace->data_width();
+		LOG(" - Done at %d width\n", m_prgwidth);
+	}
+	else    // use host CPU's spaces directly
+	{
+		LOG(" - using owner memory spaces for %s\n", m_cputag);
+		m_maincpu = owner()->subdevice<cpu_device>(m_cputag);
+		m_prgspace = &m_maincpu->space(AS_PROGRAM);
+		m_prgwidth = m_maincpu->space_config(AS_PROGRAM)->m_databus_width;
+		LOG(" - Done at %d width\n", m_prgwidth);
+	}
 }
 
 void vme_device::device_reset()
 {
+	LOG("%s %s\n", tag(), FUNCNAME);
 }
 
 void vme_device::add_vme_card(device_vme_card_interface *card)
 {
+	LOG("%s %s\n", tag(), FUNCNAME);
 	m_device_list.append(*card);
 }
 
-void vme_device::install_device(offs_t start, offs_t end, read8_delegate rhandler, write8_delegate whandler, uint32_t mask)
+#if 0
+/*
+ *  Install UB (Utility Bus) handlers for this board
+ *
+ * The Utility Bus signal lines
+ *------------------------------
+ * System Clock (SYSCLK)
+ * Serial Clock (SERCLK)
+ * Serial Data (SERDAT*)
+ * AC Fail (ACFAIL*)
+ * System Reset (SYSRESET*)
+ * System Failure (SYSFAIL*)
+ *------------------------------
+ */
+void vme_device::install_ub_handler(offs_t start, offs_t end, read8_delegate rhandler, write8_delegate whandler, uint32_t mask)
 {
-	cpu_device  *m_maincpu = machine().device<cpu_device>("maincpu");
+}
+#endif
 
-	int buswidth = m_maincpu->space_config(AS_PROGRAM)->m_databus_width;
-	LOG("%s width:%d\n", FUNCNAME, buswidth);
-	switch(buswidth)
+/*
+ *  Install DTB (Data Transfer Bus) handlers for this board
+ */
+
+// D8 bit devices in A16, A24 and A32
+void vme_device::install_device(vme_amod_t amod, offs_t start, offs_t end, read8_delegate rhandler, write8_delegate whandler, uint32_t mask)
+{
+	LOG("%s %s AM%d D%02x\n", tag(), FUNCNAME, amod, m_prgwidth);
+
+	LOG(" - width:%d\n", m_prgwidth);
+
+	// TODO: support address modifiers and buscycles other than single access cycles
+	switch(amod)
 	{
-	case 32:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, mask);
+	case A16_SC: break;
+	case A24_SC: break;
+	case A32_SC: break;
+	default: fatalerror("VME D8: Non supported Address modifier: AM%02x\n", amod);
+	}
+
+	switch(m_prgwidth)
+	{
+	case 16:
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, (uint16_t)(mask & 0x0000ffff));
 		break;
 	case 24:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, mask);
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, (uint32_t)(mask & 0x00ffffff));
 		break;
-	case 16:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, (uint16_t)(mask & 0xffff));
+	case 32:
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, mask);
 		break;
-	default:
-		fatalerror("VME D8: Bus width %d not supported\n", buswidth);
+	default: fatalerror("VME D8: Bus width %d not supported\n", m_prgwidth);
 	}
 }
 
-void vme_device::install_device(offs_t start, offs_t end, read16_delegate rhandler, write16_delegate whandler, uint32_t mask)
+// D16 bit devices in A16, A24 and A32
+void vme_device::install_device(vme_amod_t amod, offs_t start, offs_t end, read16_delegate rhandler, write16_delegate whandler, uint32_t mask)
 {
-	cpu_device *m_maincpu = machine().device<cpu_device>("maincpu");
-	int buswidth = m_maincpu->space_config(AS_PROGRAM)->m_databus_width;
-	LOG("%s width:%d\n", FUNCNAME, buswidth);
-	switch(buswidth)
+	LOG("%s %s AM%d D%02x\n", tag(), FUNCNAME, amod, m_prgwidth);
+
+	LOG(" - width:%d\n", m_prgwidth);
+
+	// TODO: support address modifiers and buscycles other than single access cycles
+	switch(amod)
 	{
-	case 32:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, mask);
+	case A16_SC: break;
+	case A24_SC: break;
+	case A32_SC: break;
+	default: fatalerror("VME D16: Non supported Address modifier: %02x\n", amod);
+	}
+
+	switch(m_prgwidth)
+	{
+	case 16:
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, (uint16_t)(mask & 0x0000ffff));
 		break;
 	case 24:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, mask);
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, (uint32_t)(mask & 0x00ffffff));
 		break;
-	case 16:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, (uint16_t)(mask & 0xffff));
+	case 32:
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, mask);
 		break;
-	default:
-		fatalerror("VME D16: Bus width %d not supported\n", buswidth);
+	default: fatalerror("VME D16: Bus width %d not supported\n", m_prgwidth);
 	}
 }
 
-void vme_device::install_device(offs_t start, offs_t end, read32_delegate rhandler, write32_delegate whandler, uint32_t mask)
+// D32 bit devices in A16, A24 and A32
+void vme_device::install_device(vme_amod_t amod, offs_t start, offs_t end, read32_delegate rhandler, write32_delegate whandler, uint32_t mask)
 {
-	cpu_device *m_maincpu = machine().device<cpu_device>("maincpu");
-	int buswidth = m_maincpu->space_config(AS_PROGRAM)->m_databus_width;
-	LOG("%s width:%d\n", FUNCNAME, buswidth);
-	switch(buswidth)
+	LOG("%s %s AM%d D%02x\n", tag(), FUNCNAME, amod, m_prgwidth);
+
+	LOG(" - width:%d\n", m_prgwidth);
+
+	// TODO: support address modifiers and buscycles other than single access cycles
+	switch(amod)
 	{
-	case 32:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, mask);
+	case A16_SC: break;
+	case A24_SC: break;
+	case A32_SC: break;
+	default: fatalerror("VME D32: Non supported Address modifier: %02x\n", amod);
+	}
+
+	switch(m_prgwidth)
+	{
+	case 16:
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, (uint16_t)(mask & 0x0000ffff));
 		break;
 	case 24:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, mask);
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, (uint32_t)(mask & 0x00ffffff));
 		break;
-	case 16:
-		m_maincpu->space(AS_PROGRAM).install_readwrite_handler(start, end, rhandler, whandler, (uint16_t)(mask & 0xffff));
+	case 32:
+		m_prgspace->install_readwrite_handler(start, end, rhandler, whandler, mask);
 		break;
-	default:
-		fatalerror("VME D32: Bus width %d not supported\n", buswidth);
+	default: fatalerror("VME D32: Bus width %d not supported\n", m_prgwidth);
 	}
 }
 
@@ -316,6 +413,7 @@ device_vme_card_interface::~device_vme_card_interface()
 
 void device_vme_card_interface::static_set_vme_tag(device_t &device, const char *tag, const char *slottag)
 {
+	LOG("%s %s\n", tag, FUNCNAME);
 	device_vme_card_interface &vme_card = dynamic_cast<device_vme_card_interface &>(device);
 	vme_card.m_vme_tag = tag;
 	vme_card.m_vme_slottag = slottag;

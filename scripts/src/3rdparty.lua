@@ -574,7 +574,7 @@ project "lualibs"
 	}
 if (_OPTIONS["osd"] ~= "uwp") then
 	includedirs {
-		MAME_DIR .. "3rdparty/linenoise-ng/include",
+		MAME_DIR .. "3rdparty/linenoise",
 	}
 end
 	includedirs {
@@ -730,6 +730,77 @@ links {
 }
 end
 end
+
+--------------------------------------------------
+-- BX library objects
+--------------------------------------------------
+
+project "bx"
+	uuid "238318fe-49f5-4eb4-88be-0618900f5eac"
+	kind "StaticLib"
+
+	defines {
+		"__STDC_LIMIT_MACROS",
+		"__STDC_FORMAT_MACROS",
+		"__STDC_CONSTANT_MACROS",
+	}
+
+	configuration { "vs*" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/msvc",
+		}
+	configuration { "mingw*" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/mingw",
+		}
+
+	configuration { "osx* or xcode4" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/osx",
+		}
+
+	configuration { "freebsd" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/freebsd",
+		}
+
+	configuration { "netbsd" }
+		includedirs {
+			MAME_DIR .. "3rdparty/bx/include/compat/freebsd",
+		}
+
+	configuration { }
+
+	local version = str_to_version(_OPTIONS["gcc_version"])
+	if _OPTIONS["gcc"]~=nil and string.find(_OPTIONS["gcc"], "gcc") then
+		if version < 60000 then
+			buildoptions {
+				"-Wno-strict-overflow",
+			}
+		end
+	end
+
+	includedirs {
+		MAME_DIR .. "3rdparty/bx/include",
+	}
+
+	files {
+		MAME_DIR .. "3rdparty/bx/src/bx.cpp",
+		MAME_DIR .. "3rdparty/bx/src/commandline.cpp",
+		MAME_DIR .. "3rdparty/bx/src/crtnone.cpp",
+		MAME_DIR .. "3rdparty/bx/src/crtimpl.cpp",
+		MAME_DIR .. "3rdparty/bx/src/debug.cpp",
+		MAME_DIR .. "3rdparty/bx/src/dtoa.cpp",
+		MAME_DIR .. "3rdparty/bx/src/fpumath.cpp",
+		MAME_DIR .. "3rdparty/bx/src/mutex.cpp",
+		MAME_DIR .. "3rdparty/bx/src/os.cpp",
+		MAME_DIR .. "3rdparty/bx/src/semaphore.cpp",
+		MAME_DIR .. "3rdparty/bx/src/sort.cpp",
+		MAME_DIR .. "3rdparty/bx/src/string.cpp",
+		MAME_DIR .. "3rdparty/bx/src/timer.cpp",
+		MAME_DIR .. "3rdparty/bx/src/thread.cpp",
+	}
+
 --------------------------------------------------
 -- BGFX library objects
 --------------------------------------------------
@@ -874,20 +945,10 @@ end
 		MAME_DIR .. "3rdparty/bgfx/src/shader_spirv.cpp",
 		MAME_DIR .. "3rdparty/bgfx/src/topology.cpp",
 		MAME_DIR .. "3rdparty/bgfx/src/vertexdecl.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/bgfx_utils.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/bounds.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/camera.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/cube_atlas.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/font/font_manager.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/font/text_buffer_manager.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/font/text_metrics.cpp",
-		MAME_DIR .. "3rdparty/bgfx/examples/common/font/utf8.cpp",
 		MAME_DIR .. "3rdparty/bgfx/examples/common/imgui/imgui.cpp",
 		MAME_DIR .. "3rdparty/bgfx/examples/common/imgui/ocornut_imgui.cpp",
 		MAME_DIR .. "3rdparty/bgfx/examples/common/nanovg/nanovg.cpp",
 		MAME_DIR .. "3rdparty/bgfx/examples/common/nanovg/nanovg_bgfx.cpp",
-		MAME_DIR .. "3rdparty/bgfx/3rdparty/ib-compress/indexbuffercompression.cpp",
-		MAME_DIR .. "3rdparty/bgfx/3rdparty/ib-compress/indexbufferdecompression.cpp",
 		MAME_DIR .. "3rdparty/bgfx/3rdparty/ocornut-imgui/imgui.cpp",
 		MAME_DIR .. "3rdparty/bgfx/3rdparty/ocornut-imgui/imgui_draw.cpp",
 	}
@@ -1570,10 +1631,10 @@ end
 end
 
 --------------------------------------------------
--- linenoise-ng library
+-- linenoise library
 --------------------------------------------------
 if (_OPTIONS["osd"] ~= "uwp") then
-project "linenoise-ng"
+project "linenoise"
 	uuid "7320ffc8-2748-4add-8864-ae29b72a8511"
 	kind (LIBTYPE)
 
@@ -1587,13 +1648,12 @@ project "linenoise-ng"
 	configuration { }
 
 	includedirs {
-		MAME_DIR .. "3rdparty/linenoise-ng/include",
+		MAME_DIR .. "3rdparty/linenoise",
 	}
 
 	files {
-		MAME_DIR .. "3rdparty/linenoise-ng/src/ConvertUTF.cpp",
-		MAME_DIR .. "3rdparty/linenoise-ng/src/linenoise.cpp",
-		MAME_DIR .. "3rdparty/linenoise-ng/src/wcwidth.cpp",
+		MAME_DIR .. "3rdparty/linenoise/utf8.c",
+		MAME_DIR .. "3rdparty/linenoise/linenoise.c",
 	}
 end
 

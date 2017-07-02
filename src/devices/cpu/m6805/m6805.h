@@ -12,9 +12,9 @@
 //**************************************************************************
 
 // device type definition
-extern const device_type M6805;
-extern const device_type M68HC05EG;
-extern const device_type HD63705;
+DECLARE_DEVICE_TYPE(M6805,     m6805_device)
+DECLARE_DEVICE_TYPE(M68HC05EG, m68hc05eg_device)
+DECLARE_DEVICE_TYPE(HD63705,   hd63705_device)
 
 // ======================> m6805_base_device
 
@@ -92,21 +92,15 @@ protected:
 			device_t *owner,
 			uint32_t clock,
 			device_type const type,
-			char const *name,
-			configuration_params const &params,
-			char const *shortname,
-			char const *source);
+			configuration_params const &params);
 	m6805_base_device(
 			machine_config const &mconfig,
 			char const *tag,
 			device_t *owner,
 			uint32_t clock,
 			device_type const type,
-			char const *name,
 			configuration_params const &params,
-			address_map_delegate internal_map,
-			char const *shortname,
-			char const *source);
+			address_map_delegate internal_map);
 
 	// device-level overrides
 	virtual void device_start() override;
@@ -117,7 +111,7 @@ protected:
 	virtual uint32_t execute_max_cycles() const override;
 	virtual uint32_t execute_input_lines() const override;
 	virtual void execute_run() override;
-	virtual void execute_set_input(int inputnum, int state) override = 0;
+	virtual void execute_set_input(int inputnum, int state) override;
 	virtual uint64_t execute_clocks_to_cycles(uint64_t clocks) const override;
 	virtual uint64_t execute_cycles_to_clocks(uint64_t cycles) const override;
 
@@ -181,8 +175,7 @@ protected:
 	template <bool C> void bhcc();
 	template <bool C> void bpl();
 	template <bool C> void bmc();
-	virtual void bil();
-	virtual void bih();
+	template <bool C> void bil();
 	void bsr();
 
 	template <addr_mode M> void neg();
@@ -260,6 +253,7 @@ protected:
 
 	virtual void interrupt();
 	virtual void interrupt_vector();
+	virtual bool test_il();
 
 	configuration_params const m_params;
 
@@ -296,9 +290,6 @@ class m6805_device : public m6805_base_device
 public:
 	// construction/destruction
 	m6805_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock);
-
-protected:
-	virtual void execute_set_input(int inputnum, int state) override;
 };
 
 
@@ -313,8 +304,6 @@ public:
 protected:
 	// device-level overrides
 	virtual void device_reset() override;
-
-	virtual void execute_set_input(int inputnum, int state) override;
 
 	virtual void interrupt_vector() override;
 };
@@ -334,10 +323,7 @@ protected:
 	virtual void execute_set_input(int inputnum, int state) override;
 
 	virtual void interrupt_vector() override;
-
-	// opcodes
-	virtual void bil() override;
-	virtual void bih() override;
+	virtual bool test_il() override { return m_nmi_state != CLEAR_LINE; }
 };
 
 #define M6805_IRQ_LINE      0

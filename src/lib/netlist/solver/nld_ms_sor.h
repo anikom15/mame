@@ -14,8 +14,8 @@
 
 #include <algorithm>
 
-#include "solver/nld_ms_direct.h"
-#include "solver/nld_solver.h"
+#include "nld_ms_direct.h"
+#include "nld_solver.h"
 
 namespace netlist
 {
@@ -32,7 +32,7 @@ public:
 		{
 		}
 
-	virtual ~matrix_solver_SOR_t() {}
+	virtual ~matrix_solver_SOR_t() override {}
 
 	virtual void vsetup(analog_net_t::list_t &nets) override;
 	virtual unsigned vsolve_non_dynamic(const bool newton_raphson) override;

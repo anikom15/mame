@@ -31,7 +31,8 @@ namespace plib {
 	}
 
 	option::option(options &parent, pstring ashort, pstring along, pstring help, bool has_argument)
-	: option_base(parent, help), m_short(ashort), m_long(along),  m_has_argument(has_argument)
+	: option_base(parent, help), m_short(ashort), m_long(along),
+	  m_has_argument(has_argument), m_specified(false)
 	{
 	}
 
@@ -132,30 +133,32 @@ namespace plib {
 			}
 			else if (arg.startsWith("-"))
 			{
-				auto p = arg.begin() + 1;
-				opt = getopt_short(arg.substr(p,p + 1));
+				std::size_t p = 1;
+				opt = getopt_short(arg.substr(p, 1));
 				++p;
-				if (p != arg.end())
+				if (p < arg.length())
 				{
 					has_equal_arg = true;
 					opt_arg = arg.substr(p);
 				}
 			}
 			else
+			{
 				return i;
+			}
 			if (opt == nullptr)
 				return i;
 			if (opt->has_argument())
 			{
 				if (has_equal_arg)
 				{
-					if (opt->parse(opt_arg) != 0)
+					if (opt->do_parse(opt_arg) != 0)
 						return i;
 				}
 				else
 				{
 					i++; // FIXME: are there more arguments?
-					if (opt->parse(pstring(argv[i], pstring::UTF8)) != 0)
+					if (opt->do_parse(pstring(argv[i], pstring::UTF8)) != 0)
 						return i - 1;
 				}
 			}
@@ -163,7 +166,7 @@ namespace plib {
 			{
 				if (has_equal_arg)
 					return i;
-				opt->parse("");
+				opt->do_parse("");
 			}
 			i++;
 		}
@@ -181,7 +184,7 @@ namespace plib {
 			pstring line = pstring("").rpad(" ", firstline_indent);
 			for (auto &s : psplit(p, " "))
 			{
-				if (line.len() + s.len() > width)
+				if (line.length() + s.length() > width)
 				{
 					ret += line + "\n";
 					line = pstring("").rpad(" ", indent);
@@ -225,14 +228,14 @@ namespace plib {
 							{
 								line += v + "|";
 							}
-							line = line.left(line.begin() + (line.len() - 1));
+							line = line.left(line.length() - 1);
 						}
 						else
 							line += "Value";
 					}
 				}
 				line = line.rpad(" ", indent - 2) + "  ";
-				if (line.len() > indent)
+				if (line.length() > indent)
 				{
 					//ret += "TestGroup abc\n  def gef\nxyz\n\n" ;
 					ret += line + "\n";
@@ -256,7 +259,7 @@ namespace plib {
 				ex += split_paragraphs(example->help(), width, 4, 4) + "\n";
 			}
 		}
-		if (ex.len() > 0)
+		if (ex.length() > 0)
 		{
 			ret += "\n\nExamples:\n\n" + ex;
 		}
@@ -285,3 +288,4 @@ namespace plib {
 	}
 
 } // namespace plib
+
