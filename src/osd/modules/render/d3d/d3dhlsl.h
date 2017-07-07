@@ -65,6 +65,9 @@ public:
 		CU_NTSC_HTIME,
 		CU_NTSC_ENABLE,
 
+		CU_INPUT_GAMMA_ENABLE,
+		CU_INPUT_GAMMA,
+
 		CU_COLOR_RED_RATIOS,
 		CU_COLOR_GRN_RATIOS,
 		CU_COLOR_BLU_RATIOS,
@@ -169,6 +172,8 @@ struct hlsl_options
 {
 	bool                    params_init;
 	bool                    params_dirty;
+	int                     input_gamma_enable;
+	float                   input_gamma;
 	int                     shadow_mask_tile_mode;
 	float                   shadow_mask_alpha;
 	char                    shadow_mask_texture[1024];
@@ -328,6 +333,7 @@ private:
 	rgb_t                   apply_color_convolution(rgb_t color);
 
 	// Shader passes
+	int                     gamma_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     ntsc_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     color_convolution_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     prescale_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
@@ -379,6 +385,7 @@ private:
 	effect *                curr_effect;                // pointer to the currently active effect object
 	effect *                default_effect;             // pointer to the primary-effect object
 	effect *                prescale_effect;            // pointer to the prescale-effect object
+	effect *                gamma_effect;
 	effect *                post_effect;                // pointer to the post-effect object
 	effect *                distortion_effect;          // pointer to the distortion-effect object
 	effect *                focus_effect;               // pointer to the focus-effect object

@@ -25,6 +25,7 @@
 #include "strconv.h"
 #include "d3dhlsl.h"
 #include "../frontend/mame/ui/slider.h"
+
 #include <utility>
 
 //============================================================
@@ -166,10 +167,10 @@ shaders::shaders() :
 	black_surface(nullptr), black_texture(nullptr), recording_movie(false), render_snap(false),
 	snap_copy_target(nullptr), snap_copy_texture(nullptr), snap_target(nullptr), snap_texture(nullptr),
 	snap_width(0), snap_height(0), initialized(false), backbuffer(nullptr), curr_effect(nullptr),
-	default_effect(nullptr), prescale_effect(nullptr), post_effect(nullptr), distortion_effect(nullptr),
-	focus_effect(nullptr), phosphor_effect(nullptr), deconverge_effect(nullptr), color_effect(nullptr),
-	ntsc_effect(nullptr), bloom_effect(nullptr), downsample_effect(nullptr), vector_effect(nullptr),
-	curr_texture(nullptr), curr_render_target(nullptr), curr_poly(nullptr),
+	default_effect(nullptr), prescale_effect(nullptr), gamma_effect(nullptr), post_effect(nullptr),
+	distortion_effect(nullptr), focus_effect(nullptr), phosphor_effect(nullptr), deconverge_effect(nullptr),
+	color_effect(nullptr), ntsc_effect(nullptr), bloom_effect(nullptr), downsample_effect(nullptr),
+	vector_effect(nullptr), curr_texture(nullptr), curr_render_target(nullptr), curr_poly(nullptr),
 	d3dx_create_effect_from_file_ptr(nullptr)
 {
 }
@@ -406,6 +407,10 @@ void shaders::set_texture(texture_info *texture)
 	{
 		ntsc_effect->set_texture("Diffuse", (texture == nullptr) ? default_texture->get_finaltex() : texture->get_finaltex());
 	}
+	else if (options->input_gamma_enable)
+	{
+		gamma_effect->set_texture("Diffuse", (texture == nullptr) ? default_texture->get_finaltex() : texture->get_finaltex());
+	}
 	else
 	{
 		color_effect->set_texture("Diffuse", (texture == nullptr) ? default_texture->get_finaltex() : texture->get_finaltex());
@@ -477,6 +482,8 @@ bool shaders::init(d3d_base *d3dintf, running_machine *machine, renderer_d3d9 *r
 	// read options if not initialized
 	if (!options->params_init)
 	{
+		options->input_gamma_enable = winoptions.screen_input_gamma_enable();
+		options->input_gamma = winoptions.screen_input_gamma();
 		strncpy(options->shadow_mask_texture, winoptions.screen_shadow_mask_texture(), sizeof(options->shadow_mask_texture));
 		options->shadow_mask_tile_mode = winoptions.screen_shadow_mask_tile_mode();
 		options->shadow_mask_alpha = winoptions.screen_shadow_mask_alpha();
@@ -700,6 +707,7 @@ int shaders::create_resources()
 	const char *fx_dir = downcast<windows_options &>(machine->options()).screen_post_fx_dir();
 
 	default_effect = new effect(this, d3d->get_device(), "primary.fx", fx_dir);
+	gamma_effect = new effect(this, d3d->get_device(), "gamma.fx", fx_dir);
 	post_effect = new effect(this, d3d->get_device(), "post.fx", fx_dir);
 	distortion_effect = new effect(this, d3d->get_device(), "distortion.fx", fx_dir);
 	prescale_effect = new effect(this, d3d->get_device(), "prescale.fx", fx_dir);
@@ -713,6 +721,7 @@ int shaders::create_resources()
 	vector_effect = new effect(this, d3d->get_device(), "vector.fx", fx_dir);
 
 	if (!default_effect->is_valid() ||
+		!gamma_effect->is_valid() ||
 		!post_effect->is_valid() ||
 		!distortion_effect->is_valid() ||
 		!prescale_effect->is_valid() ||
@@ -728,7 +737,9 @@ int shaders::create_resources()
 		return 1;
 	}
 
-	effect *effects[13] = {
+	const int EFFECT_COUNT = 14;
+
+	effect *effects[EFFECT_COUNT] = {
 		default_effect,
 		post_effect,
 		distortion_effect,
@@ -738,13 +749,14 @@ int shaders::create_resources()
 		deconverge_effect,
 		color_effect,
 		ntsc_effect,
+		gamma_effect,
 		color_effect,
 		bloom_effect,
 		downsample_effect,
 		vector_effect
 	};
 
-	for (int i = 0; i < 13; i++)
+	for (int i = 0; i < EFFECT_COUNT; i++)
 	{
 		effects[i]->add_uniform("SourceDims", uniform::UT_VEC2, uniform::CU_SOURCE_DIMS);
 		effects[i]->add_uniform("TargetDims", uniform::UT_VEC2, uniform::CU_TARGET_DIMS);
@@ -766,6 +778,9 @@ int shaders::create_resources()
 	ntsc_effect->add_uniform("IFreqResponse", uniform::UT_FLOAT, uniform::CU_NTSC_IFREQ);
 	ntsc_effect->add_uniform("QFreqResponse", uniform::UT_FLOAT, uniform::CU_NTSC_QFREQ);
 	ntsc_effect->add_uniform("ScanTime", uniform::UT_FLOAT, uniform::CU_NTSC_HTIME);
+
+	gamma_effect->add_uniform("GammaEnable", uniform::UT_BOOL, uniform::CU_INPUT_GAMMA_ENABLE);
+	gamma_effect->add_uniform("Gamma", uniform::UT_FLOAT, uniform::CU_INPUT_GAMMA);
 
 	color_effect->add_uniform("RedRatios", uniform::UT_VEC3, uniform::CU_COLOR_RED_RATIOS);
 	color_effect->add_uniform("GrnRatios", uniform::UT_VEC3, uniform::CU_COLOR_GRN_RATIOS);
@@ -838,6 +853,7 @@ void shaders::begin_draw()
 	deconverge_effect->set_technique("DefaultTechnique");
 	color_effect->set_technique("DefaultTechnique");
 	ntsc_effect->set_technique("DefaultTechnique");
+	gamma_effect->set_technique("DefaultTechnique");
 	color_effect->set_technique("DefaultTechnique");
 	bloom_effect->set_technique("DefaultTechnique");
 	downsample_effect->set_technique("DefaultTechnique");
@@ -943,8 +959,23 @@ int shaders::ntsc_pass(d3d_render_target *rt, int source_index, poly_info *poly,
 	next_index = rt->next_index(next_index);
 	blit(rt->source_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
 
-	color_effect->set_texture("Diffuse", rt->source_texture[next_index]);
+	gamma_effect->set_texture("Diffuse", rt->source_texture[next_index]);
 
+	return next_index;
+}
+
+int shaders::gamma_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum)
+{
+	int next_index = source_index;
+
+	if (!options->input_gamma_enable)
+		return next_index;
+	curr_effect = gamma_effect;
+	curr_effect->update_uniforms();
+	// initial "Diffuse" texture is set in shaders::set_texture() or the result of shaders::ntsc_pass()
+	next_index = rt->next_index(next_index);
+	blit(rt->source_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	color_effect->set_texture("Diffuse", rt->source_texture[next_index]);
 	return next_index;
 }
 
@@ -994,9 +1025,7 @@ int shaders::color_convolution_pass(d3d_render_target *rt, int source_index, pol
 
 	curr_effect = color_effect;
 	curr_effect->update_uniforms();
-
-	// initial "Diffuse" texture is set in shaders::set_texture() or the result of shaders::ntsc_pass()
-
+	// initial "Diffuse" texture is set in shaders::set_texture() or the result of shaders::gamma_pass()
 	next_index = rt->next_index(next_index);
 	blit(rt->source_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
 
@@ -1354,6 +1383,7 @@ void shaders::render_quad(poly_info *poly, int vertnum)
 		int next_index = 0;
 
 		next_index = ntsc_pass(rt, next_index, poly, vertnum); // handled in bgfx
+		next_index = gamma_pass(rt, next_index, poly, vertnum);
 		next_index = color_convolution_pass(rt, next_index, poly, vertnum); // handled in bgfx
 		next_index = prescale_pass(rt, next_index, poly, vertnum); // handled in bgfx
 		next_index = deconverge_pass(rt, next_index, poly, vertnum); // handled in bgfx
@@ -1710,6 +1740,11 @@ void shaders::delete_resources()
 		delete default_effect;
 		default_effect = nullptr;
 	}
+	if (gamma_effect != nullptr)
+	{
+		delete gamma_effect;
+		gamma_effect = nullptr;
+	}
 	if (post_effect != nullptr)
 	{
 		delete post_effect;
@@ -1907,6 +1942,8 @@ enum slider_option
 	SLIDER_VECTOR_BEAM_SMOOTH = 0,
 	SLIDER_VECTOR_ATT_MAX,
 	SLIDER_VECTOR_ATT_LEN_MIN,
+	SLIDER_INPUT_GAMMA_ENABLE,
+	SLIDER_INPUT_GAMMA,
 	SLIDER_SHADOW_MASK_TILE_MODE,
 	SLIDER_SHADOW_MASK_ALPHA,
 	SLIDER_SHADOW_MASK_X_COUNT,
@@ -1985,6 +2022,8 @@ slider_desc shaders::s_sliders[] =
 	{ "Vector Beam Smooth Amount",          0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_VECTOR,        SLIDER_VECTOR_BEAM_SMOOTH,      0.01f,    "%1.2f", {} },
 	{ "Vector Attenuation Maximum",         0,    50,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_VECTOR,        SLIDER_VECTOR_ATT_MAX,          0.01f,    "%1.2f", {} },
 	{ "Vector Attenuation Length Minimum",  1,   500,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_VECTOR,        SLIDER_VECTOR_ATT_LEN_MIN,      0.001f,   "%1.3f", {} },
+	{ "Input Gamma Processing",             0,     1,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_INPUT_GAMMA_ENABLE,      0,        "%s",    { "Off", "On" } },
+	{ "Input Gamma Exponent",             100,   240,   300, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_INPUT_GAMMA,             0.01f,    "%1.2f", {} },
 	{ "Shadow Mask Tile Mode",              0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_TILE_MODE,   0,        "%s",    { "Screen", "Source" } },
 	{ "Shadow Mask Amount",                 0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_ALPHA,       0.01f,    "%1.2f", {} },
 	{ "Shadow Mask Pixel X Count",          1,     1,  1024, 1, SLIDER_INT,      SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_X_COUNT,     0,        "%d",    {} },
@@ -2057,6 +2096,8 @@ void *shaders::get_slider_option(int id, int index)
 		case SLIDER_VECTOR_BEAM_SMOOTH: return &(options->vector_beam_smooth);
 		case SLIDER_VECTOR_ATT_MAX: return &(options->vector_length_scale);
 		case SLIDER_VECTOR_ATT_LEN_MIN: return &(options->vector_length_ratio);
+		case SLIDER_INPUT_GAMMA_ENABLE: return &(options->input_gamma_enable);
+		case SLIDER_INPUT_GAMMA: return &(options->input_gamma);
 		case SLIDER_SHADOW_MASK_TILE_MODE: return &(options->shadow_mask_tile_mode);
 		case SLIDER_SHADOW_MASK_ALPHA: return &(options->shadow_mask_alpha);
 		case SLIDER_SHADOW_MASK_X_COUNT: return &(options->shadow_mask_count_x);
@@ -2198,7 +2239,6 @@ void shaders::init_slider_list()
 		}
 	}
 }
-
 
 //============================================================
 //  uniform functions
@@ -2344,6 +2384,13 @@ void uniform::update()
 			break;
 		case CU_NTSC_ENABLE:
 			m_shader->set_float("YIQEnable", options->yiq_enable ? 1.0f : 0.0f);
+			break;
+
+		case CU_INPUT_GAMMA_ENABLE:
+			m_shader->set_bool("GammaEnable", options->input_gamma_enable);
+			break;
+		case CU_INPUT_GAMMA:
+			m_shader->set_float("Gamma", options->input_gamma);
 			break;
 
 		case CU_COLOR_RED_RATIOS:
