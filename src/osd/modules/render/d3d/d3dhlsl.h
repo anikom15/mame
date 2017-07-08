@@ -67,6 +67,8 @@ public:
 
 		CU_INPUT_GAMMA_ENABLE,
 		CU_INPUT_GAMMA,
+		CU_COLOR_SPACE,
+		CU_PHOSPHOR_TYPE,
 
 		CU_COLOR_RED_RATIOS,
 		CU_COLOR_GRN_RATIOS,
@@ -174,6 +176,8 @@ struct hlsl_options
 	bool                    params_dirty;
 	int                     input_gamma_enable;
 	float                   input_gamma;
+	int                     color_space;
+	int                     phosphor_type;
 	int                     shadow_mask_tile_mode;
 	float                   shadow_mask_alpha;
 	char                    shadow_mask_texture[1024];

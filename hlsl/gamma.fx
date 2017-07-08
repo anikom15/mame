@@ -102,14 +102,102 @@ VS_OUTPUT vs_main(VS_INPUT Input)
 // Gamma Pixel Shader
 //-----------------------------------------------------------------------------
 
+// Color Correction Matrices
+//
+// sRGB uses a white point D65.  It is identical to Rec. 709 used for HD
+// video.  Note that UHD and digital cinema formats use a different gamut.
+//
+// NTSC 1953 uses a wide gamut with white point C.
+//
+// NTSC 1987 uses a distinct gamut with white point D65.
+//
+// NTSC-J uses the same gamut as NTSC 1987, but uses a white point around
+// 9300 K.
+//
+// PAL 525 was used for all analog 525-line systems.  It uses the same gamut
+// as NTSC 1987, but with white point C.
+//
+// SECAM/PAL 625 was used for all analog 625-line systems.  It uses a gamut
+// nearly identical to sRGB with white point D65.
+//
+// Apple RGB has a unique gamut that mimics the 13" Apple RGB monitor. It uses
+// white D65.
+
+static const float3x3 SRGB_TO_SRGB = { 1.0f, 0.0f, 0.0f,
+                                       0.0f, 1.0f, 0.0f,
+				       0.0f, 0.0f, 1.0f
+                                     };
+
+static const float3x3 NTSC_1953_TO_SRGB = {  1.5073f, -0.3724f, -0.0833f,
+                                            -0.0273f,  0.9350f,  0.0669f,
+                                            -0.0271f,  0.0401f,  1.1672f
+                                          };
+static const float3x3 NTSC_1987_TO_SRGB = {  0.9394f,  0.0502f, 0.0102f,
+                                             0.0179f,  0.9658f, 0.0164f,
+					    -0.0016f, -0.0044f, 1.0060f
+                                          };
+static const float3x3 NTSC_J_TO_SRGB = {  0.8292f,  0.0497f, 0.0140f,
+                                          0.0158f,  0.9561f, 0.0225f,
+					 -0.0014f, -0.0043f, 1.3772f
+                                       };
+static const float3x3 PAL_525_TO_SRGB = {  0.9917f,  0.0487f, 0.0112f,
+                                           0.0189f,  0.9377f, 0.0181f,
+					  -0.0017f, -0.0042f, 1.1058f
+                                        };
+static const float3x3 SECAM_TO_SRGB = { 1.0439f, -0.0440f, -0.0000f,
+                                        0.0001f,  1.0000f, -0.0000f,
+					0.0000f,  0.0118f,  0.9882f
+                                      };
+static const float3x3 APPLE_RGB_TO_SRGB = { 1.0686f, -0.0786f, 0.0099f,
+                                            0.0242f,  0.9601f, 0.0158f,
+					    0.0252f,  0.0298f, 0.9686f
+                                          };
+static const float3x3 CORRECTION_MATRIX[] = {
+	SRGB_TO_SRGB,
+	NTSC_1953_TO_SRGB,
+	NTSC_1987_TO_SRGB,
+	NTSC_J_TO_SRGB,
+	PAL_525_TO_SRGB,
+	SECAM_TO_SRGB,
+	APPLE_RGB_TO_SRGB
+};
+static const float3 LUMA_REC_709 = { 0.2126f, 0.7152f, 0.0722f };
+static const float3x3 XYZ_TO_SRGB = {  3.2406f, -1.5372f, -0.4986f,
+                                      -0.9689f,  1.8758f,  0.0415f,
+				       0.0557f, -0.2040f,  1.0570f
+                                    };
+static const float2 PCOLOR = { 0.0f, 0.0f };
+static const float2 P1 = { 0.218f, 0.712f };
+static const float2 P3 = { 0.523f, 0.469f };
+static const float2 P4 = { 0.265f, 0.285f };
+static const float2 PHOSPHOR[] = {
+	PCOLOR,
+	P1,
+	P3,
+	P4
+};
+
 uniform float Gamma = 1.0f;
+uniform int ColorSpace = 0;
+uniform int PhosphorType = 0;
 
 float4 ps_main(PS_INPUT Input) : COLOR
 {
 	float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
 
 	float3 OutRGB = pow(BaseTexel.rgb, float3(Gamma, Gamma, Gamma));
-
+	OutRGB = ColorSpace <= 6 ?
+	         mul(CORRECTION_MATRIX[ColorSpace], OutRGB) :
+		 OutRGB;
+	if (PhosphorType > 0 && PhosphorType <= 3)
+	{
+		float x = PHOSPHOR[PhosphorType][0];
+		float y = PHOSPHOR[PhosphorType][1];
+		float Y = dot(LUMA_REC_709, OutRGB);
+		float X = x * (Y / y);
+		float Z = (1.0f - x - y) * (Y / y);
+		OutRGB = mul(XYZ_TO_SRGB, float3(X, Y, Z));
+	}
 	return float4(OutRGB, BaseTexel.a);
 }
 

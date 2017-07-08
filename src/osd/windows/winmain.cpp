@@ -178,6 +178,8 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_HLSL_SNAP_HEIGHT,                               "1536",              OPTION_STRING,     "HLSL upscaled-snapshot height" },
 	{ WINOPTION_INPUT_GAMMA_ENABLE";input_gamma_enable",        "0",                 OPTION_BOOLEAN,    "enable HLSL gamma correction" },
 	{ WINOPTION_INPUT_GAMMA";input_gamma",                      "2.4",               OPTION_FLOAT,      "gamma decoding exponent" },
+	{ WINOPTION_COLOR_SPACE";color_space",                      "0",                 OPTION_INTEGER,    "color space of simulated display" },
+	{ WINOPTION_PHOSPHOR_TYPE";phosphor_type",                  "0",                 OPTION_INTEGER,    "screen phosphor to simulate" },
 	{ WINOPTION_SHADOW_MASK_TILE_MODE,                          "0",                 OPTION_INTEGER,    "shadow mask tile mode (0 for screen based, 1 for source based)" },
 	{ WINOPTION_SHADOW_MASK_ALPHA";fs_shadwa(0.0-1.0)",         "0.0",               OPTION_FLOAT,      "shadow mask alpha-blend value (1.0 is fully blended, 0.0 is no mask)" },
 	{ WINOPTION_SHADOW_MASK_TEXTURE";fs_shadwt(0.0-1.0)",       "shadow-mask.png",   OPTION_STRING,     "shadow mask texture name" },

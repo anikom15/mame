@@ -34,6 +34,8 @@
 #define WINOPTION_HLSL_SNAP_HEIGHT          "hlsl_snap_height"
 #define WINOPTION_INPUT_GAMMA_ENABLE        "input_gamma_enable"
 #define WINOPTION_INPUT_GAMMA               "input_gamma"
+#define WINOPTION_COLOR_SPACE               "color_space"
+#define WINOPTION_PHOSPHOR_TYPE             "phosphor_type"
 #define WINOPTION_SHADOW_MASK_TILE_MODE     "shadow_mask_tile_mode"
 #define WINOPTION_SHADOW_MASK_ALPHA         "shadow_mask_alpha"
 #define WINOPTION_SHADOW_MASK_TEXTURE       "shadow_mask_texture"
@@ -137,6 +139,8 @@ public:
 	int d3d_snap_height() const { return int_value(WINOPTION_HLSL_SNAP_HEIGHT); }
 	bool screen_input_gamma_enable() const { return bool_value(WINOPTION_INPUT_GAMMA_ENABLE); }
 	float screen_input_gamma() const { return float_value(WINOPTION_INPUT_GAMMA); }
+	int screen_color_space() const { return int_value(WINOPTION_COLOR_SPACE); }
+	int screen_phosphor_type() const { return int_value(WINOPTION_PHOSPHOR_TYPE); }
 	int screen_shadow_mask_tile_mode() const { return int_value(WINOPTION_SHADOW_MASK_TILE_MODE); }
 	float screen_shadow_mask_alpha() const { return float_value(WINOPTION_SHADOW_MASK_ALPHA); }
 	const char *screen_shadow_mask_texture() const { return value(WINOPTION_SHADOW_MASK_TEXTURE); }
