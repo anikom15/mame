@@ -123,35 +123,41 @@ VS_OUTPUT vs_main(VS_INPUT Input)
 // Apple RGB has a unique gamut that mimics the 13" Apple RGB monitor. It uses
 // white D65.
 
-static const float3x3 SRGB_TO_SRGB = { 1.0f, 0.0f, 0.0f,
-                                       0.0f, 1.0f, 0.0f,
-				       0.0f, 0.0f, 1.0f
-                                     };
-
-static const float3x3 NTSC_1953_TO_SRGB = {  1.5073f, -0.3724f, -0.0833f,
-                                            -0.0273f,  0.9350f,  0.0669f,
-                                            -0.0271f,  0.0401f,  1.1672f
-                                          };
-static const float3x3 NTSC_1987_TO_SRGB = {  0.9394f,  0.0502f, 0.0102f,
-                                             0.0179f,  0.9658f, 0.0164f,
-					    -0.0016f, -0.0044f, 1.0060f
-                                          };
-static const float3x3 NTSC_J_TO_SRGB = {  0.8292f,  0.0497f, 0.0140f,
-                                          0.0158f,  0.9561f, 0.0225f,
-					 -0.0014f, -0.0043f, 1.3772f
-                                       };
-static const float3x3 PAL_525_TO_SRGB = {  0.9917f,  0.0487f, 0.0112f,
-                                           0.0189f,  0.9377f, 0.0181f,
-					  -0.0017f, -0.0042f, 1.1058f
-                                        };
-static const float3x3 SECAM_TO_SRGB = { 1.0439f, -0.0440f, -0.0000f,
-                                        0.0001f,  1.0000f, -0.0000f,
-					0.0000f,  0.0118f,  0.9882f
-                                      };
-static const float3x3 APPLE_RGB_TO_SRGB = { 1.0686f, -0.0786f, 0.0099f,
-                                            0.0242f,  0.9601f, 0.0158f,
-					    0.0252f,  0.0298f, 0.9686f
-                                          };
+static const float3x3 SRGB_TO_SRGB = {
+	1.0f, 0.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+	0.0f, 0.0f, 1.0f
+};
+static const float3x3 NTSC_1953_TO_SRGB = {
+	 1.5073f, -0.3724f, -0.0833f,
+        -0.0273f,  0.9350f,  0.0669f,
+        -0.0271f,  0.0401f,  1.1672f
+};
+static const float3x3 NTSC_1987_TO_SRGB = {
+	 0.9394f,  0.0502f, 0.0102f,
+         0.0179f,  0.9658f, 0.0164f,
+	-0.0016f, -0.0044f, 1.0060f
+};
+static const float3x3 NTSC_J_TO_SRGB = {
+	 0.8292f,  0.0497f, 0.0140f,
+         0.0158f,  0.9561f, 0.0225f,
+	-0.0014f, -0.0043f, 1.3772f
+};
+static const float3x3 PAL_525_TO_SRGB = {
+	 0.9917f,  0.0487f, 0.0112f,
+         0.0189f,  0.9377f, 0.0181f,
+	-0.0017f, -0.0042f, 1.1058f
+};
+static const float3x3 SECAM_TO_SRGB = {
+	1.0439f, -0.0440f, -0.0000f,
+        0.0001f,  1.0000f, -0.0000f,
+	0.0000f,  0.0118f,  0.9882f
+};
+static const float3x3 APPLE_RGB_TO_SRGB = {
+	1.0686f, -0.0786f, 0.0099f,
+        0.0242f,  0.9601f, 0.0158f,
+	0.0252f,  0.0298f, 0.9686f
+};
 static const float3x3 CORRECTION_MATRIX[] = {
 	SRGB_TO_SRGB,
 	NTSC_1953_TO_SRGB,
@@ -183,7 +189,7 @@ uniform int PhosphorType = 0;
 
 float4 ps_main(PS_INPUT Input) : COLOR
 {
-	float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
+	const float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
 
 	float3 OutRGB = pow(BaseTexel.rgb, float3(Gamma, Gamma, Gamma));
 	OutRGB = ColorSpace <= 6 ?
@@ -191,11 +197,11 @@ float4 ps_main(PS_INPUT Input) : COLOR
 		 OutRGB;
 	if (PhosphorType > 0 && PhosphorType <= 3)
 	{
-		float x = PHOSPHOR[PhosphorType][0];
-		float y = PHOSPHOR[PhosphorType][1];
-		float Y = dot(LUMA_REC_709, OutRGB);
-		float X = x * (Y / y);
-		float Z = (1.0f - x - y) * (Y / y);
+		const float x = PHOSPHOR[PhosphorType][0];
+		const float y = PHOSPHOR[PhosphorType][1];
+		const float Y = dot(LUMA_REC_709, OutRGB);
+		const float X = x * (Y / y);
+		const float Z = (1.0f - x - y) * (Y / y);
 		OutRGB = mul(XYZ_TO_SRGB, float3(X, Y, Z));
 	}
 	return float4(OutRGB, BaseTexel.a);

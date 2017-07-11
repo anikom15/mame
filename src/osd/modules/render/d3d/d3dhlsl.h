@@ -85,6 +85,7 @@ public:
 		CU_FOCUS_SIZE,
 
 		CU_PHOSPHOR_LIFE,
+		CU_PHOSPHOR_LIFE_MONO,
 
 		CU_POST_VIGNETTING,
 		CU_POST_DISTORTION,
@@ -215,6 +216,7 @@ struct hlsl_options
 	float                   power[3];
 	float                   floor[3];
 	float                   phosphor[3];
+	float                   phosphor_mono;
 	float                   saturation;
 
 	// NTSC

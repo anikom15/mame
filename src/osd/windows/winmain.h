@@ -73,6 +73,7 @@
 #define WINOPTION_POWER                     "power"
 #define WINOPTION_FLOOR                     "floor"
 #define WINOPTION_PHOSPHOR                  "phosphor_life"
+#define WINOPTION_PHOSPHOR_MONO             "phosphor_life_mono"
 #define WINOPTION_SATURATION                "saturation"
 #define WINOPTION_YIQ_ENABLE                "yiq_enable"
 #define WINOPTION_YIQ_JITTER                "yiq_jitter"
@@ -206,6 +207,7 @@ public:
 	const char *screen_power() const { return value(WINOPTION_POWER); }
 	const char *screen_floor() const { return value(WINOPTION_FLOOR); }
 	const char *screen_phosphor() const { return value(WINOPTION_PHOSPHOR); }
+	float screen_phosphor_mono() const { return float_value(WINOPTION_PHOSPHOR_MONO); }
 	float screen_saturation() const { return float_value(WINOPTION_SATURATION); }
 
 	// full screen options
