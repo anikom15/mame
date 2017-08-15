@@ -429,6 +429,18 @@ end
 
 ---------------------------------------------------
 --
+--@src/devices/machine/74259.h,MACHINES["TTL74259"] = true
+---------------------------------------------------
+
+if (MACHINES["TTL74259"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/74259.cpp",
+		MAME_DIR .. "src/devices/machine/74259.h",
+	}
+end
+
+---------------------------------------------------
+--
 --@src/devices/machine/7474.h,MACHINES["TTL7474"] = true
 ---------------------------------------------------
 
@@ -766,20 +778,6 @@ if (MACHINES["CXD1095"]~=null) then
 	}
 end
 
----------------------------------------------------
---
---@src/devices/machine/dm9334.h,MACHINES["DM9334"] = true
----------------------------------------------------
-
-if (MACHINES["DM9334"]~=null) then
-	files {
-		MAME_DIR .. "src/devices/machine/dm9334.cpp",
-		MAME_DIR .. "src/devices/machine/dm9334.h",
-	}
-end
-
----------------------------------------------------
---
 --@src/devices/machine/ds1204.h,MACHINES["DS1204"] = true
 ---------------------------------------------------
 
@@ -1571,6 +1569,18 @@ if (MACHINES["MC146818"]~=null) then
 		MAME_DIR .. "src/devices/machine/mc146818.h",
 		MAME_DIR .. "src/devices/machine/ds128x.cpp",
 		MAME_DIR .. "src/devices/machine/ds128x.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/mc14411.h,MACHINES["MC14411"] = true
+---------------------------------------------------
+
+if (MACHINES["MC14411"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/mc14411.cpp",
+		MAME_DIR .. "src/devices/machine/mc14411.h",
 	}
 end
 
@@ -3201,5 +3211,17 @@ if (MACHINES["SMIOC"]~=null) then
 	files {
 		MAME_DIR .. "src/devices/machine/smioc.cpp",
 		MAME_DIR .. "src/devices/machine/smioc.h",
+	}
+end
+
+---------------------------------------------------
+--
+--@src/devices/machine/i82586.h,MACHINES["I82586"] = true
+---------------------------------------------------
+
+if (MACHINES["I82586"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/machine/i82586.cpp",
+		MAME_DIR .. "src/devices/machine/i82586.h",
 	}
 end

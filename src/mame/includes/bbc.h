@@ -9,9 +9,10 @@
  * Driver by Gordon Jefferyes <mess_bbc@romvault.com>
  *
  ****************************************************************************/
+#ifndef MAME_INCLUDES_BBC_H
+#define MAME_INCLUDES_BBC_H
 
-#ifndef BBC_H_
-#define BBC_H_
+#pragma once
 
 #include "bus/rs232/rs232.h"
 #include "machine/6522via.h"
@@ -249,7 +250,7 @@ public: // HACK FOR MC6845
 	required_memory_bank m_bank7; // bbca bbcb bbcbp bbcbp128 bbcm
 	optional_memory_bank m_bank8; //                          bbcm
 
-	required_device<input_merger_active_high_device> m_irqs;
+	required_device<input_merger_device> m_irqs;
 
 	machine_type_t m_machinetype;
 
@@ -448,4 +449,12 @@ public: // HACK FOR MC6845
 	optional_ioport m_bbcconfig;
 };
 
-#endif /* BBC_H_ */
+
+class torch240_state : public bbc_state
+{
+public:
+	using bbc_state::bbc_state;
+	static constexpr feature_type imperfect_features() { return feature::KEYBOARD; }
+};
+
+#endif // MAME_INCLUDES_BBC_H

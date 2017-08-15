@@ -17,13 +17,14 @@
         * CMD 646U2 Ultra DMA IDE controller
         * M4T28-8R128H1 TimeKeeper RTC/CMOS
         * PLX PCI9050 Bus Target Interface Chip (interfaces ISA-style designs to PCI)
-        * Midway Zeus-series custom video
-		* Actiontec PM560LKI PCI Data/Fax Modem (PCI\VEN_11C1&DEV_0480&SUBSYS_04801668)
-		* TL16c552 dual UART
-		* ADSP-2181 based DCS2 audio (unclear which variant)
-		* Cirrus Logic CS4338 16 bit stereo audio serial DAC, PCB has space for 3 chips (6-channels), only 1 is populated
-		* Maxim MAX192 8 channel 10 bit serial ADC
-		* PIC16C57 (protection? serial #?)
+        * Midway ZeusII-series custom video
+        * Actiontec PM560LKI PCI Data/Fax Modem (PCI\VEN_11C1&DEV_0480&SUBSYS_04801668)
+        * TL16c552 dual UART
+        * ADSP-2181 based DCS2 audio (unclear which variant)
+        * ICS AV9110 Serially Programmable Frequency Generator.  Programmed through ADSP FL0,FL1,FL2 pins.
+        * Cirrus Logic CS4338 16 bit stereo audio serial DAC, PCB has space for 3 chips (6-channels), only 1 is populated
+        * Maxim MAX192 8 channel 10 bit serial ADC
+        * PIC16C57 (protection? serial #?)
         * Quantum Fireball CX 6.4GB IDE HDD (C/H/S 13328/15/63)
 
     TODO:
@@ -110,6 +111,7 @@ public:
 	DECLARE_DRIVER_INIT(mwskins);
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
+	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 	required_device<mips3_device> m_maincpu;
 	required_device<screen_device> m_screen;
 	optional_device<palette_device> m_palette;
@@ -122,6 +124,7 @@ public:
 	required_device<ide_pci_device> m_ide;
 	required_device<m48t37_device> m_rtc;
 	optional_ioport_array<8> m_io_analog;
+	emu_timer *m_adc_ready_timer;
 
 	READ8_MEMBER(cmos_r);
 	WRITE8_MEMBER(cmos_w);
@@ -245,10 +248,18 @@ WRITE32_MEMBER(atlantis_state::board_ctrl_w)
 			}
 		}
 		if (changeData & RESET_IDE) {
-			if (!(data & RESET_IDE))
+			if (!(data & RESET_IDE)) {
+				logerror("%s:board_ctrl_w IDE Reset\n", machine().describe_context());
 				m_ide->reset();
+			}
 		}
-		if ((changeData & RESET_IDE) || LOG_IRQ)
+		if (changeData & RESET_ZEUS) {
+			if (!(data & RESET_ZEUS)) {
+				logerror("%s:board_ctrl_w Zeus Reset\n", machine().describe_context());
+				m_zeus->reset();
+			}
+		}
+		if (LOG_IRQ)
 			logerror("%s:board_ctrl_w write to RESET offset %04X = %08X & %08X bus offset = %08X\n", machine().describe_context(), newOffset, data, mem_mask, offset);
 		break;
 	case VSYNC_CLEAR:
@@ -271,7 +282,6 @@ WRITE32_MEMBER(atlantis_state::board_ctrl_w)
 	case IRQ_EN:
 		// Zero bit will clear cause
 		board_ctrl[CAUSE] &= data;
-		board_ctrl[STATUS] &= data;
 		update_asic_irq();
 		if (LOG_IRQ)
 			logerror("%s:board_ctrl_w write to IRQ_EN offset %04X = %08X & %08X bus offset = %08X\n", machine().describe_context(), newOffset, data, mem_mask, offset);
@@ -292,7 +302,8 @@ WRITE32_MEMBER(atlantis_state::board_ctrl_w)
 			case 0x90: digit = '9'; break;
 			case 0x88: digit = 'A'; break;
 			case 0x83: digit = 'B'; break;
-			case 0xa7: digit = 'C'; break;
+			case 0xc6: digit = 'C'; break;
+			case 0xa7: digit = 'c'; break;
 			case 0xa1: digit = 'D'; break;
 			case 0x86: digit = 'E'; break;
 			case 0x87: digit = 'F'; break;
@@ -594,14 +605,15 @@ WRITE16_MEMBER(atlantis_state::a2d_ctrl_w)
 	int index = (data & A2D_CTRL_CHAN_MASK) >> A2D_CTRL_CHAN_SHIFT;
 	m_a2d_data = (m_io_analog[index].read_safe(0));
 	if (board_ctrl[IRQ_EN] & (1 << A2D_IRQ_SHIFT)) {
-		board_ctrl[STATUS] |= (1 << A2D_IRQ_SHIFT);
-		update_asic_irq();
+		// Set adc ready timer to fire
+		m_adc_ready_timer->adjust(attotime::from_usec(5));
 	}
-	logerror("a2d_ctrl_w: offset = %08x index = %d data = %04x\n", offset, index, data);
+	//logerror("a2d_ctrl_w: offset = %08x index = %d data = %04x\n", offset, index, data);
 }
 
 READ16_MEMBER(atlantis_state::a2d_data_r)
 {
+	// Clear interrupt if enabled
 	if (board_ctrl[IRQ_EN] & (1 << A2D_IRQ_SHIFT)) {
 		board_ctrl[STATUS] &= ~(1 << A2D_IRQ_SHIFT);
 		update_asic_irq();
@@ -622,6 +634,9 @@ void atlantis_state::machine_start()
 	/* set the fastest DRC options */
 	m_maincpu->mips3drc_set_options(MIPS3DRC_FASTEST_OPTIONS);
 
+	// Allocate adc timer
+	m_adc_ready_timer = timer_alloc(0);
+
 	// Save states
 	save_item(NAME(m_cmos_write_enabled));
 	save_item(NAME(m_serial_count));
@@ -632,8 +647,6 @@ void atlantis_state::machine_start()
 	save_item(NAME(m_a2d_data));
 
 }
-
-
 
 /*************************************
 *  Machine init
@@ -647,6 +660,17 @@ void atlantis_state::machine_reset()
 	m_serial_count = 0;
 	m_irq_state = 0;
 	memset(board_ctrl, 0, sizeof(board_ctrl));
+	m_adc_ready_timer->reset();
+}
+
+/*************************************
+*  Timer
+*************************************/
+void atlantis_state::device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr)
+{
+	// ADC Ready Timer
+	board_ctrl[STATUS] |= (1 << A2D_IRQ_SHIFT);
+	update_asic_irq();
 }
 
 /*************************************
@@ -754,17 +778,17 @@ static INPUT_PORTS_START( mwskins )
 	PORT_BIT(0x3ff, 0x200, IPT_AD_STICK_X) PORT_SENSITIVITY(100) PORT_KEYDELTA(50) PORT_PLAYER(1)
 
 	PORT_START("KEYPAD")
-	PORT_BIT(0x0001, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 1") PORT_CODE(KEYCODE_1_PAD)   /* keypad 1 */
-	PORT_BIT(0x0002, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 2") PORT_CODE(KEYCODE_2_PAD)   /* keypad 2 */
-	PORT_BIT(0x0004, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 3") PORT_CODE(KEYCODE_3_PAD)   /* keypad 3 */
-	PORT_BIT(0x0010, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 4") PORT_CODE(KEYCODE_4_PAD)   /* keypad 4 */
-	PORT_BIT(0x0020, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 5") PORT_CODE(KEYCODE_5_PAD)   /* keypad 5 */
-	PORT_BIT(0x0040, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 6") PORT_CODE(KEYCODE_6_PAD)   /* keypad 6 */
-	PORT_BIT(0x0100, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 7") PORT_CODE(KEYCODE_7_PAD)   /* keypad 7 */
-	PORT_BIT(0x0200, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 8") PORT_CODE(KEYCODE_8_PAD)   /* keypad 8 */
-	PORT_BIT(0x0400, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 9") PORT_CODE(KEYCODE_9_PAD)   /* keypad 9 */
-	PORT_BIT(0x1000, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad *") PORT_CODE(KEYCODE_MINUS_PAD)    /* keypad - */
-	PORT_BIT(0x2000, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad 0") PORT_CODE(KEYCODE_0_PAD)   /* keypad 0 */
+	PORT_BIT(0x0001, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(1_PAD)) PORT_CODE(KEYCODE_1_PAD)   /* keypad 1 */
+	PORT_BIT(0x0002, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(2_PAD)) PORT_CODE(KEYCODE_2_PAD)   /* keypad 2 */
+	PORT_BIT(0x0004, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(3_PAD)) PORT_CODE(KEYCODE_3_PAD)   /* keypad 3 */
+	PORT_BIT(0x0010, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(4_PAD)) PORT_CODE(KEYCODE_4_PAD)   /* keypad 4 */
+	PORT_BIT(0x0020, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(5_PAD)) PORT_CODE(KEYCODE_5_PAD)   /* keypad 5 */
+	PORT_BIT(0x0040, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(6_PAD)) PORT_CODE(KEYCODE_6_PAD)   /* keypad 6 */
+	PORT_BIT(0x0100, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(7_PAD)) PORT_CODE(KEYCODE_7_PAD)   /* keypad 7 */
+	PORT_BIT(0x0200, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(8_PAD)) PORT_CODE(KEYCODE_8_PAD)   /* keypad 8 */
+	PORT_BIT(0x0400, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(9_PAD)) PORT_CODE(KEYCODE_9_PAD)   /* keypad 9 */
+	PORT_BIT(0x1000, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_CHAR(UCHAR_MAMEKEY(ASTERISK)) PORT_CODE(KEYCODE_ASTERISK)    /* keypad * */
+	PORT_BIT(0x2000, IP_ACTIVE_LOW, IPT_KEYPAD) PORT_CHAR(UCHAR_MAMEKEY(0_PAD)) PORT_CODE(KEYCODE_0_PAD)   /* keypad 0 */
 	PORT_BIT(0x4000, IP_ACTIVE_LOW, IPT_SPECIAL) PORT_NAME("Keypad #") PORT_CODE(KEYCODE_PLUS_PAD)   /* keypad + */
 
 INPUT_PORTS_END
@@ -825,8 +849,7 @@ static MACHINE_CONFIG_START( mwskins )
 	//MCFG_DEVICE_ADD("dcs", DCS2_AUDIO_DSIO, 0)
 	MCFG_DEVICE_ADD("dcs", DCS2_AUDIO_DENVER, 0)
 	MCFG_DCS2_AUDIO_DRAM_IN_MB(8)
-	//MCFG_DCS2_AUDIO_POLLING_OFFSET(0) /* no place to hook :-( */
-	//MCFG_DCS2_AUDIO_DAC_EXT_FREQ(1000000.0)
+	MCFG_DCS2_AUDIO_POLLING_OFFSET(0x200d)
 
 	MCFG_DEVICE_ADD("ioasic", MIDWAY_IOASIC, 0)
 	MCFG_MIDWAY_IOASIC_SHUFFLE(MIDWAY_IOASIC_STANDARD)

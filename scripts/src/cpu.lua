@@ -720,6 +720,22 @@ if (CPUS["NANOPROCESSOR"]~=null or _OPTIONS["with-tools"]) then
 end
 
 --------------------------------------------------
+-- HP Capricorn
+--@src/devices/cpu/capricorn/capricorn.h,CPUS["CAPRICORN"] = true
+--------------------------------------------------
+
+if (CPUS["CAPRICORN"]~=null) then
+	files {
+		MAME_DIR .. "src/devices/cpu/capricorn/capricorn.cpp",
+		MAME_DIR .. "src/devices/cpu/capricorn/capricorn.h",
+	}
+end
+
+if (CPUS["CAPRICORN"]~=null or _OPTIONS["with-tools"]) then
+	table.insert(disasm_files , MAME_DIR .. "src/devices/cpu/capricorn/capricorn_dasm.cpp")
+end
+
+--------------------------------------------------
 -- Hudsonsoft 6280
 --@src/devices/cpu/h6280/h6280.h,CPUS["H6280"] = true
 --------------------------------------------------
@@ -914,7 +930,7 @@ if (CPUS["MCS96"]~=null) then
 end
 
 --------------------------------------------------
--- Intel 80x86 series
+-- Intel 80x86 series (also a dynamic recompiler target)
 --@src/devices/cpu/i86/i86.h,CPUS["I86"] = true
 --@src/devices/cpu/i86/i286.h,CPUS["I86"] = true
 --@src/devices/cpu/i386/i386.h,CPUS["I386"] = true
@@ -932,8 +948,9 @@ if (CPUS["I86"]~=null) then
 	}
 end
 
-if (CPUS["SH2"]~=null or CPUS["MIPS"]~=null or CPUS["POWERPC"]~=null or CPUS["RSP"]~=null or CPUS["ARM7"]~=null or CPUS["ADSP21062"]~=null or CPUS["MB86235"]~=null or CPUS["I86"]~=null or _OPTIONS["with-tools"]) then
+if (CPUS["SH2"]~=null or CPUS["MIPS"]~=null or CPUS["POWERPC"]~=null or CPUS["RSP"]~=null or CPUS["ARM7"]~=null or CPUS["ADSP21062"]~=null or CPUS["MB86235"]~=null or CPUS["I86"]~=null or CPUS["I386"]~=null or _OPTIONS["with-tools"]) then
 	table.insert(disasm_files , MAME_DIR .. "src/devices/cpu/i386/i386dasm.cpp")
+	table.insert(disasm_files , MAME_DIR .. "src/devices/cpu/i386/i386dasm.h")
 end
 
 if (CPUS["I386"]~=null) then
