@@ -484,6 +484,8 @@ bool shaders::init(d3d_base *d3dintf, running_machine *machine, renderer_d3d9 *r
 	{
 		options->input_gamma_enable = winoptions.screen_input_gamma_enable();
 		options->input_gamma = winoptions.screen_input_gamma();
+		options->input_gain = winoptions.screen_input_gain();
+		options->input_black_level = winoptions.screen_input_black_level();
 		options->color_space = winoptions.screen_color_space();
 		options->phosphor_type = winoptions.screen_phosphor_type();
 		strncpy(options->shadow_mask_texture, winoptions.screen_shadow_mask_texture(), sizeof(options->shadow_mask_texture));
@@ -784,6 +786,8 @@ int shaders::create_resources()
 
 	gamma_effect->add_uniform("GammaEnable", uniform::UT_BOOL, uniform::CU_INPUT_GAMMA_ENABLE);
 	gamma_effect->add_uniform("Gamma", uniform::UT_FLOAT, uniform::CU_INPUT_GAMMA);
+	gamma_effect->add_uniform("Gain", uniform::UT_FLOAT, uniform::CU_INPUT_GAIN);
+	gamma_effect->add_uniform("BlackLevel", uniform::UT_FLOAT, uniform::CU_INPUT_BLACK_LEVEL);
 	gamma_effect->add_uniform("ColorSpace", uniform::UT_INT, uniform::CU_COLOR_SPACE);
 	gamma_effect->add_uniform("PhosphorType", uniform::UT_INT, uniform::CU_PHOSPHOR_TYPE);
 
@@ -819,6 +823,7 @@ int shaders::create_resources()
 	post_effect->add_uniform("ScanlineBrightOffset", uniform::UT_FLOAT, uniform::CU_POST_SCANLINE_BRIGHT_OFFSET);
 	post_effect->add_uniform("Power", uniform::UT_VEC3, uniform::CU_POST_POWER);
 	post_effect->add_uniform("Floor", uniform::UT_VEC3, uniform::CU_POST_FLOOR);
+	post_effect->add_uniform("ColorSpace", uniform::UT_INT, uniform::CU_COLOR_SPACE);
 
 	distortion_effect->add_uniform("VignettingAmount", uniform::UT_FLOAT, uniform::CU_POST_VIGNETTING);
 	distortion_effect->add_uniform("DistortionAmount", uniform::UT_FLOAT, uniform::CU_POST_DISTORTION);
@@ -1952,6 +1957,8 @@ enum slider_option
 	SLIDER_VECTOR_ATT_LEN_MIN,
 	SLIDER_INPUT_GAMMA_ENABLE,
 	SLIDER_INPUT_GAMMA,
+	SLIDER_INPUT_GAIN,
+	SLIDER_INPUT_BLACK_LEVEL,
 	SLIDER_COLOR_SPACE,
 	SLIDER_PHOSPHOR_TYPE,
 	SLIDER_SHADOW_MASK_TILE_MODE,
@@ -2035,6 +2042,8 @@ slider_desc shaders::s_sliders[] =
 	{ "Vector Attenuation Length Minimum",  1,   500,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_VECTOR,        SLIDER_VECTOR_ATT_LEN_MIN,      0.001f,   "%1.3f", {} },
 	{ "Gamma & Color Correction",           0,     1,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_INPUT_GAMMA_ENABLE,      0,        "%s",    { "Off", "On" } },
 	{ "Input Gamma Exponent",               0,   240,   500, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_INPUT_GAMMA,             0.01f,    "%1.2f", {} },
+	{ "Input Gain",                         0,   100,   200, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_INPUT_GAIN,              0.01f,    "%1.2f", {} },
+	{ "Input Black Level",               -100,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_INPUT_BLACK_LEVEL,       0.01f,    "%1.2f", {} },
 	{ "Color Space:",                       0,     2,     6, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_COLOR_SPACE,             0,        "%s",    { "sRGB (Rec. 709)", "NTSC 1953", "NTSC 1987 \"SMPTE C\"", "NTSC-J", "PAL 525 (Rec. 601)", "SECAM/PAL 625 (Rec. 601)", "Apple RGB" } },
 	{ "Screen Phosphor:",                   0,     0,     3, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_TYPE,           0,        "%s",    { "Color", "P1", "P3", "P4" } },
 	{ "Shadow Mask Tile Mode",              0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_TILE_MODE,   0,        "%s",    { "Screen", "Source" } },
@@ -2112,6 +2121,8 @@ void *shaders::get_slider_option(int id, int index)
 		case SLIDER_VECTOR_ATT_LEN_MIN: return &(options->vector_length_ratio);
 		case SLIDER_INPUT_GAMMA_ENABLE: return &(options->input_gamma_enable);
 		case SLIDER_INPUT_GAMMA: return &(options->input_gamma);
+		case SLIDER_INPUT_GAIN: return &(options->input_gain);
+		case SLIDER_INPUT_BLACK_LEVEL: return &(options->input_black_level);
 		case SLIDER_COLOR_SPACE: return &(options->color_space);
 		case SLIDER_PHOSPHOR_TYPE: return &(options->phosphor_type);
 		case SLIDER_SHADOW_MASK_TILE_MODE: return &(options->shadow_mask_tile_mode);
@@ -2408,6 +2419,12 @@ void uniform::update()
 			break;
 		case CU_INPUT_GAMMA:
 			m_shader->set_float("Gamma", options->input_gamma);
+			break;
+		case CU_INPUT_GAIN:
+			m_shader->set_float("Gain", options->input_gain);
+			break;
+		case CU_INPUT_BLACK_LEVEL:
+			m_shader->set_float("BlackLevel", options->input_black_level);
 			break;
 		case CU_COLOR_SPACE:
 			m_shader->set_int("ColorSpace", options->color_space);

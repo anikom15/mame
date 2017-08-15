@@ -178,6 +178,8 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_HLSL_SNAP_HEIGHT,                               "1536",              OPTION_STRING,     "HLSL upscaled-snapshot height" },
 	{ WINOPTION_INPUT_GAMMA_ENABLE";input_gamma_enable",        "0",                 OPTION_BOOLEAN,    "enable HLSL gamma correction" },
 	{ WINOPTION_INPUT_GAMMA";input_gamma",                      "2.4",               OPTION_FLOAT,      "gamma decoding exponent" },
+	{ WINOPTION_INPUT_GAIN";input_gain",                        "1.0",               OPTION_FLOAT,      "gain applied to signal after gamma correction" },
+	{ WINOPTION_INPUT_BLACK_LEVEL";input_black_level",          "0.0",               OPTION_FLOAT,      "DC offset applied to signal before gamma correction"},
 	{ WINOPTION_COLOR_SPACE";color_space",                      "0",                 OPTION_INTEGER,    "color space of simulated display" },
 	{ WINOPTION_PHOSPHOR_TYPE";phosphor_type",                  "0",                 OPTION_INTEGER,    "screen phosphor to simulate" },
 	{ WINOPTION_SHADOW_MASK_TILE_MODE,                          "0",                 OPTION_INTEGER,    "shadow mask tile mode (0 for screen based, 1 for source based)" },
@@ -220,7 +222,7 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_POWER";fs_power",                               "1.0,1.0,1.0",       OPTION_STRING,     "signal power value (exponential)" },
 	{ WINOPTION_FLOOR";fs_floor",                               "0.0,0.0,0.0",       OPTION_STRING,     "signal floor level" },
 	{ WINOPTION_PHOSPHOR";fs_phosphor",                         "0.0,0.0,0.0",       OPTION_STRING,     "phosphorescence decay rate for color screens (0.0 is instant, 1.0 is forever)" },
-	{ WINOPTION_PHOSPHOR_MONO";fs_phosphor_mono",                    "0.0",               OPTION_FLOAT,      "phosphorescence decay rate for monochrome screens" },
+	{ WINOPTION_PHOSPHOR_MONO";fs_phosphor_mono",               "0.0",               OPTION_FLOAT,      "phosphorescence decay rate for monochrome screens" },
 	/* NTSC simulation below this line */
 	{ nullptr,                                                  nullptr,             OPTION_HEADER,     "NTSC POST-PROCESSING OPTIONS" },
 	{ WINOPTION_YIQ_ENABLE";yiq",                               "0",                 OPTION_BOOLEAN,    "enables YIQ-space HLSL post-processing" },

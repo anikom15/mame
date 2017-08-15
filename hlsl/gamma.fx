@@ -183,6 +183,8 @@ static const float2 PHOSPHOR[] = {
 	P4
 };
 
+uniform float Gain = 1.0f;
+uniform float BlackLevel = 0.0f;
 uniform float Gamma = 1.0f;
 uniform int ColorSpace = 0;
 uniform int PhosphorType = 0;
@@ -191,9 +193,11 @@ float4 ps_main(PS_INPUT Input) : COLOR
 {
 	const float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
 
-	float3 OutRGB = pow(BaseTexel.rgb, float3(Gamma, Gamma, Gamma));
+	float3 OutRGB = Gain * pow(max(BaseTexel.rgb + BlackLevel,
+	                               float3(0.0f, 0.0f, 0.0f)),
+	                           float3(Gamma, Gamma, Gamma));
 	OutRGB = ColorSpace <= 6 ?
-	         mul(CORRECTION_MATRIX[ColorSpace], OutRGB) :
+		 mul(CORRECTION_MATRIX[ColorSpace], OutRGB) :
 		 OutRGB;
 	if (PhosphorType > 0 && PhosphorType <= 3)
 	{
