@@ -76,6 +76,7 @@ II Plus: RAM options reduced to 16/32/48 KB.
 #include "bus/a2bus/ramcard128k.h"
 #include "bus/a2bus/ramcard16k.h"
 #include "bus/a2bus/timemasterho.h"
+#include "bus/a2bus/ssprite.h"
 
 #include "screen.h"
 #include "softlist.h"
@@ -520,9 +521,12 @@ void napple2_state::do_io(address_space &space, int offset)
 
 WRITE_LINE_MEMBER(napple2_state::txt_w)
 {
-	// select graphics or text mode
-	machine().first_screen()->update_now();
-	m_video->m_graphics = !state;
+	if (m_video->m_graphics == state) // avoid flickering from II+ refresh polling
+	{
+		// select graphics or text mode
+		machine().first_screen()->update_now();
+		m_video->m_graphics = !state;
+	}
 }
 
 WRITE_LINE_MEMBER(napple2_state::mix_w)
@@ -1315,6 +1319,7 @@ static SLOT_INTERFACE_START(apple2_cards)
 	SLOT_INTERFACE("ezcgi", A2BUS_EZCGI)    /* E-Z Color Graphics Interface */
 	SLOT_INTERFACE("ezcgi9938", A2BUS_EZCGI_9938)   /* E-Z Color Graphics Interface (TMS9938) */
 	SLOT_INTERFACE("ezcgi9958", A2BUS_EZCGI_9958)   /* E-Z Color Graphics Interface (TMS9958) */
+	SLOT_INTERFACE("ssprite", A2BUS_SSPRITE)    /* Synetix SuperSprite Board */
 //  SLOT_INTERFACE("magicmusician", A2BUS_MAGICMUSICIAN)    /* Magic Musician Card */
 SLOT_INTERFACE_END
 

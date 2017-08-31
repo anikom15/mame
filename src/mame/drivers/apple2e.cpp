@@ -146,6 +146,7 @@ Address bus A0-A11 is Y0-Y11
 #include "bus/a2bus/a2estd80col.h"
 #include "bus/a2bus/a2eext80col.h"
 #include "bus/a2bus/a2eramworks3.h"
+#include "bus/a2bus/ssprite.h"
 
 #include "bus/rs232/rs232.h"
 
@@ -1319,8 +1320,11 @@ void apple2e_state::do_io(address_space &space, int offset, bool is_iic)
 			break;
 
 		case 0x50:  // graphics mode
-			machine().first_screen()->update_now();
-			m_video->m_graphics = true;
+			if (m_video->m_graphics == false) // avoid flickering from II+ refresh polling
+			{
+				machine().first_screen()->update_now();
+				m_video->m_graphics = true;
+			}
 			break;
 
 		case 0x51:  // text mode
@@ -3731,6 +3735,7 @@ static SLOT_INTERFACE_START(apple2_cards)
 	SLOT_INTERFACE("ezcgi9958", A2BUS_EZCGI_9958)   /* E-Z Color Graphics Interface (TMS9958) */
 //  SLOT_INTERFACE("magicmusician", A2BUS_MAGICMUSICIAN)    /* Magic Musician Card */
 	SLOT_INTERFACE("pcxport", A2BUS_PCXPORTER) /* Applied Engineering PC Transporter */
+	SLOT_INTERFACE("ssprite", A2BUS_SSPRITE)    /* Synetix SuperSprite Board */
 SLOT_INTERFACE_END
 
 static SLOT_INTERFACE_START(apple2eaux_cards)
