@@ -53,6 +53,7 @@ public:
 		CU_SWAP_XY,
 		CU_VECTOR_SCREEN,
 
+		CU_NTSC_ENABLE,
 		CU_NTSC_CCFREQ,
 		CU_NTSC_A,
 		CU_NTSC_B,
@@ -63,21 +64,19 @@ public:
 		CU_NTSC_IFREQ,
 		CU_NTSC_QFREQ,
 		CU_NTSC_HTIME,
-		CU_NTSC_ENABLE,
 
-		CU_INPUT_GAMMA_ENABLE,
-		CU_INPUT_GAMMA,
-		CU_INPUT_GAIN,
-		CU_INPUT_BLACK_LEVEL,
-		CU_COLOR_SPACE,
-		CU_PHOSPHOR_TYPE,
-
+		CU_COLOR_SATURATION,
+		CU_COLOR_TINT,
+		CU_COLOR_SCALE,
+		CU_COLOR_OFFSET,
 		CU_COLOR_RED_RATIOS,
 		CU_COLOR_GRN_RATIOS,
 		CU_COLOR_BLU_RATIOS,
-		CU_COLOR_OFFSET,
-		CU_COLOR_SCALE,
-		CU_COLOR_SATURATION,
+
+		CU_SRGB_GAMMA_ENABLE,
+		CU_DISPLAY_GAMMA,
+		CU_DISPLAY_GAIN,
+		CU_DISPLAY_BLACK_LEVEL,
 
 		CU_CONVERGE_LINEAR_X,
 		CU_CONVERGE_LINEAR_Y,
@@ -86,29 +85,36 @@ public:
 
 		CU_FOCUS_SIZE,
 
-		CU_PHOSPHOR_LIFE,
-		CU_PHOSPHOR_LIFE_MONO,
-
-		CU_POST_VIGNETTING,
-		CU_POST_DISTORTION,
-		CU_POST_CUBIC_DISTORTION,
-		CU_POST_DISTORT_CORNER,
-		CU_POST_ROUND_CORNER,
-		CU_POST_SMOOTH_BORDER,
-		CU_POST_REFLECTION,
-		CU_POST_SHADOW_ALPHA,
-		CU_POST_SHADOW_COUNT,
-		CU_POST_SHADOW_UV,
-		CU_POST_SHADOW_UV_OFFSET,
-		CU_POST_SHADOW_DIMS,
 		CU_POST_SCANLINE_ALPHA,
 		CU_POST_SCANLINE_SCALE,
 		CU_POST_SCANLINE_HEIGHT,
 		CU_POST_SCANLINE_VARIATION,
 		CU_POST_SCANLINE_BRIGHT_SCALE,
 		CU_POST_SCANLINE_BRIGHT_OFFSET,
-		CU_POST_POWER,
-		CU_POST_FLOOR,
+
+		CU_POST_SHADOW_ALPHA,
+		CU_POST_SHADOW_COUNT,
+		CU_POST_SHADOW_UV,
+		CU_POST_SHADOW_UV_OFFSET,
+		CU_POST_SHADOW_DIMS,
+
+		CU_PHOSPHOR_TYPE,
+		CU_PHOSPHOR_CHROMA_X,
+		CU_PHOSPHOR_CHROMA_Y,
+		CU_PHOSPHOR_RATE_MODE,
+		CU_PHOSPHOR_DECAY_MODEL,
+		CU_PHOSPHOR_LIFE,
+		CU_PHOSPHOR_BETA,
+
+		CU_COLOR_SPACE,
+
+		CU_POST_DISTORTION,
+		CU_POST_CUBIC_DISTORTION,
+		CU_POST_DISTORT_CORNER,
+		CU_POST_SMOOTH_BORDER,
+		CU_POST_VIGNETTING,
+		CU_POST_REFLECTION,
+		CU_POST_ROUND_CORNER,
 
 		CU_COUNT
 	};
@@ -177,51 +183,11 @@ struct hlsl_options
 {
 	bool                    params_init;
 	bool                    params_dirty;
-	int                     input_gamma_enable;
-	float                   input_gamma;
-	float                   input_gain;
-	float                   input_black_level;
-	int                     color_space;
-	int                     phosphor_type;
-	int                     shadow_mask_tile_mode;
-	float                   shadow_mask_alpha;
-	char                    shadow_mask_texture[1024];
-	int                     shadow_mask_count_x;
-	int                     shadow_mask_count_y;
-	float                   shadow_mask_u_size;
-	float                   shadow_mask_v_size;
-	float                   shadow_mask_u_offset;
-	float                   shadow_mask_v_offset;
-	float                   distortion;
-	float                   cubic_distortion;
-	float                   distort_corner;
-	float                   round_corner;
-	float                   smooth_border;
-	float                   reflection;
-	float                   vignetting;
-	float                   scanline_alpha;
-	float                   scanline_scale;
-	float                   scanline_height;
-	float                   scanline_variation;
-	float                   scanline_bright_scale;
-	float                   scanline_bright_offset;
-	float                   scanline_jitter;
-	float                   hum_bar_alpha;
-	float                   defocus[2];
-	float                   converge_x[3];
-	float                   converge_y[3];
-	float                   radial_converge_x[3];
-	float                   radial_converge_y[3];
-	float                   red_ratio[3];
-	float                   grn_ratio[3];
-	float                   blu_ratio[3];
-	float                   offset[3];
-	float                   scale[3];
-	float                   power[3];
-	float                   floor[3];
-	float                   phosphor[3];
-	float                   phosphor_mono;
-	float                   saturation;
+
+	// Vectors
+	float                   vector_beam_smooth;
+	float                   vector_length_scale;
+	float                   vector_length_ratio;
 
 	// NTSC
 	int                     yiq_enable;
@@ -237,11 +203,51 @@ struct hlsl_options
 	float                   yiq_q;
 	float                   yiq_scan_time;
 	int                     yiq_phase_count;
+	
+	// Controls
+	float                   saturation;
+	float                   tint;
+	float                   scale[3];
+	float                   offset[3];
+	float                   red_ratio[3];
+	float                   grn_ratio[3];
+	float                   blu_ratio[3];
 
-	// Vectors
-	float                   vector_beam_smooth;
-	float                   vector_length_scale;
-	float                   vector_length_ratio;
+	// Display transfer function
+	int                     srgb_gamma_enable;
+	float                   display_gamma;
+	float                   display_gain;
+	float                   display_black_level;
+
+	// Beam convergence
+	float                   converge_x[3];
+	float                   converge_y[3];
+	float                   radial_converge_x[3];
+	float                   radial_converge_y[3];
+	float                   defocus[2];
+
+	// Scanlines
+	float                   scanline_alpha;
+	float                   scanline_scale;
+	float                   scanline_height;
+	float                   scanline_variation;
+	float                   scanline_bright_scale;
+	float                   scanline_bright_offset;
+	float                   scanline_jitter;
+
+	// Hum bar
+	float                   hum_bar_alpha;
+
+	// Shadow mask
+	int                     shadow_mask_tile_mode;
+	float                   shadow_mask_alpha;
+	char                    shadow_mask_texture[1024];
+	int                     shadow_mask_count_x;
+	int                     shadow_mask_count_y;
+	float                   shadow_mask_u_size;
+	float                   shadow_mask_v_size;
+	float                   shadow_mask_u_offset;
+	float                   shadow_mask_v_offset;
 
 	// Bloom
 	int                     bloom_blend_mode;
@@ -256,6 +262,27 @@ struct hlsl_options
 	float                   bloom_level6_weight;
 	float                   bloom_level7_weight;
 	float                   bloom_level8_weight;
+
+	// Phosphors
+	int                     phosphor_type;
+	float                   phosphor_chroma_x;
+	float                   phosphor_chroma_y;
+	int                     phosphor_rate_mode;
+	int                     phosphor_decay_model;
+	float                   phosphor[3];
+	float                   phosphor_beta[3];
+
+	// Color correction
+	int                     color_space;
+
+	// Distortion
+	float                   distortion;
+	float                   cubic_distortion;
+	float                   distort_corner;
+	float                   smooth_border;
+	float                   vignetting;
+	float                   reflection;
+	float                   round_corner;
 };
 
 struct slider_desc
@@ -343,19 +370,19 @@ private:
 	rgb_t                   apply_color_convolution(rgb_t color);
 
 	// Shader passes
-	int                     gamma_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
+	int                     vector_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
+	int                     vector_buffer_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     ntsc_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     color_convolution_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
+	int                     gamma_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     prescale_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     deconverge_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     defocus_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
-	int                     phosphor_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     post_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum, bool prepare_bloom);
 	int                     downsample_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     bloom_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
+	int                     phosphor_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);	
 	int                     distortion_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
-	int                     vector_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
-	int                     vector_buffer_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     screen_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	void                    ui_pass(poly_info *poly, int vertnum);
 
@@ -396,6 +423,7 @@ private:
 	effect *                default_effect;             // pointer to the primary-effect object
 	effect *                prescale_effect;            // pointer to the prescale-effect object
 	effect *                gamma_effect;
+	effect *                srgb_gamma_effect;
 	effect *                post_effect;                // pointer to the post-effect object
 	effect *                distortion_effect;          // pointer to the distortion-effect object
 	effect *                focus_effect;               // pointer to the focus-effect object

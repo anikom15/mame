@@ -220,7 +220,7 @@ class d3d_render_target
 {
 public:
 	// construction/destruction
-	d3d_render_target(): target_width(0), target_height(0), width(0), height(0), screen_index(0), bloom_count(0)
+	d3d_render_target(): target_width(0), target_height(0), width(0), height(0), screen_index(0), bloom_count(0), cache_index(0)
 	{
 		for (int index = 0; index < MAX_BLOOM_COUNT; index++)
 		{
@@ -232,18 +232,20 @@ public:
 		{
 			source_texture[index] = nullptr;
 			source_surface[index] = nullptr;
+			intermediate_texture[index] = nullptr;
+			intermediate_surface[index] = nullptr;
 			target_texture[index] = nullptr;
 			target_surface[index] = nullptr;
+			cache_texture[index] = nullptr;
+			cache_surface[index] = nullptr;
 		}
-
-		cache_texture = nullptr;
-		cache_surface = nullptr;
 	}
 
 	~d3d_render_target();
 
 	bool init(renderer_d3d9 *d3d, int source_width, int source_height, int target_width, int target_height, int screen_index);
 	int next_index(int index) { return ++index > 1 ? 0 : index; }
+	int next_cache_index() { cache_index = ++cache_index > 1 ? 0 : cache_index; return cache_index; }
 
 	// real target dimension
 	int target_width;
@@ -259,9 +261,11 @@ public:
 	IDirect3DTexture9 *target_texture[2];
 	IDirect3DSurface9 *source_surface[2];
 	IDirect3DTexture9 *source_texture[2];
+	IDirect3DSurface9 *intermediate_surface[2];
+	IDirect3DTexture9 *intermediate_texture[2];
 
-	IDirect3DSurface9 *cache_surface;
-	IDirect3DTexture9 *cache_texture;
+	IDirect3DSurface9 *cache_surface[2];
+	IDirect3DTexture9 *cache_texture[2];
 
 	IDirect3DSurface9 *bloom_surface[MAX_BLOOM_COUNT];
 	IDirect3DTexture9 *bloom_texture[MAX_BLOOM_COUNT];
@@ -269,6 +273,8 @@ public:
 	float bloom_dims[MAX_BLOOM_COUNT][2];
 
 	int bloom_count;
+
+	int cache_index;
 };
 
 #endif

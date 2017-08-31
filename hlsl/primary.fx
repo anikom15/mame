@@ -143,6 +143,7 @@ technique ScreenTechnique
 	pass Pass0
 	{
 		Lighting = FALSE;
+		SRGBWriteEnable = TRUE;
 
 		VertexShader = compile vs_2_0 vs_screen_main();
 		PixelShader  = compile ps_2_0 ps_screen_main();

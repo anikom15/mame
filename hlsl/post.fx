@@ -68,51 +68,6 @@ struct PS_INPUT
 static const float PI = 3.1415927f;
 static const float HalfPI = PI * 0.5f;
 
-static const float3x3 SRGB_TO_SRGB = {
-	1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 1.0f
-};
-static const float3x3 NTSC_1953_TO_SRGB = {
-	 1.5073f, -0.3724f, -0.0833f,
-        -0.0273f,  0.9350f,  0.0669f,
-        -0.0271f,  0.0401f,  1.1672f
-};
-static const float3x3 NTSC_1987_TO_SRGB = {
-	 0.9394f,  0.0502f, 0.0102f,
-         0.0179f,  0.9658f, 0.0164f,
-	-0.0016f, -0.0044f, 1.0060f
-};
-static const float3x3 NTSC_J_TO_SRGB = {
-	 0.8292f,  0.0497f, 0.0140f,
-         0.0158f,  0.9561f, 0.0225f,
-	-0.0014f, -0.0043f, 1.3772f
-};
-static const float3x3 PAL_525_TO_SRGB = {
-	 0.9917f,  0.0487f, 0.0112f,
-         0.0189f,  0.9377f, 0.0181f,
-	-0.0017f, -0.0042f, 1.1058f
-};
-static const float3x3 SECAM_TO_SRGB = {
-	1.0439f, -0.0440f, -0.0000f,
-        0.0001f,  1.0000f, -0.0000f,
-	0.0000f,  0.0118f,  0.9882f
-};
-static const float3x3 APPLE_RGB_TO_SRGB = {
-	1.0686f, -0.0786f, 0.0099f,
-        0.0242f,  0.9601f, 0.0158f,
-	0.0252f,  0.0298f, 0.9686f
-};
-static const float3x3 CORRECTION_MATRIX[] = {
-	SRGB_TO_SRGB,
-	NTSC_1953_TO_SRGB,
-	NTSC_1987_TO_SRGB,
-	NTSC_J_TO_SRGB,
-	PAL_525_TO_SRGB,
-	SECAM_TO_SRGB,
-	APPLE_RGB_TO_SRGB
-};
-
 //-----------------------------------------------------------------------------
 // Scanline & Shadowmask Vertex Shader
 //-----------------------------------------------------------------------------
@@ -181,9 +136,6 @@ uniform int ShadowTileMode = 0; // 0 based on screen (quad) dimension, 1 based o
 uniform float ShadowAlpha = 0.0f;
 uniform float2 ShadowCount = float2(6.0f, 6.0f);
 uniform float2 ShadowUV = float2(0.25f, 0.25f);
-
-uniform float3 Power = float3(1.0f, 1.0f, 1.0f);
-uniform float3 Floor = float3(0.0f, 0.0f, 0.0f);
 
 float2 GetAdjustedCoords(float2 coord)
 {
@@ -265,35 +217,6 @@ float4 ps_main(PS_INPUT Input) : COLOR
 		return float4(0.0f, 0.0f, 0.0f, 1.0f);
 	}
 
-	// Mask Simulation (may not affect bloom)
-	if (!PrepareBloom && ShadowAlpha > 0.0f)
-	{
-		float2 ShadowCoord = GetShadowCoord(ScreenCoord, BaseCoord);
-
-		float4 ShadowColor = tex2D(ShadowSampler, ShadowCoord);
-		ShadowColor.rgb = mul(CORRECTION_MATRIX[ColorSpace], ShadowColor.rgb);
-		float3 ShadowMaskColor = lerp(1.0f, ShadowColor.rgb, ShadowAlpha);
-		float ShadowMaskClear = (1.0f - ShadowColor.a) * ShadowAlpha;
-
-		// apply shadow mask color
-		BaseColor.rgb *= ShadowMaskColor;
-		// clear shadow mask by background color
-		BaseColor.rgb = lerp(BaseColor.rgb, BackColor, ShadowMaskClear);
-	}
-
-	// Color Compression (may not affect bloom)
-	if (!PrepareBloom)
-	{
-		// increasing the floor of the signal without affecting the ceiling
-		BaseColor.rgb = Floor + (1.0f - Floor) * BaseColor.rgb;
-	}
-
-	// Color Power (may affect bloom)
-	BaseColor.r = pow(BaseColor.r, Power.r);
-	BaseColor.g = pow(BaseColor.g, Power.g);
-	BaseColor.b = pow(BaseColor.b, Power.b);
-
-	// Scanline Simulation (may not affect bloom)
 	if (!PrepareBloom)
 	{
 		// Scanline Simulation (may not affect vector screen)
@@ -331,6 +254,21 @@ float4 ps_main(PS_INPUT Input) : COLOR
 			float HumBarBrightness = 1.0 - frac(BaseCoord.y + HumBarStep) * HumBarAlpha;
 			BaseColor.rgb *= HumBarBrightness;
 		}
+
+		// Mask Simulation (may not affect bloom)
+		if (ShadowAlpha > 0.0f)
+		{
+			float2 ShadowCoord = GetShadowCoord(ScreenCoord, BaseCoord);
+
+			float4 ShadowColor = tex2D(ShadowSampler, ShadowCoord);
+			float3 ShadowMaskColor = lerp(1.0f, ShadowColor.rgb, ShadowAlpha);
+			float ShadowMaskClear = (1.0f - ShadowColor.a) * ShadowAlpha;
+
+			// apply shadow mask color
+			BaseColor.rgb *= ShadowMaskColor;
+			// clear shadow mask by background color
+			BaseColor.rgb = lerp(BaseColor.rgb, BackColor, ShadowMaskClear);
+		}
 	}
 
 	return BaseColor;
@@ -345,7 +283,6 @@ technique DefaultTechnique
 	pass Pass0
 	{
 		Lighting = FALSE;
-		SRGBWriteEnable = TRUE;
 
 		VertexShader = compile vs_3_0 vs_main();
 		PixelShader = compile ps_3_0 ps_main();

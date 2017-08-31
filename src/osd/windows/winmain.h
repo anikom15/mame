@@ -32,51 +32,13 @@
 #define WINOPTION_HLSL_WRITE                "hlsl_write"
 #define WINOPTION_HLSL_SNAP_WIDTH           "hlsl_snap_width"
 #define WINOPTION_HLSL_SNAP_HEIGHT          "hlsl_snap_height"
-#define WINOPTION_INPUT_GAMMA_ENABLE        "input_gamma_enable"
-#define WINOPTION_INPUT_GAMMA               "input_gamma"
-#define WINOPTION_INPUT_GAIN                "input_gain"
-#define WINOPTION_INPUT_BLACK_LEVEL         "input_black_level"
-#define WINOPTION_COLOR_SPACE               "color_space"
-#define WINOPTION_PHOSPHOR_TYPE             "phosphor_type"
-#define WINOPTION_SHADOW_MASK_TILE_MODE     "shadow_mask_tile_mode"
-#define WINOPTION_SHADOW_MASK_ALPHA         "shadow_mask_alpha"
-#define WINOPTION_SHADOW_MASK_TEXTURE       "shadow_mask_texture"
-#define WINOPTION_SHADOW_MASK_COUNT_X       "shadow_mask_x_count"
-#define WINOPTION_SHADOW_MASK_COUNT_Y       "shadow_mask_y_count"
-#define WINOPTION_SHADOW_MASK_USIZE         "shadow_mask_usize"
-#define WINOPTION_SHADOW_MASK_VSIZE         "shadow_mask_vsize"
-#define WINOPTION_SHADOW_MASK_UOFFSET       "shadow_mask_uoffset"
-#define WINOPTION_SHADOW_MASK_VOFFSET       "shadow_mask_voffset"
-#define WINOPTION_REFLECTION                "reflection"
-#define WINOPTION_DISTORTION                "distortion"
-#define WINOPTION_CUBIC_DISTORTION          "cubic_distortion"
-#define WINOPTION_DISTORT_CORNER            "distort_corner"
-#define WINOPTION_ROUND_CORNER              "round_corner"
-#define WINOPTION_SMOOTH_BORDER             "smooth_border"
-#define WINOPTION_VIGNETTING                "vignetting"
-#define WINOPTION_SCANLINE_AMOUNT           "scanline_alpha"
-#define WINOPTION_SCANLINE_SCALE            "scanline_size"
-#define WINOPTION_SCANLINE_HEIGHT           "scanline_height"
-#define WINOPTION_SCANLINE_VARIATION        "scanline_variation"
-#define WINOPTION_SCANLINE_BRIGHT_SCALE     "scanline_bright_scale"
-#define WINOPTION_SCANLINE_BRIGHT_OFFSET    "scanline_bright_offset"
-#define WINOPTION_SCANLINE_JITTER           "scanline_jitter"
-#define WINOPTION_HUM_BAR_ALPHA             "hum_bar_alpha"
-#define WINOPTION_DEFOCUS                   "defocus"
-#define WINOPTION_CONVERGE_X                "converge_x"
-#define WINOPTION_CONVERGE_Y                "converge_y"
-#define WINOPTION_RADIAL_CONVERGE_X         "radial_converge_x"
-#define WINOPTION_RADIAL_CONVERGE_Y         "radial_converge_y"
-#define WINOPTION_RED_RATIO                 "red_ratio"
-#define WINOPTION_GRN_RATIO                 "grn_ratio"
-#define WINOPTION_BLU_RATIO                 "blu_ratio"
-#define WINOPTION_OFFSET                    "offset"
-#define WINOPTION_SCALE                     "scale"
-#define WINOPTION_POWER                     "power"
-#define WINOPTION_FLOOR                     "floor"
-#define WINOPTION_PHOSPHOR                  "phosphor_life"
-#define WINOPTION_PHOSPHOR_MONO             "phosphor_life_mono"
-#define WINOPTION_SATURATION                "saturation"
+
+// Vector options
+#define WINOPTION_VECTOR_BEAM_SMOOTH        "vector_beam_smooth"
+#define WINOPTION_VECTOR_LENGTH_SCALE       "vector_length_scale"
+#define WINOPTION_VECTOR_LENGTH_RATIO       "vector_length_ratio"
+
+// NTSC options
 #define WINOPTION_YIQ_ENABLE                "yiq_enable"
 #define WINOPTION_YIQ_JITTER                "yiq_jitter"
 #define WINOPTION_YIQ_CCVALUE               "yiq_cc"
@@ -90,9 +52,55 @@
 #define WINOPTION_YIQ_QVALUE                "yiq_q"
 #define WINOPTION_YIQ_SCAN_TIME             "yiq_scan_time"
 #define WINOPTION_YIQ_PHASE_COUNT           "yiq_phase_count"
-#define WINOPTION_VECTOR_BEAM_SMOOTH        "vector_beam_smooth"
-#define WINOPTION_VECTOR_LENGTH_SCALE       "vector_length_scale"
-#define WINOPTION_VECTOR_LENGTH_RATIO       "vector_length_ratio"
+
+// Consumer television controls
+#define WINOPTION_SATURATION                "saturation"
+#define WINOPTION_TINT                      "tint"
+
+// Professional monitor controls
+#define WINOPTION_SCALE                     "scale"
+#define WINOPTION_OFFSET                    "offset"
+#define WINOPTION_RED_RATIO                 "red_ratio"
+#define WINOPTION_GRN_RATIO                 "grn_ratio"
+#define WINOPTION_BLU_RATIO                 "blu_ratio"
+
+// Display transfer function
+#define WINOPTION_SRGB_GAMMA_ENABLE         "srgb_gamma_enable"
+#define WINOPTION_DISPLAY_GAMMA             "display_gamma"
+#define WINOPTION_DISPLAY_GAIN              "display_gain"
+#define WINOPTION_DISPLAY_BLACK_LEVEL       "display_black_level"
+
+// Convergence
+#define WINOPTION_CONVERGE_X                "converge_x"
+#define WINOPTION_CONVERGE_Y                "converge_y"
+#define WINOPTION_RADIAL_CONVERGE_X         "radial_converge_x"
+#define WINOPTION_RADIAL_CONVERGE_Y         "radial_converge_y"
+#define WINOPTION_DEFOCUS                   "defocus"
+
+// Scanlines
+#define WINOPTION_SCANLINE_AMOUNT           "scanline_alpha"
+#define WINOPTION_SCANLINE_SCALE            "scanline_size"
+#define WINOPTION_SCANLINE_HEIGHT           "scanline_height"
+#define WINOPTION_SCANLINE_VARIATION        "scanline_variation"
+#define WINOPTION_SCANLINE_BRIGHT_SCALE     "scanline_bright_scale"
+#define WINOPTION_SCANLINE_BRIGHT_OFFSET    "scanline_bright_offset"
+#define WINOPTION_SCANLINE_JITTER           "scanline_jitter"
+
+// Hum bar
+#define WINOPTION_HUM_BAR_ALPHA             "hum_bar_alpha"
+
+// Shadow mask
+#define WINOPTION_SHADOW_MASK_TILE_MODE     "shadow_mask_tile_mode"
+#define WINOPTION_SHADOW_MASK_ALPHA         "shadow_mask_alpha"
+#define WINOPTION_SHADOW_MASK_TEXTURE       "shadow_mask_texture"
+#define WINOPTION_SHADOW_MASK_COUNT_X       "shadow_mask_x_count"
+#define WINOPTION_SHADOW_MASK_COUNT_Y       "shadow_mask_y_count"
+#define WINOPTION_SHADOW_MASK_USIZE         "shadow_mask_usize"
+#define WINOPTION_SHADOW_MASK_VSIZE         "shadow_mask_vsize"
+#define WINOPTION_SHADOW_MASK_UOFFSET       "shadow_mask_uoffset"
+#define WINOPTION_SHADOW_MASK_VOFFSET       "shadow_mask_voffset"
+
+// Bloom
 #define WINOPTION_BLOOM_BLEND_MODE          "bloom_blend_mode"
 #define WINOPTION_BLOOM_SCALE               "bloom_scale"
 #define WINOPTION_BLOOM_OVERDRIVE           "bloom_overdrive"
@@ -105,6 +113,27 @@
 #define WINOPTION_BLOOM_LEVEL6_WEIGHT       "bloom_lvl6_weight"
 #define WINOPTION_BLOOM_LEVEL7_WEIGHT       "bloom_lvl7_weight"
 #define WINOPTION_BLOOM_LEVEL8_WEIGHT       "bloom_lvl8_weight"
+
+// Phosphor
+#define WINOPTION_PHOSPHOR_TYPE             "phosphor_type"
+#define WINOPTION_PHOSPHOR_CHROMA_X         "phosphor_chroma_x"
+#define WINOPTION_PHOSPHOR_CHROMA_Y         "phosphor_chroma_y"
+#define WINOPTION_PHOSPHOR_DECAY_MODEL      "phosphor_decay_model"
+#define WINOPTION_PHOSPHOR_RATE_MODE        "phosphor_rate_mode"
+#define WINOPTION_PHOSPHOR                  "phosphor_life"
+#define WINOPTION_PHOSPHOR_BETA             "phosphor_beta"
+
+// Color correction
+#define WINOPTION_COLOR_SPACE               "color_space"
+
+// Geometry
+#define WINOPTION_DISTORTION                "distortion"
+#define WINOPTION_CUBIC_DISTORTION          "cubic_distortion"
+#define WINOPTION_DISTORT_CORNER            "distort_corner"
+#define WINOPTION_SMOOTH_BORDER             "smooth_border"
+#define WINOPTION_VIGNETTING                "vignetting"
+#define WINOPTION_REFLECTION                "reflection"
+#define WINOPTION_ROUND_CORNER              "round_corner"
 
 // full screen options
 #define WINOPTION_TRIPLEBUFFER          "triplebuffer"
@@ -140,44 +169,11 @@ public:
 	const char *d3d_hlsl_write() const { return value(WINOPTION_HLSL_WRITE); }
 	int d3d_snap_width() const { return int_value(WINOPTION_HLSL_SNAP_WIDTH); }
 	int d3d_snap_height() const { return int_value(WINOPTION_HLSL_SNAP_HEIGHT); }
-	bool screen_input_gamma_enable() const { return bool_value(WINOPTION_INPUT_GAMMA_ENABLE); }
-	float screen_input_gamma() const { return float_value(WINOPTION_INPUT_GAMMA); }
-	float screen_input_gain() const { return float_value(WINOPTION_INPUT_GAIN); }
-	float screen_input_black_level() const { return float_value(WINOPTION_INPUT_BLACK_LEVEL); }
-	int screen_color_space() const { return int_value(WINOPTION_COLOR_SPACE); }
-	int screen_phosphor_type() const { return int_value(WINOPTION_PHOSPHOR_TYPE); }
-	int screen_shadow_mask_tile_mode() const { return int_value(WINOPTION_SHADOW_MASK_TILE_MODE); }
-	float screen_shadow_mask_alpha() const { return float_value(WINOPTION_SHADOW_MASK_ALPHA); }
-	const char *screen_shadow_mask_texture() const { return value(WINOPTION_SHADOW_MASK_TEXTURE); }
-	int screen_shadow_mask_count_x() const { return int_value(WINOPTION_SHADOW_MASK_COUNT_X); }
-	int screen_shadow_mask_count_y() const { return int_value(WINOPTION_SHADOW_MASK_COUNT_Y); }
-	float screen_shadow_mask_u_size() const { return float_value(WINOPTION_SHADOW_MASK_USIZE); }
-	float screen_shadow_mask_v_size() const { return float_value(WINOPTION_SHADOW_MASK_VSIZE); }
-	float screen_shadow_mask_u_offset() const { return float_value(WINOPTION_SHADOW_MASK_UOFFSET); }
-	float screen_shadow_mask_v_offset() const { return float_value(WINOPTION_SHADOW_MASK_VOFFSET); }
-	float screen_scanline_amount() const { return float_value(WINOPTION_SCANLINE_AMOUNT); }
-	float screen_scanline_scale() const { return float_value(WINOPTION_SCANLINE_SCALE); }
-	float screen_scanline_height() const { return float_value(WINOPTION_SCANLINE_HEIGHT); }
-	float screen_scanline_variation() const { return float_value(WINOPTION_SCANLINE_VARIATION); }
-	float screen_scanline_bright_scale() const { return float_value(WINOPTION_SCANLINE_BRIGHT_SCALE); }
-	float screen_scanline_bright_offset() const { return float_value(WINOPTION_SCANLINE_BRIGHT_OFFSET); }
-	float screen_scanline_jitter() const { return float_value(WINOPTION_SCANLINE_JITTER); }
-	float screen_hum_bar_alpha() const { return float_value(WINOPTION_HUM_BAR_ALPHA); }
-	float screen_reflection() const { return float_value(WINOPTION_REFLECTION); }
-	float screen_distortion() const { return float_value(WINOPTION_DISTORTION); }
-	float screen_cubic_distortion() const { return float_value(WINOPTION_CUBIC_DISTORTION); }
-	float screen_distort_corner() const { return float_value(WINOPTION_DISTORT_CORNER); }
-	float screen_round_corner() const { return float_value(WINOPTION_ROUND_CORNER); }
-	float screen_smooth_border() const { return float_value(WINOPTION_SMOOTH_BORDER); }
-	float screen_vignetting() const { return float_value(WINOPTION_VIGNETTING); }
-	const char *screen_defocus() const { return value(WINOPTION_DEFOCUS); }
-	const char *screen_converge_x() const { return value(WINOPTION_CONVERGE_X); }
-	const char *screen_converge_y() const { return value(WINOPTION_CONVERGE_Y); }
-	const char *screen_radial_converge_x() const { return value(WINOPTION_RADIAL_CONVERGE_X); }
-	const char *screen_radial_converge_y() const { return value(WINOPTION_RADIAL_CONVERGE_Y); }
-	const char *screen_red_ratio() const { return value(WINOPTION_RED_RATIO); }
-	const char *screen_grn_ratio() const { return value(WINOPTION_GRN_RATIO); }
-	const char *screen_blu_ratio() const { return value(WINOPTION_BLU_RATIO); }
+
+	float screen_vector_beam_smooth() const { return float_value(WINOPTION_VECTOR_BEAM_SMOOTH); }
+	float screen_vector_length_scale() const { return float_value(WINOPTION_VECTOR_LENGTH_SCALE); }
+	float screen_vector_length_ratio() const { return float_value(WINOPTION_VECTOR_LENGTH_RATIO); }	
+
 	bool screen_yiq_enable() const { return bool_value(WINOPTION_YIQ_ENABLE); }
 	float screen_yiq_jitter() const { return float_value(WINOPTION_YIQ_JITTER); }
 	float screen_yiq_cc() const { return float_value(WINOPTION_YIQ_CCVALUE); }
@@ -191,9 +187,57 @@ public:
 	float screen_yiq_q() const { return float_value(WINOPTION_YIQ_QVALUE); }
 	float screen_yiq_scan_time() const { return float_value(WINOPTION_YIQ_SCAN_TIME); }
 	int screen_yiq_phase_count() const { return int_value(WINOPTION_YIQ_PHASE_COUNT); }
-	float screen_vector_beam_smooth() const { return float_value(WINOPTION_VECTOR_BEAM_SMOOTH); }
-	float screen_vector_length_scale() const { return float_value(WINOPTION_VECTOR_LENGTH_SCALE); }
-	float screen_vector_length_ratio() const { return float_value(WINOPTION_VECTOR_LENGTH_RATIO); }
+
+	float screen_saturation() const { return float_value(WINOPTION_SATURATION); }
+	float screen_tint() const { return float_value(WINOPTION_TINT); }
+
+	const char *screen_scale() const { return value(WINOPTION_SCALE); }
+	const char *screen_offset() const { return value(WINOPTION_OFFSET); }
+	const char *screen_red_ratio() const { return value(WINOPTION_RED_RATIO); }
+	const char *screen_grn_ratio() const { return value(WINOPTION_GRN_RATIO); }
+	const char *screen_blu_ratio() const { return value(WINOPTION_BLU_RATIO); }
+
+	bool screen_srgb_gamma_enable() const { return bool_value(WINOPTION_SRGB_GAMMA_ENABLE); }
+	float screen_display_gamma() const { return float_value(WINOPTION_DISPLAY_GAMMA); }
+	float screen_display_gain() const { return float_value(WINOPTION_DISPLAY_GAIN); }
+	float screen_display_black_level() const { return float_value(WINOPTION_DISPLAY_BLACK_LEVEL); }
+
+	const char *screen_converge_x() const { return value(WINOPTION_CONVERGE_X); }
+	const char *screen_converge_y() const { return value(WINOPTION_CONVERGE_Y); }
+	const char *screen_radial_converge_x() const { return value(WINOPTION_RADIAL_CONVERGE_X); }
+	const char *screen_radial_converge_y() const { return value(WINOPTION_RADIAL_CONVERGE_Y); }
+	const char *screen_defocus() const { return value(WINOPTION_DEFOCUS); }
+
+	float screen_scanline_amount() const { return float_value(WINOPTION_SCANLINE_AMOUNT); }
+	float screen_scanline_scale() const { return float_value(WINOPTION_SCANLINE_SCALE); }
+	float screen_scanline_height() const { return float_value(WINOPTION_SCANLINE_HEIGHT); }
+	float screen_scanline_variation() const { return float_value(WINOPTION_SCANLINE_VARIATION); }
+	float screen_scanline_bright_scale() const { return float_value(WINOPTION_SCANLINE_BRIGHT_SCALE); }
+	float screen_scanline_bright_offset() const { return float_value(WINOPTION_SCANLINE_BRIGHT_OFFSET); }
+	float screen_scanline_jitter() const { return float_value(WINOPTION_SCANLINE_JITTER); }
+
+	float screen_hum_bar_alpha() const { return float_value(WINOPTION_HUM_BAR_ALPHA); }
+
+	int screen_shadow_mask_tile_mode() const { return int_value(WINOPTION_SHADOW_MASK_TILE_MODE); }
+	float screen_shadow_mask_alpha() const { return float_value(WINOPTION_SHADOW_MASK_ALPHA); }
+	const char *screen_shadow_mask_texture() const { return value(WINOPTION_SHADOW_MASK_TEXTURE); }
+	int screen_shadow_mask_count_x() const { return int_value(WINOPTION_SHADOW_MASK_COUNT_X); }
+	int screen_shadow_mask_count_y() const { return int_value(WINOPTION_SHADOW_MASK_COUNT_Y); }
+	float screen_shadow_mask_u_size() const { return float_value(WINOPTION_SHADOW_MASK_USIZE); }
+	float screen_shadow_mask_v_size() const { return float_value(WINOPTION_SHADOW_MASK_VSIZE); }
+	float screen_shadow_mask_u_offset() const { return float_value(WINOPTION_SHADOW_MASK_UOFFSET); }
+	float screen_shadow_mask_v_offset() const { return float_value(WINOPTION_SHADOW_MASK_VOFFSET); }
+
+	int screen_phosphor_type() const { return int_value(WINOPTION_PHOSPHOR_TYPE); }
+	float screen_phosphor_chroma_x() const { return float_value(WINOPTION_PHOSPHOR_CHROMA_X); }
+	float screen_phosphor_chroma_y() const { return float_value(WINOPTION_PHOSPHOR_CHROMA_Y); }
+	int screen_phosphor_decay_model() const { return int_value(WINOPTION_PHOSPHOR_DECAY_MODEL); }
+	int screen_phosphor_rate_mode() const { return int_value(WINOPTION_PHOSPHOR_RATE_MODE); }
+	const char *screen_phosphor() const { return value(WINOPTION_PHOSPHOR); }
+	const char *screen_phosphor_beta() const { return value(WINOPTION_PHOSPHOR_BETA); }
+
+	int screen_color_space() const { return int_value(WINOPTION_COLOR_SPACE); }
+
 	int screen_bloom_blend_mode() const { return int_value(WINOPTION_BLOOM_BLEND_MODE); }
 	float screen_bloom_scale() const { return float_value(WINOPTION_BLOOM_SCALE); }
 	const char *screen_bloom_overdrive() const { return value(WINOPTION_BLOOM_OVERDRIVE); }
@@ -206,13 +250,14 @@ public:
 	float screen_bloom_lvl6_weight() const { return float_value(WINOPTION_BLOOM_LEVEL6_WEIGHT); }
 	float screen_bloom_lvl7_weight() const { return float_value(WINOPTION_BLOOM_LEVEL7_WEIGHT); }
 	float screen_bloom_lvl8_weight() const { return float_value(WINOPTION_BLOOM_LEVEL8_WEIGHT); }
-	const char *screen_offset() const { return value(WINOPTION_OFFSET); }
-	const char *screen_scale() const { return value(WINOPTION_SCALE); }
-	const char *screen_power() const { return value(WINOPTION_POWER); }
-	const char *screen_floor() const { return value(WINOPTION_FLOOR); }
-	const char *screen_phosphor() const { return value(WINOPTION_PHOSPHOR); }
-	float screen_phosphor_mono() const { return float_value(WINOPTION_PHOSPHOR_MONO); }
-	float screen_saturation() const { return float_value(WINOPTION_SATURATION); }
+
+	float screen_distortion() const { return float_value(WINOPTION_DISTORTION); }
+	float screen_cubic_distortion() const { return float_value(WINOPTION_CUBIC_DISTORTION); }
+	float screen_distort_corner() const { return float_value(WINOPTION_DISTORT_CORNER); }
+	float screen_smooth_border() const { return float_value(WINOPTION_SMOOTH_BORDER); }
+	float screen_vignetting() const { return float_value(WINOPTION_VIGNETTING); }
+	float screen_reflection() const { return float_value(WINOPTION_REFLECTION); }
+	float screen_round_corner() const { return float_value(WINOPTION_ROUND_CORNER); }
 
 	// full screen options
 	bool triple_buffer() const { return bool_value(WINOPTION_TRIPLEBUFFER); }
