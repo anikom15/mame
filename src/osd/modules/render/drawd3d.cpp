@@ -2743,7 +2743,7 @@ bool d3d_render_target::init(renderer_d3d9 *d3d, int source_width, int source_he
 		this->bloom_dims[bloom_index][0] = (int)bloom_width;
 		this->bloom_dims[bloom_index][1] = (int)bloom_height;
 
-		result = d3d->get_device()->CreateTexture((int)bloom_width, (int)bloom_height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &bloom_texture[bloom_index], nullptr);
+		result = d3d->get_device()->CreateTexture((int)bloom_width, (int)bloom_height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A8B8G8R8, D3DPOOL_DEFAULT, &bloom_texture[bloom_index], nullptr);
 		if (FAILED(result))
 			return false;
 

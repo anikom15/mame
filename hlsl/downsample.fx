@@ -13,6 +13,7 @@ texture DiffuseTexture;
 sampler DiffuseSampler = sampler_state
 {
 	Texture = <DiffuseTexture>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -110,6 +111,7 @@ technique DefaultTechnique
 	pass Pass0
 	{
 		Lighting = FALSE;
+		SRGBWriteEnable = TRUE;
 
 		VertexShader = compile vs_2_0 vs_main();
 		PixelShader = compile ps_2_0 ps_main();

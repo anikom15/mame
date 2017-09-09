@@ -42,6 +42,7 @@ sampler DiffuseSampler = sampler_state
 sampler BloomSamplerA = sampler_state
 {
 	Texture = <BloomTextureA>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -53,6 +54,7 @@ sampler BloomSamplerA = sampler_state
 sampler BloomSamplerB = sampler_state
 {
 	Texture = <BloomTextureB>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -64,6 +66,7 @@ sampler BloomSamplerB = sampler_state
 sampler BloomSamplerC = sampler_state
 {
 	Texture = <BloomTextureC>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -75,6 +78,7 @@ sampler BloomSamplerC = sampler_state
 sampler BloomSamplerD = sampler_state
 {
 	Texture = <BloomTextureD>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -86,6 +90,7 @@ sampler BloomSamplerD = sampler_state
 sampler BloomSamplerE = sampler_state
 {
 	Texture = <BloomTextureE>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -97,6 +102,7 @@ sampler BloomSamplerE = sampler_state
 sampler BloomSamplerF = sampler_state
 {
 	Texture = <BloomTextureF>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -108,6 +114,7 @@ sampler BloomSamplerF = sampler_state
 sampler BloomSamplerG = sampler_state
 {
 	Texture = <BloomTextureG>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -119,6 +126,7 @@ sampler BloomSamplerG = sampler_state
 sampler BloomSamplerH = sampler_state
 {
 	Texture = <BloomTextureH>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -130,6 +138,7 @@ sampler BloomSamplerH = sampler_state
 sampler BloomSamplerI = sampler_state
 {
 	Texture = <BloomTextureI>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -141,6 +150,7 @@ sampler BloomSamplerI = sampler_state
 sampler BloomSamplerJ = sampler_state
 {
 	Texture = <BloomTextureJ>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -152,6 +162,7 @@ sampler BloomSamplerJ = sampler_state
 sampler BloomSamplerK = sampler_state
 {
 	Texture = <BloomTextureK>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -163,6 +174,7 @@ sampler BloomSamplerK = sampler_state
 sampler BloomSamplerL = sampler_state
 {
 	Texture = <BloomTextureL>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -174,6 +186,7 @@ sampler BloomSamplerL = sampler_state
 sampler BloomSamplerM = sampler_state
 {
 	Texture = <BloomTextureM>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -185,6 +198,7 @@ sampler BloomSamplerM = sampler_state
 sampler BloomSamplerN = sampler_state
 {
 	Texture = <BloomTextureN>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -196,6 +210,7 @@ sampler BloomSamplerN = sampler_state
 sampler BloomSamplerO = sampler_state
 {
 	Texture = <BloomTextureO>;
+	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -310,14 +325,14 @@ float4 ps_main(PS_INPUT Input) : COLOR
 {
 	float3 texel = tex2D(DiffuseSampler, Input.TexCoord).rgb;
 
-	float3 texelA = tex2D(BloomSamplerA, Input.BloomCoord.xy).rgb;
-	float3 texelB = tex2D(BloomSamplerB, Input.BloomCoord.xy).rgb;
-	float3 texelC = tex2D(BloomSamplerC, Input.BloomCoord.xy).rgb;
-	float3 texelD = tex2D(BloomSamplerD, Input.BloomCoord.xy).rgb;
-	float3 texelE = tex2D(BloomSamplerE, Input.BloomCoord.xy).rgb;
-	float3 texelF = tex2D(BloomSamplerF, Input.BloomCoord.xy).rgb;
-	float3 texelG = tex2D(BloomSamplerG, Input.BloomCoord.xy).rgb;
-	float3 texelH = tex2D(BloomSamplerH, Input.BloomCoord.xy).rgb;
+	float3 texelA = pow(tex2D(BloomSamplerA, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelB = pow(tex2D(BloomSamplerB, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelC = pow(tex2D(BloomSamplerC, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelD = pow(tex2D(BloomSamplerD, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelE = pow(tex2D(BloomSamplerE, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelF = pow(tex2D(BloomSamplerF, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelG = pow(tex2D(BloomSamplerG, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelH = pow(tex2D(BloomSamplerH, Input.BloomCoord.xy).rgb, 2.0f);
 
 	float3 texelI = float3(0.0f, 0.0f, 0.0f);
 	float3 texelJ = float3(0.0f, 0.0f, 0.0f);
@@ -330,13 +345,13 @@ float4 ps_main(PS_INPUT Input) : COLOR
 	// vector screen uses twice -1 as many bloom levels
 	if (VectorScreen)
 	{
-		texelI = tex2D(BloomSamplerI, Input.BloomCoord.xy).rgb;
-		texelJ = tex2D(BloomSamplerJ, Input.BloomCoord.xy).rgb;
-		texelK = tex2D(BloomSamplerK, Input.BloomCoord.xy).rgb;
-		texelL = tex2D(BloomSamplerL, Input.BloomCoord.xy).rgb;
-		texelM = tex2D(BloomSamplerM, Input.BloomCoord.xy).rgb;
-		texelN = tex2D(BloomSamplerN, Input.BloomCoord.xy).rgb;
-		texelO = tex2D(BloomSamplerO, Input.BloomCoord.xy).rgb;
+		texelI = pow(tex2D(BloomSamplerI, Input.BloomCoord.xy).rgb, 2.0f);
+		texelJ = pow(tex2D(BloomSamplerJ, Input.BloomCoord.xy).rgb, 2.0f);
+		texelK = pow(tex2D(BloomSamplerK, Input.BloomCoord.xy).rgb, 2.0f);
+		texelL = pow(tex2D(BloomSamplerL, Input.BloomCoord.xy).rgb, 2.0f);
+		texelM = pow(tex2D(BloomSamplerM, Input.BloomCoord.xy).rgb, 2.0f);
+		texelN = pow(tex2D(BloomSamplerN, Input.BloomCoord.xy).rgb, 2.0f);
+		texelO = pow(tex2D(BloomSamplerO, Input.BloomCoord.xy).rgb, 2.0f);
 	}
 
 	float3 blend;
