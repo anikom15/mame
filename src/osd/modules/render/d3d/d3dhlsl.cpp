@@ -169,9 +169,9 @@ shaders::shaders() :
 	snap_width(0), snap_height(0), initialized(false), backbuffer(nullptr), curr_effect(nullptr),
 	default_effect(nullptr), prescale_effect(nullptr), gamma_effect(nullptr), srgb_gamma_effect(nullptr),
 	post_effect(nullptr), distortion_effect(nullptr), focus_effect(nullptr), phosphor_effect(nullptr),
-	deconverge_effect(nullptr), color_effect(nullptr), ntsc_effect(nullptr), bloom_effect(nullptr),
-	downsample_effect(nullptr), vector_effect(nullptr), curr_texture(nullptr), curr_render_target(nullptr),
-	curr_poly(nullptr), d3dx_create_effect_from_file_ptr(nullptr)
+	correction_effect(nullptr), deconverge_effect(nullptr), color_effect(nullptr), ntsc_effect(nullptr),
+	bloom_effect(nullptr), downsample_effect(nullptr), vector_effect(nullptr), curr_texture(nullptr),
+	curr_render_target(nullptr), curr_poly(nullptr), d3dx_create_effect_from_file_ptr(nullptr)
 {
 }
 
@@ -717,6 +717,7 @@ int shaders::create_resources()
 	distortion_effect = new effect(this, d3d->get_device(), "distortion.fx", fx_dir);
 	prescale_effect = new effect(this, d3d->get_device(), "prescale.fx", fx_dir);
 	phosphor_effect = new effect(this, d3d->get_device(), "phosphor.fx", fx_dir);
+	correction_effect = new effect(this, d3d->get_device(), "correction.fx", fx_dir);
 	focus_effect = new effect(this, d3d->get_device(), "focus.fx", fx_dir);
 	deconverge_effect = new effect(this, d3d->get_device(), "deconverge.fx", fx_dir);
 	color_effect = new effect(this, d3d->get_device(), "color.fx", fx_dir);
@@ -732,6 +733,7 @@ int shaders::create_resources()
 		!distortion_effect->is_valid() ||
 		!prescale_effect->is_valid() ||
 		!phosphor_effect->is_valid() ||
+		!correction_effect->is_valid() ||
 		!focus_effect->is_valid() ||
 		!deconverge_effect->is_valid() ||
 		!color_effect->is_valid() ||
@@ -751,9 +753,9 @@ int shaders::create_resources()
 		distortion_effect,
 		prescale_effect,
 		phosphor_effect,
+		correction_effect,
 		focus_effect,
 		deconverge_effect,
-		color_effect,
 		ntsc_effect,
 		gamma_effect,
 		srgb_gamma_effect,
@@ -806,14 +808,17 @@ int shaders::create_resources()
 
 	focus_effect->add_uniform("Defocus", uniform::UT_VEC2, uniform::CU_FOCUS_SIZE);
 
-	phosphor_effect->add_uniform("PhosphorType", uniform::UT_INT, uniform::CU_PHOSPHOR_TYPE);
-	phosphor_effect->add_uniform("PhosphorChromaX", uniform::UT_FLOAT, uniform::CU_PHOSPHOR_CHROMA_X);
-	phosphor_effect->add_uniform("PhosphorChromaY", uniform::UT_FLOAT, uniform::CU_PHOSPHOR_CHROMA_Y);
 	phosphor_effect->add_uniform("DecayModel", uniform::UT_INT, uniform::CU_PHOSPHOR_DECAY_MODEL);
 	phosphor_effect->add_uniform("RateMode", uniform::UT_INT, uniform::CU_PHOSPHOR_RATE_MODE);
 	phosphor_effect->add_uniform("PhosphorRGB", uniform::UT_VEC3, uniform::CU_PHOSPHOR_LIFE);
 	phosphor_effect->add_uniform("Beta", uniform::UT_VEC3, uniform::CU_PHOSPHOR_BETA);
+
+	phosphor_effect->add_uniform("PhosphorType", uniform::UT_INT, uniform::CU_PHOSPHOR_TYPE);
+	phosphor_effect->add_uniform("PhosphorChromaX", uniform::UT_FLOAT, uniform::CU_PHOSPHOR_CHROMA_X);
+	phosphor_effect->add_uniform("PhosphorChromaY", uniform::UT_FLOAT, uniform::CU_PHOSPHOR_CHROMA_Y);
 	phosphor_effect->add_uniform("ColorSpace", uniform::UT_INT, uniform::CU_COLOR_SPACE);
+
+	correction_effect->add_uniform("ColorSpace", uniform::UT_INT, uniform::CU_COLOR_SPACE);
 
 	post_effect->add_uniform("ShadowAlpha", uniform::UT_FLOAT, uniform::CU_POST_SHADOW_ALPHA);
 	post_effect->add_uniform("ShadowCount", uniform::UT_VEC2, uniform::CU_POST_SHADOW_COUNT);
@@ -865,6 +870,7 @@ void shaders::begin_draw()
 	distortion_effect->set_technique("DefaultTechnique");
 	prescale_effect->set_technique("DefaultTechnique");
 	phosphor_effect->set_technique("DefaultTechnique");
+	correction_effect->set_technique("DefaultTechnique");
 	focus_effect->set_technique("DefaultTechnique");
 	deconverge_effect->set_technique("DefaultTechnique");
 	color_effect->set_technique("DefaultTechnique");
@@ -1191,6 +1197,41 @@ int shaders::downsample_pass(d3d_render_target *rt, int source_index, poly_info 
 	return next_index;
 }
 
+
+int shaders::phosphor_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum)
+{
+	int next_index = source_index;
+
+	// Shader needs time between last update
+	curr_effect = phosphor_effect;
+	curr_effect->update_uniforms();
+	curr_effect->set_texture("Diffuse", rt->target_texture[next_index]);
+	curr_effect->set_texture("LastPass", rt->cache_texture[rt->cache_index]);
+	curr_effect->set_bool("Passthrough", false);
+	curr_effect->set_float("DeltaTime", delta_time());
+	rt->next_cache_index();
+	blit(rt->cache_surface[rt->cache_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	// Copy cached texture to target texture
+	curr_effect->update_uniforms();
+	curr_effect->set_texture("Diffuse", rt->cache_texture[rt->cache_index]);
+	curr_effect->set_texture("LastPass", rt->cache_texture[rt->cache_index]);
+	curr_effect->set_bool("Passthrough", true);
+	blit(rt->target_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	return next_index;
+}
+
+int shaders::correction_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum)
+{
+	int next_index = source_index;
+
+	curr_effect = correction_effect;
+	curr_effect->update_uniforms();
+	curr_effect->set_texture("Diffuse", rt->target_texture[next_index]);
+	next_index = rt->next_index(next_index);
+	blit(rt->target_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	return next_index;
+}
+
 int shaders::bloom_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum)
 {
 	int next_index = source_index;
@@ -1235,28 +1276,6 @@ int shaders::bloom_pass(d3d_render_target *rt, int source_index, poly_info *poly
 	next_index = rt->next_index(next_index);
 	blit(rt->target_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
 
-	return next_index;
-}
-
-int shaders::phosphor_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum)
-{
-	int next_index = source_index;
-
-	// Shader needs time between last update
-	curr_effect = phosphor_effect;
-	curr_effect->update_uniforms();
-	curr_effect->set_texture("Diffuse", rt->target_texture[next_index]);
-	curr_effect->set_texture("LastPass", rt->cache_texture[rt->cache_index]);
-	curr_effect->set_bool("Passthrough", false);
-	curr_effect->set_float("DeltaTime", delta_time());
-	rt->next_cache_index();
-	blit(rt->cache_surface[rt->cache_index], false, D3DPT_TRIANGLELIST, 0, 2);
-	// Copy cached texture to target texture
-	curr_effect->update_uniforms();
-	curr_effect->set_texture("Diffuse", rt->cache_texture[rt->cache_index]);
-	curr_effect->set_texture("LastPass", rt->cache_texture[rt->cache_index]);
-	curr_effect->set_bool("Passthrough", true);
-	blit(rt->target_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
 	return next_index;
 }
 
@@ -1419,6 +1438,7 @@ void shaders::render_quad(poly_info *poly, int vertnum)
 		next_index = post_pass(rt, next_index, poly, vertnum, false);
 		next_index = bloom_pass(rt, next_index, poly, vertnum);
 		next_index = phosphor_pass(rt, next_index, poly, vertnum);
+		next_index = correction_pass(rt, next_index, poly, vertnum);
 
 		next_index = distortion_pass(rt, next_index, poly, vertnum);
 
@@ -1485,20 +1505,21 @@ void shaders::render_quad(poly_info *poly, int vertnum)
 		int next_index = 0;
 
 		next_index = vector_buffer_pass(rt, next_index, poly, vertnum);
-		next_index = gamma_pass(rt, next_index, poly, vertnum);
+		//next_index = gamma_pass(rt, next_index, poly, vertnum);
 		next_index = deconverge_pass(rt, next_index, poly, vertnum);
 		next_index = defocus_pass(rt, next_index, poly, vertnum);
-		next_index = phosphor_pass(rt, next_index, poly, vertnum);
 
 		// create bloom textures
-		int phosphor_index = next_index;
+		int defocus_index = next_index;
 		next_index = post_pass(rt, next_index, poly, vertnum, true);
 		next_index = downsample_pass(rt, next_index, poly, vertnum);
 
 		// apply bloom textures
-		next_index = phosphor_index;
+		next_index = defocus_index;
 		next_index = post_pass(rt, next_index, poly, vertnum, false);
 		next_index = bloom_pass(rt, next_index, poly, vertnum);
+		next_index = phosphor_pass(rt, next_index, poly, vertnum);
+		next_index = correction_pass(rt, next_index, poly, vertnum);
 
 		next_index = distortion_pass(rt, next_index, poly, vertnum);
 
@@ -1791,6 +1812,11 @@ void shaders::delete_resources()
 		delete phosphor_effect;
 		phosphor_effect = nullptr;
 	}
+	if (correction_effect != nullptr)
+	{
+		delete correction_effect;
+		correction_effect = nullptr;
+	}
 	if (focus_effect != nullptr)
 	{
 		delete focus_effect;
@@ -1980,6 +2006,7 @@ enum slider_option
 	SLIDER_NTSC_I_VALUE,
 	SLIDER_NTSC_Q_VALUE,
 	SLIDER_NTSC_SCAN_TIME,
+	SLIDER_COLOR_SPACE,
 	SLIDER_SATURATION,
 	SLIDER_TINT,
 	SLIDER_SCALE,
@@ -2012,6 +2039,13 @@ enum slider_option
 	SLIDER_SHADOW_MASK_V_SIZE,
 	SLIDER_SHADOW_MASK_U_OFFSET,
 	SLIDER_SHADOW_MASK_V_OFFSET,
+	SLIDER_PHOSPHOR_TYPE,
+	SLIDER_PHOSPHOR_CHROMA_X,
+	SLIDER_PHOSPHOR_CHROMA_Y,
+	SLIDER_PHOSPHOR_DECAY_MODEL,
+	SLIDER_PHOSPHOR_RATE_MODE,
+	SLIDER_PHOSPHOR,
+	SLIDER_PHOSPHOR_BETA,
 	SLIDER_BLOOM_BLEND_MODE,
 	SLIDER_BLOOM_SCALE,
 	SLIDER_BLOOM_OVERDRIVE,
@@ -2024,14 +2058,6 @@ enum slider_option
 	SLIDER_BLOOM_LVL6_SCALE,
 	SLIDER_BLOOM_LVL7_SCALE,
 	SLIDER_BLOOM_LVL8_SCALE,
-	SLIDER_PHOSPHOR_TYPE,
-	SLIDER_PHOSPHOR_CHROMA_X,
-	SLIDER_PHOSPHOR_CHROMA_Y,
-	SLIDER_PHOSPHOR_DECAY_MODEL,
-	SLIDER_PHOSPHOR_RATE_MODE,
-	SLIDER_PHOSPHOR,
-	SLIDER_PHOSPHOR_BETA,
-	SLIDER_COLOR_SPACE,
 	SLIDER_DISTORTION,
 	SLIDER_CUBIC_DISTORTION,
 	SLIDER_DISTORT_CORNER,
@@ -2101,6 +2127,13 @@ slider_desc shaders::s_sliders[] =
 	{ "Shadow Mask V Size",                 1,     1,    32, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_V_SIZE,      0.03125f, "%2.5f", {} },
 	{ "Shadow Mask U Offset",            -100,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_U_OFFSET,    0.01f,    "%1.2f", {} },
 	{ "Shadow Mask V Offset",            -100,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_V_OFFSET,    0.01f,    "%1.2f", {} },
+	{ "Phosphor Type",                      0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_TYPE,           0,        "%s",    { "Color", "Monochrome" } },
+	{ "Phosphor Chromaticity x",            0,   333,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA_X,       0.001f,   "%1.3f", {} },
+	{ "Phosphor Chromaticity y",            0,   333,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA_Y,       0.001f,   "%1.3f", {} },
+	{ "Phosphor Decay Model" ,              0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_DECAY_MODEL,    0,        "%s",    { "Exponential", "Inverse Power" } },
+	{ "Phospor Base Decay Rate",            0,     3,     5, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_RATE_MODE,      0,        "%s",    { "Very Short", "Short", "Medium-Short", "Medium", "Long", "Very Long" } },
+	{ "Phosphor Persistence,",              0,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR,                0.01f,    "%2.2f", {} },
+	{ "Phosphor Beta,",                    50,   100,   200, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_BETA,           0.01f,    "%2.2f", {} },
 	{ "Bloom Blend Mode",                   0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_BLOOM_BLEND_MODE,        0,        "%s",    { "Brighten", "Darken" } },
 	{ "Bloom Scale",                        0,     0,  2000, 5, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_BLOOM_SCALE,             0.001f,   "%1.3f", {} },
 	{ "Bloom Overdrive,",                   0,     0,  2000, 5, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_BLOOM_OVERDRIVE,         0.001f,   "%1.3f", {} },
@@ -2113,13 +2146,6 @@ slider_desc shaders::s_sliders[] =
 	{ "Bloom Level 6 Scale",                0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_BLOOM_LVL6_SCALE,        0.01f,    "%1.2f", {} },
 	{ "Bloom Level 7 Scale",                0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_BLOOM_LVL7_SCALE,        0.01f,    "%1.2f", {} },
 	{ "Bloom Level 8 Scale",                0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_BLOOM_LVL8_SCALE,        0.01f,    "%1.2f", {} },
-	{ "Phosphor Type",                      0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_TYPE,           0,        "%s",    { "Color", "Monochrome" } },
-	{ "Phosphor Chromaticity x",            0,   333,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA_X,       0.001f,   "%1.3f", {} },
-	{ "Phosphor Chromaticity y",            0,   333,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA_Y,       0.001f,   "%1.3f", {} },
-	{ "Phosphor Decay Model" ,              0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_DECAY_MODEL,    0,        "%s",    { "Exponential", "Inverse Power" } },
-	{ "Phospor Base Decay Rate",            0,     3,     5, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_RATE_MODE,      0,        "%s",    { "Very Short", "Short", "Medium-Short", "Medium", "Long", "Very Long" } },
-	{ "Phosphor Persistence,",              0,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR,                0.01f,    "%2.2f", {} },
-	{ "Phosphor Beta,",                    50,   100,   200, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_BETA,           0.01f,    "%2.2f", {} },
 	{ "Quadric Distortion Amount",       -200,     0,   200, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_DISTORTION,              0.01f,    "%2.2f", {} },
 	{ "Cubic Distortion Amount",         -200,     0,   200, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_CUBIC_DISTORTION,        0.01f,    "%2.2f", {} },
 	{ "Distorted Corner Amount",            0,     0,   200, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_DISTORT_CORNER,          0.01f,    "%1.2f", {} },

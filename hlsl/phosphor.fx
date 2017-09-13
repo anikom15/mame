@@ -13,7 +13,6 @@ texture Diffuse;
 sampler DiffuseSampler = sampler_state
 {
 	Texture   = <Diffuse>;
-	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -27,7 +26,6 @@ texture LastPass;
 sampler PreviousSampler = sampler_state
 {
 	Texture   = <LastPass>;
-	SRGBTexture = TRUE;
 	MipFilter = LINEAR;
 	MinFilter = LINEAR;
 	MagFilter = LINEAR;
@@ -95,88 +93,6 @@ VS_OUTPUT vs_main(VS_INPUT Input)
 // PhosphorRGB Pixel Shader
 //-----------------------------------------------------------------------------
 
-// Color Correction Matrices
-//
-// sRGB uses a white point D65.  It is identical to Rec. 709 used for HD
-// video.  Note that UHD and digital cinema formats use a different gamut.
-//
-// NTSC 1953 uses a wide gamut with white point C.
-//
-// NTSC 1987 uses a distinct gamut with white point D65.
-//
-// NTSC-J uses the same gamut as NTSC 1987, but uses a white point around
-// 9300 K.
-//
-// PAL 525 was used for all analog 525-line systems.  It uses the same gamut
-// as NTSC 1987, but with white point C.
-//
-// SECAM/PAL 625 was used for all analog 625-line systems.  It uses a gamut
-// nearly identical to sRGB with white point D65.
-//
-// Apple RGB has a unique gamut that mimics the 13" Apple RGB monitor. It uses
-// white point D65.
-
-static const float3x3 SRGB_TO_SRGB = {
-	1.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f,
-	0.0f, 0.0f, 1.0f
-};
-static const float3x3 NTSC_1953_TO_SRGB = {
-	 1.5073f, -0.3724f, -0.0833f,
-        -0.0273f,  0.9350f,  0.0669f,
-        -0.0271f,  0.0401f,  1.1672f
-};
-static const float3x3 NTSC_1987_TO_SRGB = {
-	 0.9394f,  0.0502f, 0.0102f,
-         0.0179f,  0.9658f, 0.0164f,
-	-0.0016f, -0.0044f, 1.0060f
-};
-static const float3x3 NTSC_J_TO_SRGB = {
-	 0.8292f,  0.0497f, 0.0140f,
-         0.0158f,  0.9561f, 0.0225f,
-	-0.0014f, -0.0043f, 1.3772f
-};
-static const float3x3 PAL_525_TO_SRGB = {
-	 0.9917f,  0.0487f, 0.0112f,
-         0.0189f,  0.9377f, 0.0181f,
-	-0.0017f, -0.0042f, 1.1058f
-};
-static const float3x3 SECAM_TO_SRGB = {
-	1.0439f, -0.0440f, -0.0000f,
-        0.0001f,  1.0000f, -0.0000f,
-	0.0000f,  0.0118f,  0.9882f
-};
-static const float3x3 APPLE_RGB_TO_SRGB = {
-	1.0686f, -0.0786f, 0.0099f,
-        0.0242f,  0.9601f, 0.0158f,
-	0.0252f,  0.0298f, 0.9686f
-};
-static const float3x3 CORRECTION_MATRIX[] = {
-	SRGB_TO_SRGB,
-	NTSC_1953_TO_SRGB,
-	NTSC_1987_TO_SRGB,
-	NTSC_J_TO_SRGB,
-	PAL_525_TO_SRGB,
-	SECAM_TO_SRGB,
-	APPLE_RGB_TO_SRGB
-};
-static const float3 LUMA_NTSC_1953 = { 0.30f, 0.59f, 0.11f };
-static const float3 LUMA_REC_601 = { 0.299f, 0.587f, 0.114f };
-static const float3 LUMA_REC_709 = { 0.2126f, 0.7152f, 0.0722f };
-static const float3 LUMA[] = {
-	LUMA_REC_709,
-	LUMA_NTSC_1953,
-	LUMA_REC_601,
-	LUMA_REC_601,
-	LUMA_REC_601,
-	LUMA_REC_601,
-	LUMA_REC_601
-};
-static const float3x3 XYZ_TO_SRGB = {  3.2406f, -1.5372f, -0.4986f,
-                                      -0.9689f,  1.8758f,  0.0415f,
-				       0.0557f, -0.2040f,  1.0570f
-                                    };
-
 static const float TAU_FACTOR[] = {
 	434.29e-9f,
 	4.3429e-6f,
@@ -195,15 +111,73 @@ static const float GAMMA_FACTOR[] = {
 	216.23e-3f
 };
 
+static const float3 LUMA_NTSC_1953 = { 0.30f, 0.59f, 0.11f };
+static const float3 LUMA_REC_601 = { 0.299f, 0.587f, 0.114f };
+static const float3 LUMA_REC_709 = { 0.2126f, 0.7152f, 0.0722f };
+static const float3 LUMA[] = {
+	LUMA_REC_709,
+	LUMA_NTSC_1953,
+	LUMA_REC_601,
+	LUMA_REC_601,
+	LUMA_REC_601,
+	LUMA_REC_601,
+	LUMA_REC_601
+};
+static const float3x3 XYZ_TO_SRGB = {
+	 3.2406f, -1.5372f, -0.4986f,
+        -0.9689f,  1.8758f,  0.0415f,
+	 0.0557f, -0.2040f,  1.0570f
+};
+static const float3x3 XYZ_TO_NTSC_1953 = {
+	 1.9100f, -0.5325f, -0.2883f,
+	-0.9846f,  1.9991f, -0.0282f,
+	 0.0582f, -0.1183f,  0.8980f
+};
+static const float3x3 XYZ_TO_NTSC_1987 = {
+	 3.5062f, -1.7398f, -0.5441f,
+	-1.0694f,  1.9780f,  0.0352f,
+	 0.0564f, -0.1970f,  1.0499f
+};
+static const float3x3 XYZ_TO_NTSC_J = {
+	 3.9716f, -1.9709f, -0.6163f,
+	-1.0800f,  1.9980f,  0.0356f,
+	 0.0413f, -0.1440f,  0.7670f
+};
+static const float3x3 XYZ_TO_PAL_525 = {
+	 3.3213f, -1.6478f, -0.5156f,
+	-1.1011f,  2.0368f,  0.0363f,
+	 0.0512f, -0.1792f,  0.9552f
+};
+static const float3x3 XYZ_TO_SECAM = {
+	 3.0543f, -1.3892f, -0.4743f,
+	-0.9577f,  1.8708f,  0.0398f,
+	 0.0664f, -0.2282f,  1.0693f
+};
+static const float3x3 XYZ_TO_APPLE_RGB = {
+	 2.9515f, -1.2892f, -0.4738f,
+	-1.0849f,  1.9908f,  0.0372f,
+	 0.0854f, -0.2694f,  1.0910f
+};
+static const float3x3 XYZ_TO_RGB[] = {
+	XYZ_TO_SRGB,
+	XYZ_TO_NTSC_1953,
+	XYZ_TO_NTSC_1987,
+	XYZ_TO_NTSC_J,
+	XYZ_TO_PAL_525,
+	XYZ_TO_SECAM,
+	XYZ_TO_APPLE_RGB
+};
+
 uniform float3 Beta = { 0.0f, 0.0f, 0.0f };
-uniform int ColorSpace = 0;
 uniform int DecayModel = 0;
 uniform float DeltaTime = 0.0f;
+uniform float3 PhosphorRGB = { 0.0f, 0.0f, 0.0f };
+uniform int RateMode = 0;
+
+uniform int ColorSpace = 0;
 uniform float PhosphorChromaX = 0.0f;
 uniform float PhosphorChromaY = 0.0f;
-uniform float3 PhosphorRGB = { 0.0f, 0.0f, 0.0f };
 uniform int PhosphorType = 0;
-uniform int RateMode = 0;
 
 float4 ps_main(PS_INPUT Input) : COLOR
 {
@@ -216,8 +190,18 @@ float4 ps_main(PS_INPUT Input) : COLOR
 	// S  - 1 to 10 us
 	// VS - 1 us or less
 
-	const float4 CurrPix = tex2D(DiffuseSampler, Input.TexCoord);
+	float4 CurrPix = tex2D(DiffuseSampler, Input.TexCoord);
 	float3 PrevPix = tex2D(PreviousSampler, Input.PrevCoord).rgb;
+
+	if (PhosphorType != 0)
+	{
+		const float x = PhosphorChromaX;
+		const float y = PhosphorChromaY;
+		const float Y = dot(LUMA[ColorSpace], CurrPix.rgb);
+		const float X = x * (Y / y);
+		const float Z = (1.0f - x - y) * (Y / y);
+		CurrPix.rgb = mul(XYZ_TO_RGB[ColorSpace], float3(X, Y, Z));
+	}
 
 	if (DecayModel == 0)
 	{
@@ -245,19 +229,7 @@ float4 ps_main(PS_INPUT Input) : COLOR
 	//const float3 one3 = { 1.0f, 1.0f, 1.0f };
 	//float3 OutRGB = one3 - (one3 - PrevPix) * (one3 - CurrPix.rgb);
 	float3 OutRGB = max(CurrPix.rgb, PrevPix);
-
-	OutRGB = ColorSpace <= 6 ?
-		 mul(CORRECTION_MATRIX[ColorSpace], OutRGB) :
-		 OutRGB;
-	if (PhosphorType != 0)
-	{
-		const float x = PhosphorChromaX;
-		const float y = PhosphorChromaY;
-		const float Y = dot(LUMA[ColorSpace], OutRGB);
-		const float X = x * (Y / y);
-		const float Z = (1.0f - x - y) * (Y / y);
-		OutRGB = mul(XYZ_TO_SRGB, float3(X, Y, Z));
-	}
+	//float3 OutRGB = CurrPix.rgb + PrevPix;
 
 	return Passthrough ?
 	       CurrPix : float4(OutRGB, CurrPix.a);

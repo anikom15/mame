@@ -97,7 +97,7 @@ float4 ps_main(PS_INPUT Input) : COLOR
 	float3 texel2 = tex2D(DiffuseSampler, Input.TexCoord23.xy).rgb;
 	float3 texel3 = tex2D(DiffuseSampler, Input.TexCoord23.zw).rgb;
 
-	float3 outTexel = (texel0 + texel1 + texel2 + texel3) / 4.0;
+	float3 outTexel = (texel0 + texel1 + texel2 + texel3) / 4.0f;
 
 	return float4(outTexel, 1.0f);
 }
