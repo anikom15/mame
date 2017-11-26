@@ -325,14 +325,14 @@ float4 ps_main(PS_INPUT Input) : COLOR
 {
 	float3 texel = tex2D(DiffuseSampler, Input.TexCoord).rgb;
 
-	float3 texelA = pow(tex2D(BloomSamplerA, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelB = pow(tex2D(BloomSamplerB, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelC = pow(tex2D(BloomSamplerC, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelD = pow(tex2D(BloomSamplerD, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelE = pow(tex2D(BloomSamplerE, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelF = pow(tex2D(BloomSamplerF, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelG = pow(tex2D(BloomSamplerG, Input.BloomCoord.xy).rgb, 2.0f);
-	float3 texelH = pow(tex2D(BloomSamplerH, Input.BloomCoord.xy).rgb, 2.0f);
+	float3 texelA = tex2D(BloomSamplerA, Input.BloomCoord.xy).rgb;
+	float3 texelB = tex2D(BloomSamplerB, Input.BloomCoord.xy).rgb;
+	float3 texelC = tex2D(BloomSamplerC, Input.BloomCoord.xy).rgb;
+	float3 texelD = tex2D(BloomSamplerD, Input.BloomCoord.xy).rgb;
+	float3 texelE = tex2D(BloomSamplerE, Input.BloomCoord.xy).rgb;
+	float3 texelF = tex2D(BloomSamplerF, Input.BloomCoord.xy).rgb;
+	float3 texelG = tex2D(BloomSamplerG, Input.BloomCoord.xy).rgb;
+	float3 texelH = tex2D(BloomSamplerH, Input.BloomCoord.xy).rgb;
 
 	float3 texelI = float3(0.0f, 0.0f, 0.0f);
 	float3 texelJ = float3(0.0f, 0.0f, 0.0f);
@@ -345,13 +345,13 @@ float4 ps_main(PS_INPUT Input) : COLOR
 	// vector screen uses twice -1 as many bloom levels
 	if (VectorScreen)
 	{
-		texelI = pow(tex2D(BloomSamplerI, Input.BloomCoord.xy).rgb, 2.0f);
-		texelJ = pow(tex2D(BloomSamplerJ, Input.BloomCoord.xy).rgb, 2.0f);
-		texelK = pow(tex2D(BloomSamplerK, Input.BloomCoord.xy).rgb, 2.0f);
-		texelL = pow(tex2D(BloomSamplerL, Input.BloomCoord.xy).rgb, 2.0f);
-		texelM = pow(tex2D(BloomSamplerM, Input.BloomCoord.xy).rgb, 2.0f);
-		texelN = pow(tex2D(BloomSamplerN, Input.BloomCoord.xy).rgb, 2.0f);
-		texelO = pow(tex2D(BloomSamplerO, Input.BloomCoord.xy).rgb, 2.0f);
+		texelI = tex2D(BloomSamplerI, Input.BloomCoord.xy).rgb;
+		texelJ = tex2D(BloomSamplerJ, Input.BloomCoord.xy).rgb;
+		texelK = tex2D(BloomSamplerK, Input.BloomCoord.xy).rgb;
+		texelL = tex2D(BloomSamplerL, Input.BloomCoord.xy).rgb;
+		texelM = tex2D(BloomSamplerM, Input.BloomCoord.xy).rgb;
+		texelN = tex2D(BloomSamplerN, Input.BloomCoord.xy).rgb;
+		texelO = tex2D(BloomSamplerO, Input.BloomCoord.xy).rgb;
 	}
 
 	float3 blend;
