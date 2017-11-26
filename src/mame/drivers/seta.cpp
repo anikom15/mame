@@ -8,16 +8,16 @@
 
 
 CPU    :    68000 + [65C02] (only in the earlier games)
-Custom :    X1-001A  X1-002A (SDIP64)   Sprites
+Custom :    X1-001A, X1-002A (SDIP64)   Sprites
             X1-001
             X1-002
-            X1-003
+            X1-003 or X1-007 (SDIP42)   Video blanking (feeds RGB DACs)
             X1-004           (SDIP52)   Inputs
-            X1-005   X0-005
-            X1-006   X0-006
-            X1-007           (SDIP42)   Video DAC
+            X1-005
+            X1-006           (SDIP64)   Palette
             X1-010           (QFP80)    Sound: 16 Bit PCM
-            X1-011   X1-012  (QFP100)   Tilemaps
+            X1-011           (QFP80)    Graphics mixing
+            X1-012           (QFP100)   Tilemaps
             X1-014                      Sprites?
 
 -------------------------------------------------------------------------------
@@ -1378,7 +1378,7 @@ Note: on screen copyright is (c)1998 Coinmaster.
 #include "machine/msm6242.h"
 #include "machine/nvram.h"
 #include "machine/pit8253.h"
-#include "machine/upd4701.h"
+#include "machine/tmp68301.h"
 #include "machine/watchdog.h"
 #include "sound/2203intf.h"
 #include "sound/2612intf.h"
@@ -1776,45 +1776,32 @@ READ16_MEMBER(seta_state::usclssic_dsw_r)
 	return 0;
 }
 
-READ16_MEMBER(seta_state::usclssic_trackball_x_r)
+CUSTOM_INPUT_MEMBER(seta_state::usclssic_trackball_x_r)
 {
-	static const char *const portx_name[2] = { "P1X", "P2X" };
-
-	switch (offset)
-	{
-		case 0/2:   return (ioport(portx_name[m_usclssic_port_select])->read() >> 0) & 0xff;
-		case 2/2:   return (ioport(portx_name[m_usclssic_port_select])->read() >> 8) & 0xff;
-	}
-	return 0;
+	return (m_usclssic_port_select ? m_track2_x : m_track1_x)->read();
 }
 
-READ16_MEMBER(seta_state::usclssic_trackball_y_r)
+CUSTOM_INPUT_MEMBER(seta_state::usclssic_trackball_y_r)
 {
-	static const char *const porty_name[2] = { "P1Y", "P2Y" };
-
-	switch (offset)
-	{
-		case 0/2:   return (ioport(porty_name[m_usclssic_port_select])->read() >> 0) & 0xff;
-		case 2/2:   return (ioport(porty_name[m_usclssic_port_select])->read() >> 8) & 0xff;
-	}
-	return 0;
+	return (m_usclssic_port_select ? m_track2_y : m_track1_y)->read();
 }
 
 
-WRITE16_MEMBER(seta_state::usclssic_lockout_w)
+WRITE8_MEMBER(seta_state::usclssic_lockout_w)
 {
-	if (ACCESSING_BITS_0_7)
-	{
-		int tiles_offset = (data & 0x10) ? 0x4000: 0;
+	int tiles_offset = BIT(data, 4) ? 0x4000: 0;
 
-		m_usclssic_port_select = (data & 0x40) >> 6;
+	m_usclssic_port_select = BIT(data, 6);
+	m_buttonmux->select_w(m_usclssic_port_select);
 
-		if (tiles_offset != m_tiles_offset)
-			machine().tilemap().mark_all_dirty();
-		m_tiles_offset = tiles_offset;
+	m_upd4701->resetx_w(BIT(data, 7));
+	m_upd4701->resety_w(BIT(data, 7));
 
-		seta_coin_lockout_w(data);
-	}
+	if (tiles_offset != m_tiles_offset)
+		machine().tilemap().mark_all_dirty();
+	m_tiles_offset = tiles_offset;
+
+	seta_coin_lockout_w(data);
 }
 
 
@@ -1826,9 +1813,8 @@ static ADDRESS_MAP_START( usclssic_map, AS_PROGRAM, 16, seta_state )
 /**/AM_RANGE(0x900000, 0x900001) AM_RAM                                 // ? $4000
 	AM_RANGE(0xa00000, 0xa00005) AM_RAM AM_SHARE("vctrl_0")         // VRAM Ctrl
 /**/AM_RANGE(0xb00000, 0xb003ff) AM_RAM AM_SHARE("paletteram")  // Palette
-	AM_RANGE(0xb40000, 0xb40003) AM_READ(usclssic_trackball_x_r)        // TrackBall X
-	AM_RANGE(0xb40000, 0xb40001) AM_WRITE(usclssic_lockout_w)           // Coin Lockout + Tiles Banking
-	AM_RANGE(0xb40004, 0xb40007) AM_READ(usclssic_trackball_y_r)        // TrackBall Y + Buttons
+	AM_RANGE(0xb40000, 0xb40007) AM_DEVREAD8("upd4701", upd4701_device, read_xy, 0x00ff)
+	AM_RANGE(0xb40000, 0xb40001) AM_WRITE8(usclssic_lockout_w, 0x00ff)  // Coin Lockout + Tiles Banking
 	AM_RANGE(0xb4000a, 0xb4000b) AM_WRITE(ipl1_ack_w)
 	AM_RANGE(0xb40010, 0xb40011) AM_READ_PORT("COINS")                  // Coins
 	AM_RANGE(0xb40010, 0xb40011) AM_DEVWRITE8("soundlatch", generic_latch_8_device, write, 0x00ff) // To Sub CPU
@@ -1939,48 +1925,32 @@ ADDRESS_MAP_END
                     and Zombie Raid (with slight variations)
 ***************************************************************************/
 
+ADC083X_INPUT_CB(seta_state::zombraid_adc_cb)
+{
+	if (input == ADC083X_AGND)
+		return 0.0;
+	else if (input == ADC083X_VREF)
+		return 1.0;
+	else
+		return m_gun_inputs[input - ADC083X_CH0]->read() / 255.0;
+}
+
 READ16_MEMBER(seta_state::zombraid_gun_r)// Serial interface
 {
-	static const char *const portnames[] = { "GUNX1", "GUNY1", "GUNX2", "GUNY2" };
-
-	int data = ioport(portnames[m_gun_input_src])->read();  // Input Ports 5-8
-	return (data >> m_gun_input_bit) & 1;
+	return m_adc->do_read();
 }
 
 // Bit 0 is clock, 1 is data, 2 is reset
 WRITE16_MEMBER(seta_state::zombraid_gun_w)
 {
-	if(data&4) { m_gun_bit_count = 0; return; } // Reset
+	m_adc->cs_write(BIT(data, 2));
+	m_adc->di_write(BIT(data, 1));
+	m_adc->clk_write(BIT(data, 0));
 
-	if((data&1) == m_gun_old_clock) return; // No change
-
-	if(m_gun_old_clock == 0) // Rising edge
-	{
-		switch (m_gun_bit_count)
-		{
-			case 0:
-			case 1: // Starting sequence 2,3,2,3. Other inputs?
-				break;
-			case 2: // First bit of source
-				m_gun_input_src = (m_gun_input_src&2) | (data>>1);
-				break;
-			case 3: // Second bit of source
-				m_gun_input_src = (m_gun_input_src&1) | (data&2);
-				break;
-			default:
-				/* Gun Recoils */
-				/* Note:  In debug menu recoil solenoids strobe when held down.  Is this correct?? */
-				output().set_value("Player1_Gun_Recoil", (data & 0x10)>>4 );
-				output().set_value("Player2_Gun_Recoil", (data & 0x8)>>3 );
-
-				m_gun_input_bit = m_gun_bit_count - 4;
-				m_gun_input_bit = 8 - m_gun_input_bit; // Reverse order
-				break;
-		}
-		m_gun_bit_count++;
-	}
-
-	m_gun_old_clock = data & 1;
+	/* Gun Recoils */
+	/* Note:  In debug menu recoil solenoids strobe when held down.  Is this correct?? */
+	output().set_value("Player1_Gun_Recoil", BIT(data, 4));
+	output().set_value("Player2_Gun_Recoil", BIT(data, 3));
 }
 
 READ16_MEMBER(seta_state::extra_r)
@@ -2025,8 +1995,10 @@ static ADDRESS_MAP_START( wrofaero_map, AS_PROGRAM, 16, seta_state )
 ADDRESS_MAP_END
 
 static ADDRESS_MAP_START( zombraid_map, AS_PROGRAM, 16, seta_state )
-	AM_IMPORT_FROM( wrofaero_map )
 	AM_RANGE(0x300000, 0x30ffff) AM_RAM AM_SHARE("nvram")           // actually 8K x8 SRAM
+	AM_RANGE(0xf00000, 0xf00001) AM_WRITE(zombraid_gun_w)
+	AM_RANGE(0xf00002, 0xf00003) AM_READ(zombraid_gun_r)
+	AM_IMPORT_FROM( wrofaero_map )
 ADDRESS_MAP_END
 
 READ16_MEMBER(seta_state::zingzipbl_unknown_r)
@@ -2676,30 +2648,6 @@ ADDRESS_MAP_END
                                 Krazy Bowl
 ***************************************************************************/
 
-READ16_MEMBER(seta_state::krzybowl_input_r)
-{
-	// analog ports
-	int dir1x = m_track1_x->read() & 0xfff;
-	int dir1y = m_track1_y->read() & 0xfff;
-	int dir2x = m_track2_x->read() & 0xfff;
-	int dir2y = m_track2_y->read() & 0xfff;
-
-	switch (offset)
-	{
-		case 0x0/2: return dir1x & 0xff;
-		case 0x2/2: return dir1x >> 8;
-		case 0x4/2: return dir1y & 0xff;
-		case 0x6/2: return dir1y >> 8;
-		case 0x8/2: return dir2x & 0xff;
-		case 0xa/2: return dir2x >> 8;
-		case 0xc/2: return dir2y & 0xff;
-		case 0xe/2: return dir2y >> 8;
-		default:
-			logerror("PC %06X - Read input %02X !\n", space.device().safe_pc(), offset*2);
-			return 0;
-	}
-}
-
 static ADDRESS_MAP_START( krzybowl_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0x000000, 0x07ffff) AM_ROM                             // ROM
 	AM_RANGE(0xf00000, 0xf0ffff) AM_RAM                             // RAM
@@ -2710,7 +2658,8 @@ static ADDRESS_MAP_START( krzybowl_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0x500000, 0x500001) AM_READ_PORT("P1")                 // P1
 	AM_RANGE(0x500002, 0x500003) AM_READ_PORT("P2")                 // P2
 	AM_RANGE(0x500004, 0x500005) AM_READ_PORT("COINS")              // Coins
-	AM_RANGE(0x600000, 0x60000f) AM_READ(krzybowl_input_r)          // P1
+	AM_RANGE(0x600000, 0x600007) AM_DEVREAD8("upd1", upd4701_device, read_xy, 0x00ff) // P1 trackball
+	AM_RANGE(0x600008, 0x60000f) AM_DEVREAD8("upd2", upd4701_device, read_xy, 0x00ff) // P2 trackball
 	AM_RANGE(0x8000f0, 0x8000f1) AM_RAM                             // NVRAM
 	AM_RANGE(0x800100, 0x8001ff) AM_RAM                             // NVRAM
 	AM_RANGE(0xa00000, 0xa03fff) AM_DEVREADWRITE("x1snd", x1_010_device, word_r, word_w)   // Sound
@@ -2829,23 +2778,14 @@ ADDRESS_MAP_END
                             Pro Mahjong Kiwame
 ***************************************************************************/
 
-// TODO: not NVRAM!!!
-READ16_MEMBER(seta_state::kiwame_nvram_r)
+WRITE16_MEMBER(seta_state::kiwame_row_select_w)
 {
-	return m_kiwame_nvram[offset] & 0xff;
-}
-
-WRITE16_MEMBER(seta_state::kiwame_nvram_w)
-{
-	if (ACCESSING_BITS_0_7)
-	{
-		COMBINE_DATA( &m_kiwame_nvram[offset] );
-	}
+	m_kiwame_row_select = data & 0x001f;
 }
 
 READ16_MEMBER(seta_state::kiwame_input_r)
 {
-	int row_select = kiwame_nvram_r( space, 0x10a/2,0x00ff ) & 0x1f;
+	int row_select = m_kiwame_row_select;
 	int i;
 	static const char *const keynames[] = { "KEY0", "KEY1", "KEY2", "KEY3", "KEY4" };
 
@@ -2877,7 +2817,7 @@ static ADDRESS_MAP_START( kiwame_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0xc00000, 0xc03fff) AM_DEVREADWRITE("x1snd", x1_010_device, word_r, word_w)   // Sound
 	AM_RANGE(0xd00000, 0xd00009) AM_READ(kiwame_input_r)            // mahjong panel
 	AM_RANGE(0xe00000, 0xe00003) AM_READ(seta_dsw_r)                // DSW
-	AM_RANGE(0xfffc00, 0xffffff) AM_READWRITE(kiwame_nvram_r, kiwame_nvram_w) AM_SHARE("kiwame_nvram")  // TODO: actual unknown device
+	AM_RANGE(0xfffc00, 0xffffff) AM_DEVREADWRITE("tmp68301", tmp68301_device, regs_r, regs_w)
 ADDRESS_MAP_END
 
 
@@ -2935,7 +2875,7 @@ static ADDRESS_MAP_START( thunderlbl_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0xb00002, 0xb00003) AM_READ_PORT("P2")                 // P2
 	AM_RANGE(0xb00004, 0xb00005) AM_READ_PORT("COINS")              // Coins
 //  AM_RANGE(0xb0000c, 0xb0000d) AM_READ(thunderl_protection_r  )   // Protection (not in wits)
-	AM_RANGE(0xb00008, 0xb00009) AM_READ_PORT("P3") AM_WRITE(wiggie_soundlatch_w)                // P3 (wits)
+	AM_RANGE(0xb00008, 0xb00009) AM_READ_PORT("P3") AM_DEVWRITE8("soundlatch", generic_latch_8_device, write, 0xff00) // P3 (wits)
 	AM_RANGE(0xb0000a, 0xb0000b) AM_READ_PORT("P4")                 // P4 (wits)
 /**/AM_RANGE(0xc00000, 0xc00001) AM_RAM                             // ? 0x4000
 /**/AM_RANGE(0xd00000, 0xd005ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r16, spriteylow_w16)     // Sprites Y
@@ -2948,21 +2888,10 @@ ADDRESS_MAP_END
                     Wiggie Waggie
 ***************************************************************************/
 
-READ8_MEMBER(seta_state::wiggie_soundlatch_r)
-{
-	return m_wiggie_soundlatch;
-}
-
-WRITE16_MEMBER(seta_state::wiggie_soundlatch_w)
-{
-	m_wiggie_soundlatch = data >> 8;
-	m_audiocpu->set_input_line(0, HOLD_LINE);
-}
-
-
 static ADDRESS_MAP_START( wiggie_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0x000000, 0x01ffff) AM_ROM                             // ROM
 	AM_RANGE(0xffc000, 0xffffff) AM_RAM                             // RAM
+	AM_RANGE(0x100000, 0x103fff) AM_NOP                             // X1_010 is not used
 	AM_RANGE(0x200000, 0x200001) AM_WRITENOP                        // ?
 	AM_RANGE(0x300000, 0x300001) AM_WRITENOP                        // ?
 	AM_RANGE(0x400000, 0x40ffff) AM_WRITE(thunderl_protection_w)    // Protection (not in wits)
@@ -2974,6 +2903,7 @@ static ADDRESS_MAP_START( wiggie_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0xb00004, 0xb00005) AM_READ_PORT("COINS")              // Coins
 	AM_RANGE(0xb0000c, 0xb0000d) AM_READ(thunderl_protection_r)     // Protection (not in wits)
 	AM_RANGE(0xb00008, 0xb00009) AM_READ_PORT("P3")                 // P3 (wits)
+	AM_RANGE(0xb00008, 0xb00009) AM_DEVWRITE8("soundlatch", generic_latch_8_device, write, 0xff00)
 	AM_RANGE(0xb0000a, 0xb0000b) AM_READ_PORT("P4")                 // P4 (wits)
 /**/AM_RANGE(0xc00000, 0xc00001) AM_RAM                             // ? 0x4000
 /**/AM_RANGE(0xd00000, 0xd005ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r16, spriteylow_w16)     // Sprites Y
@@ -2986,7 +2916,7 @@ static ADDRESS_MAP_START( wiggie_sound_map, AS_PROGRAM, 8, seta_state )
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0x87ff) AM_RAM
 	AM_RANGE(0x9800, 0x9800) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xa000, 0xa000) AM_READ(wiggie_soundlatch_r)
+	AM_RANGE(0xa000, 0xa000) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
 ADDRESS_MAP_END
 
 
@@ -3018,13 +2948,12 @@ ADDRESS_MAP_END
                             Ultra Toukond Densetsu
 ***************************************************************************/
 
-WRITE16_MEMBER(seta_state::utoukond_soundlatch_w)
+WRITE8_MEMBER(seta_state::utoukond_sound_control_w)
 {
-	if (ACCESSING_BITS_0_7)
-	{
-		m_audiocpu->set_input_line(0, HOLD_LINE);
-		m_soundlatch->write(space, 0, data & 0xff);
-	}
+	if (!BIT(data, 6))
+		m_soundlatch->acknowledge_w(space, 0, 0);
+
+	// other bits used for banking? (low nibble seems to always be 2)
 }
 
 static ADDRESS_MAP_START( utoukond_map, AS_PROGRAM, 16, seta_state )
@@ -3043,7 +2972,7 @@ static ADDRESS_MAP_START( utoukond_map, AS_PROGRAM, 16, seta_state )
 	AM_RANGE(0xa00000, 0xa005ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r16, spriteylow_w16)     // Sprites Y
 	AM_RANGE(0xa00600, 0xa00607) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritectrl_r16, spritectrl_w16)
 	AM_RANGE(0xb00000, 0xb03fff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecode_r16, spritecode_w16)     // Sprites Code + X + Attr
-	AM_RANGE(0xc00000, 0xc00001) AM_WRITE(utoukond_soundlatch_w)    // To Sound CPU (cause an IRQ)
+	AM_RANGE(0xc00000, 0xc00001) AM_DEVWRITE8("soundlatch", generic_latch_8_device, write, 0x00ff)
 	AM_RANGE(0xe00000, 0xe00001) AM_WRITENOP                        // ? ack
 ADDRESS_MAP_END
 
@@ -3570,7 +3499,7 @@ ADDRESS_MAP_END
 static ADDRESS_MAP_START( utoukond_sound_io_map, AS_IO, 8, seta_state )
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x03) AM_DEVREADWRITE("ymsnd", ym3438_device, read, write)
-	AM_RANGE(0x80, 0x80) AM_WRITENOP //?
+	AM_RANGE(0x80, 0x80) AM_WRITE(utoukond_sound_control_w)
 	AM_RANGE(0xc0, 0xc0) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
 ADDRESS_MAP_END
 
@@ -4992,7 +4921,7 @@ INPUT_PORTS_END
 ***************************************************************************/
 
 #define KRZYBOWL_TRACKBALL(_dir_, _n_ ) \
-	PORT_BIT( 0x0fff, 0x0000, IPT_TRACKBALL_##_dir_ ) PORT_PLAYER(_n_) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_REVERSE
+	PORT_BIT( 0x0fff, 0x0000, IPT_TRACKBALL_##_dir_ ) PORT_PLAYER(_n_) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_REVERSE PORT_RESET
 
 static INPUT_PORTS_START( krzybowl )
 	PORT_START("P1") //Player 1
@@ -6397,33 +6326,31 @@ INPUT_PORTS_END
 ***************************************************************************/
 
 static INPUT_PORTS_START( usclssic )
-	PORT_START("P1X")     /* muxed port 0 */
-	PORT_BIT( 0x0fff, 0x0000, IPT_TRACKBALL_X ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET
-	PORT_BIT( 0x1000, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x2000, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x4000, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_START("TRACKX")
+	PORT_BIT( 0xfff, 0x000, IPT_SPECIAL ) PORT_CUSTOM_MEMBER(DEVICE_SELF, seta_state, usclssic_trackball_x_r, nullptr)
 
-	PORT_START("P1Y")     /* muxed port 0 */
-	PORT_BIT( 0x0fff, 0x0000, IPT_TRACKBALL_Y ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET
-	PORT_BIT( 0x1000, IP_ACTIVE_LOW,  IPT_UNKNOWN )
-	PORT_BIT( 0x2000, IP_ACTIVE_HIGH, IPT_BUTTON1 )
-	PORT_BIT( 0x4000, IP_ACTIVE_HIGH, IPT_START1 )
-	PORT_BIT( 0x8000, IP_ACTIVE_LOW,  IPT_UNKNOWN )
+	PORT_START("TRACKY")
+	PORT_BIT( 0xfff, 0x000, IPT_SPECIAL ) PORT_CUSTOM_MEMBER(DEVICE_SELF, seta_state, usclssic_trackball_y_r, nullptr)
 
-	PORT_START("P2X")     /* muxed port 1 */
-	PORT_BIT( 0x0fff, 0x0000, IPT_TRACKBALL_X ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET PORT_COCKTAIL
-	PORT_BIT( 0x1000, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x2000, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x4000, IP_ACTIVE_LOW, IPT_UNKNOWN )
-	PORT_BIT( 0x8000, IP_ACTIVE_LOW, IPT_UNKNOWN )
+	PORT_START("TRACK1_X")     /* muxed port 0 */
+	PORT_BIT( 0xfff, 0x000, IPT_TRACKBALL_X ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET
 
-	PORT_START("P2Y")     /* muxed port 1 */
-	PORT_BIT( 0x0fff, 0x0000, IPT_TRACKBALL_Y ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET PORT_COCKTAIL
-	PORT_BIT( 0x1000, IP_ACTIVE_LOW,  IPT_UNKNOWN )
-	PORT_BIT( 0x2000, IP_ACTIVE_HIGH, IPT_BUTTON1 ) PORT_COCKTAIL
-	PORT_BIT( 0x4000, IP_ACTIVE_HIGH, IPT_START2 )
-	PORT_BIT( 0x8000, IP_ACTIVE_LOW,  IPT_UNKNOWN )
+	PORT_START("TRACK1_Y")     /* muxed port 0 */
+	PORT_BIT( 0xfff, 0x000, IPT_TRACKBALL_Y ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET
+
+	PORT_START("TRACK2_X")     /* muxed port 1 */
+	PORT_BIT( 0xfff, 0x000, IPT_TRACKBALL_X ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET PORT_COCKTAIL
+
+	PORT_START("TRACK2_Y")     /* muxed port 1 */
+	PORT_BIT( 0xfff, 0x000, IPT_TRACKBALL_Y ) PORT_SENSITIVITY(70) PORT_KEYDELTA(30) PORT_RESET PORT_COCKTAIL
+
+	PORT_START("BUTTONS")
+	PORT_BIT( 0x01, IP_ACTIVE_LOW, IPT_UNKNOWN ) PORT_WRITE_LINE_DEVICE_MEMBER("buttonmux", hc157_device, a0_w)
+	PORT_BIT( 0x02, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_WRITE_LINE_DEVICE_MEMBER("buttonmux", hc157_device, a1_w)
+	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_START1 ) PORT_WRITE_LINE_DEVICE_MEMBER("buttonmux", hc157_device, a2_w)
+	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_UNKNOWN ) PORT_WRITE_LINE_DEVICE_MEMBER("buttonmux", hc157_device, b0_w)
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_BUTTON1 ) PORT_COCKTAIL PORT_WRITE_LINE_DEVICE_MEMBER("buttonmux", hc157_device, b1_w)
+	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_START2 ) PORT_WRITE_LINE_DEVICE_MEMBER("buttonmux", hc157_device, b2_w)
 
 	PORT_START("COINS")
 	PORT_BIT( 0x0001, IP_ACTIVE_LOW,  IPT_UNKNOWN  )    // tested (sound related?)
@@ -7995,6 +7922,12 @@ TIMER_DEVICE_CALLBACK_MEMBER(seta_state::calibr50_interrupt)
 }
 
 
+MACHINE_START_MEMBER(seta_state, usclssic)
+{
+	m_buttonmux->ab_w(0xff);
+}
+
+
 static MACHINE_CONFIG_START( usclssic )
 
 	/* basic machine hardware */
@@ -8007,6 +7940,16 @@ static MACHINE_CONFIG_START( usclssic )
 	MCFG_CPU_PROGRAM_MAP(calibr50_sub_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", seta_state,  irq0_line_assert)
 
+	MCFG_DEVICE_ADD("upd4701", UPD4701A, 0)
+	MCFG_UPD4701_PORTX("TRACKX")
+	MCFG_UPD4701_PORTY("TRACKY")
+
+	MCFG_DEVICE_ADD("buttonmux", HC157, 0)
+	MCFG_74157_OUT_CB(DEVWRITELINE("upd4701", upd4701_device, middle_w)) MCFG_DEVCB_BIT(0)
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("upd4701", upd4701_device, right_w)) MCFG_DEVCB_BIT(1)
+	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("upd4701", upd4701_device, left_w)) MCFG_DEVCB_BIT(2)
+
+	MCFG_MACHINE_START_OVERRIDE(seta_state,usclssic)
 	MCFG_MACHINE_RESET_OVERRIDE(seta_state,calibr50)
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
@@ -8319,7 +8262,7 @@ static ADDRESS_MAP_START( blockcarb_sound_portmap, AS_IO, 8, seta_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 //  AM_RANGE(0x00, 0x01) AM_MIRROR(0x3e) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-//  AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x3f) AM_READ(wiggie_soundlatch_r)
+//  AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x3f) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
 ADDRESS_MAP_END
 
 static MACHINE_CONFIG_DERIVED( blockcarb, blockcar )
@@ -8722,6 +8665,9 @@ static MACHINE_CONFIG_DERIVED( zombraid, gundhara )
 	MCFG_CPU_PROGRAM_MAP(zombraid_map)
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
+
+	MCFG_DEVICE_ADD("adc", ADC0834, 0)
+	MCFG_ADC083X_INPUT_CB(seta_state, zombraid_adc_cb)
 MACHINE_CONFIG_END
 
 /***************************************************************************
@@ -8940,6 +8886,14 @@ static MACHINE_CONFIG_START( krzybowl )
 	MCFG_CPU_ADD("maincpu", M68000, 16000000)   /* 16 MHz */
 	MCFG_CPU_PROGRAM_MAP(krzybowl_map)
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", seta_state, seta_interrupt_1_and_2, "screen", 0, 1)
+
+	MCFG_DEVICE_ADD("upd1", UPD4701A, 0)
+	MCFG_UPD4701_PORTX("TRACK1_X")
+	MCFG_UPD4701_PORTY("TRACK1_Y")
+
+	MCFG_DEVICE_ADD("upd2", UPD4701A, 0)
+	MCFG_UPD4701_PORTX("TRACK2_X")
+	MCFG_UPD4701_PORTY("TRACK2_Y")
 
 	MCFG_DEVICE_ADD("spritegen", SETA001_SPRITE, 0)
 	MCFG_SETA001_SPRITE_GFXDECODE("gfxdecode")
@@ -9193,6 +9147,8 @@ static MACHINE_CONFIG_START( kiwame )
 	MCFG_CPU_PROGRAM_MAP(kiwame_map)
 	/* lev 1-7 are the same. WARNING: the interrupt table is written to. */
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", seta_state,  irq1_line_hold)
+	MCFG_DEVICE_ADD("tmp68301", TMP68301, 0)
+	MCFG_TMP68301_OUT_PARALLEL_CB(WRITE16(seta_state, kiwame_row_select_w))
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
@@ -9308,7 +9264,6 @@ static ADDRESS_MAP_START( thunderlbl_sound_map, AS_PROGRAM, 8, seta_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	AM_RANGE(0x0000, 0x7fff) AM_ROM
 	AM_RANGE(0x8000, 0xdfff) AM_ROM
-	AM_RANGE(0xe800, 0xe800) AM_READ(wiggie_soundlatch_r)
 	AM_RANGE(0xf800, 0xffff) AM_RAM
 ADDRESS_MAP_END
 
@@ -9316,7 +9271,7 @@ static ADDRESS_MAP_START( thunderlbl_sound_portmap, AS_IO, 8, seta_state )
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 	AM_RANGE(0x00, 0x01) AM_MIRROR(0x3e) AM_DEVREADWRITE("ymsnd", ym2151_device, read, write)
-	AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x3f) AM_READ(wiggie_soundlatch_r)
+	AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x3f) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
 ADDRESS_MAP_END
 
 
@@ -9336,6 +9291,9 @@ static MACHINE_CONFIG_DERIVED( thunderlbl, thunderl )
 
 	MCFG_YM2151_ADD("ymsnd", 10000000/2)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+
+	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", 0))
 MACHINE_CONFIG_END
 
 
@@ -9372,6 +9330,9 @@ static MACHINE_CONFIG_START( wiggie )
 
 	MCFG_OKIM6295_ADD("oki", 1000000, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
+
+	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", 0))
 MACHINE_CONFIG_END
 
 static MACHINE_CONFIG_DERIVED( superbar, wiggie )
@@ -9486,6 +9447,8 @@ static MACHINE_CONFIG_START( utoukond )
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
+	MCFG_GENERIC_LATCH_DATA_PENDING_CB(INPUTLINE("audiocpu", 0))
+	MCFG_GENERIC_LATCH_SEPARATE_ACKNOWLEDGE(true)
 
 	MCFG_SOUND_ADD("x1snd", X1_010, 16000000)
 	MCFG_SOUND_ROUTE(0, "lspeaker", 1.0)
@@ -11869,13 +11832,6 @@ DRIVER_INIT_MEMBER(seta_state,eightfrc)
 }
 
 
-DRIVER_INIT_MEMBER(seta_state,zombraid)
-{
-	m_maincpu->space(AS_PROGRAM).install_read_handler(0xf00002, 0xf00003, read16_delegate(FUNC(seta_state::zombraid_gun_r),this));
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0xf00000, 0xf00001, write16_delegate(FUNC(seta_state::zombraid_gun_w),this));
-}
-
-
 DRIVER_INIT_MEMBER(seta_state,kiwame)
 {
 	uint16_t *RAM = (uint16_t *) memregion("maincpu")->base();
@@ -11920,11 +11876,6 @@ DRIVER_INIT_MEMBER(seta_state,wiggie)
 
 
 	}
-
-	/* X1_010 is not used. */
-	m_maincpu->space(AS_PROGRAM).nop_readwrite(0x100000, 0x103fff);
-	m_maincpu->space(AS_PROGRAM).install_write_handler(0xB00008, 0xB00009, write16_delegate(FUNC(seta_state::wiggie_soundlatch_w),this));
-
 }
 
 DRIVER_INIT_MEMBER(seta_state,crazyfgt)
@@ -12066,8 +12017,8 @@ GAME( 1995, gundharac, gundhara, gundhara,  gundhara,  seta_state,     0,       
 
 GAME( 1995, sokonuke,  0,        extdwnhl,  sokonuke,  seta_state,     0,         ROT0,   "Sammy Industries",          "Sokonuke Taisen Game (Japan)", MACHINE_IMPERFECT_SOUND )
 
-GAME( 1995, zombraid,  0,        zombraid,  zombraid,  seta_state,     zombraid,  ROT0,   "American Sammy",            "Zombie Raid (9/28/95, US)", MACHINE_NO_COCKTAIL )
-GAME( 1995, zombraidp, zombraid, zombraid,  zombraid,  seta_state,     zombraid,  ROT0,   "American Sammy",            "Zombie Raid (9/28/95, US, prototype PCB)", MACHINE_NO_COCKTAIL ) // actual code is same as the released version
-GAME( 1995, zombraidpj,zombraid, zombraid,  zombraid,  seta_state,     zombraid,  ROT0,   "Sammy Industries Co.,Ltd.", "Zombie Raid (9/28/95, Japan, prototype PCB)", MACHINE_NO_COCKTAIL ) // just 3 bytes different from above
+GAME( 1995, zombraid,  0,        zombraid,  zombraid,  seta_state,     0,         ROT0,   "American Sammy",            "Zombie Raid (9/28/95, US)", MACHINE_NO_COCKTAIL )
+GAME( 1995, zombraidp, zombraid, zombraid,  zombraid,  seta_state,     0,         ROT0,   "American Sammy",            "Zombie Raid (9/28/95, US, prototype PCB)", MACHINE_NO_COCKTAIL ) // actual code is same as the released version
+GAME( 1995, zombraidpj,zombraid, zombraid,  zombraid,  seta_state,     0,         ROT0,   "Sammy Industries Co.,Ltd.", "Zombie Raid (9/28/95, Japan, prototype PCB)", MACHINE_NO_COCKTAIL ) // just 3 bytes different from above
 
 GAME( 1996, crazyfgt,  0,        crazyfgt,  crazyfgt,  seta_state,     crazyfgt,  ROT0,   "Subsino",                   "Crazy Fight", MACHINE_UNEMULATED_PROTECTION | MACHINE_IMPERFECT_GRAPHICS | MACHINE_IMPERFECT_SOUND )
