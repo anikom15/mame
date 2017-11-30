@@ -377,6 +377,7 @@ private:
 	int                     gamma_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     prescale_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     deconverge_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
+	int                     scanline_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     defocus_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     post_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum, bool prepare_bloom);
 	int                     downsample_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
@@ -427,6 +428,7 @@ private:
 	effect *                srgb_gamma_effect;
 	effect *                post_effect;                // pointer to the post-effect object
 	effect *                distortion_effect;          // pointer to the distortion-effect object
+	effect *                scanline_effect;
 	effect *                focus_effect;               // pointer to the focus-effect object
 	effect *                phosphor_effect;            // pointer to the phosphor-effect object
 	effect *                correction_effect;

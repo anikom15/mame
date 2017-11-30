@@ -122,14 +122,6 @@ uniform float TimeMilliseconds = 0.0f;
 uniform float2 ScreenScale = float2(1.0f, 1.0f);
 uniform float2 ScreenOffset = float2(0.0f, 0.0f);
 
-uniform float ScanlineAlpha = 0.0f;
-uniform float ScanlineScale = 1.0f;
-uniform float ScanlineHeight = 1.0f;
-uniform float ScanlineVariation = 1.0f;
-uniform float ScanlineOffset = 1.0f;
-uniform float ScanlineBrightScale = 1.0f;
-uniform float ScanlineBrightOffset = 1.0f;
-
 uniform float3 BackColor = float3(0.0f, 0.0f, 0.0f);
 
 uniform int ShadowTileMode = 0; // 0 based on screen (quad) dimension, 1 based on source dimension
@@ -219,34 +211,6 @@ float4 ps_main(PS_INPUT Input) : COLOR
 
 	if (!PrepareBloom)
 	{
-		// Scanline Simulation (may not affect vector screen)
-		if (!VectorScreen && ScanlineAlpha > 0.0f)
-		{
-			float BrightnessOffset = (ScanlineBrightOffset * ScanlineAlpha);
-			float BrightnessScale = (ScanlineBrightScale * ScanlineAlpha) + (1.0f - ScanlineAlpha);
-
-			float ColorBrightness = 0.299f * BaseColor.r + 0.587f * BaseColor.g + 0.114 * BaseColor.b;
-
-			float ScanlineCoord = BaseCoord.y;
-			ScanlineCoord += SwapXY
-				? QuadDims.x <= SourceDims.x * 2.0f
-					? 0.5f / QuadDims.x // uncenter scanlines if the quad is less than twice the size of the source
-					: 0.0f
-				: QuadDims.y <= SourceDims.y * 2.0f
-					? 0.5f / QuadDims.y // uncenter scanlines if the quad is less than twice the size of the source
-					: 0.0f;
-
-			ScanlineCoord *= SourceDims.y * ScanlineScale * PI;
-
-			float ScanlineCoordJitter = ScanlineOffset * HalfPI;
-			float ScanlineSine = sin(ScanlineCoord + ScanlineCoordJitter);
-			float ScanlineWide = ScanlineHeight + ScanlineVariation * max(1.0f, ScanlineHeight) * (1.0f - ColorBrightness);
-			float ScanlineAmount = pow(ScanlineSine * ScanlineSine, ScanlineWide);
-			float ScanlineBrightness = ScanlineAmount * BrightnessScale + BrightnessOffset * BrightnessScale;
-
-			BaseColor.rgb *= lerp(1.0f, ScanlineBrightness, ScanlineAlpha);
-		}
-
 		// Hum Bar Simulation (may not affect vector screen)
 		if (!VectorScreen && HumBarAlpha > 0.0f)
 		{
