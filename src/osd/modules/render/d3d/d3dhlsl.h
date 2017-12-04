@@ -379,10 +379,11 @@ private:
 	int                     deconverge_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     scanline_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     defocus_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
+	int                     expand_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     post_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum, bool prepare_bloom);
 	int                     downsample_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     phosphor_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
-	int                     correction_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);	
+	int                     correction_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     bloom_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     distortion_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
 	int                     screen_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum);
@@ -430,6 +431,7 @@ private:
 	effect *                distortion_effect;          // pointer to the distortion-effect object
 	effect *                scanline_effect;
 	effect *                focus_effect;               // pointer to the focus-effect object
+	effect *                expand_effect;
 	effect *                phosphor_effect;            // pointer to the phosphor-effect object
 	effect *                correction_effect;
 	effect *                deconverge_effect;          // pointer to the deconvergence-effect object

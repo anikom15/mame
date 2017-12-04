@@ -138,7 +138,7 @@ float4 ps_horizontal_r1(PS_INPUT Input) : COLOR
 
 float4 ps_vertical_r2(PS_INPUT Input) : COLOR
 {
-        float3 esample = tex2D(DiffuseSampler, Input.TexCoord).rgb * kernel_r2[0]
+        float3 esample = tex2D(DiffuseSampler, Input.TexCoord).rgb * kernel_r2[0];
         for (int i = 1; i < 4; ++i) {
                 float2 offset = float2(0.0f, offset_r2[i]) / 512.0f;
                 esample += tex2D(DiffuseSampler, Input.TexCoord + offset).rgb * kernel_r2[i];

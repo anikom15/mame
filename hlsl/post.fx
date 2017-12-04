@@ -1,7 +1,7 @@
 // license:BSD-3-Clause
 // copyright-holders:Ryan Holtz,ImJezze
 //-----------------------------------------------------------------------------
-// Scanline & Shadowmask Effect
+// Hum Bar & Shadowmask Effect
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
@@ -69,7 +69,7 @@ static const float PI = 3.1415927f;
 static const float HalfPI = PI * 0.5f;
 
 //-----------------------------------------------------------------------------
-// Scanline & Shadowmask Vertex Shader
+// Hum Bar & Shadowmask Vertex Shader
 //-----------------------------------------------------------------------------
 
 uniform float2 ScreenDims;
@@ -111,7 +111,7 @@ VS_OUTPUT vs_main(VS_INPUT Input)
 }
 
 //-----------------------------------------------------------------------------
-// Scanline & Shadowmask Pixel Shader
+// Hum Bar & Shadowmask Pixel Shader
 //-----------------------------------------------------------------------------
 
 uniform float HumBarDesync = 60.0f / 59.94f - 1.0f; // difference between the 59.94 Hz field rate and 60 Hz line frequency (NTSC)
@@ -239,7 +239,7 @@ float4 ps_main(PS_INPUT Input) : COLOR
 }
 
 //-----------------------------------------------------------------------------
-// Scanline & Shadowmask Technique
+// Hum Bar & Shadowmask Technique
 //-----------------------------------------------------------------------------
 
 technique DefaultTechnique

@@ -169,9 +169,9 @@ shaders::shaders() :
 	snap_width(0), snap_height(0), initialized(false), backbuffer(nullptr), curr_effect(nullptr),
 	default_effect(nullptr), prescale_effect(nullptr), gamma_effect(nullptr), srgb_gamma_effect(nullptr),
 	post_effect(nullptr), distortion_effect(nullptr), scanline_effect(nullptr), focus_effect(nullptr),
-	phosphor_effect(nullptr), correction_effect(nullptr), deconverge_effect(nullptr), color_effect(nullptr),
-	ntsc_effect(nullptr), bloom_effect(nullptr), downsample_effect(nullptr), vector_effect(nullptr),
-	curr_texture(nullptr), curr_render_target(nullptr), curr_poly(nullptr),
+	expand_effect(nullptr), phosphor_effect(nullptr), correction_effect(nullptr), deconverge_effect(nullptr),
+	color_effect(nullptr), ntsc_effect(nullptr), bloom_effect(nullptr), downsample_effect(nullptr),
+	vector_effect(nullptr), curr_texture(nullptr), curr_render_target(nullptr), curr_poly(nullptr),
 	d3dx_create_effect_from_file_ptr(nullptr)
 {
 }
@@ -719,6 +719,7 @@ int shaders::create_resources()
 	prescale_effect = new effect(this, d3d->get_device(), "prescale.fx", fx_dir);
 	phosphor_effect = new effect(this, d3d->get_device(), "phosphor.fx", fx_dir);
 	correction_effect = new effect(this, d3d->get_device(), "correction.fx", fx_dir);
+	expand_effect = new effect(this, d3d->get_device(), "expand.fx", fx_dir);
 	focus_effect = new effect(this, d3d->get_device(), "focus.fx", fx_dir);
 	scanline_effect = new effect(this, d3d->get_device(), "scanline.fx", fx_dir);
 	deconverge_effect = new effect(this, d3d->get_device(), "deconverge.fx", fx_dir);
@@ -736,6 +737,7 @@ int shaders::create_resources()
 		!prescale_effect->is_valid() ||
 		!phosphor_effect->is_valid() ||
 		!correction_effect->is_valid() ||
+		!expand_effect->is_valid() ||
 		!focus_effect->is_valid() ||
 		!scanline_effect->is_valid() ||
 		!deconverge_effect->is_valid() ||
@@ -748,7 +750,7 @@ int shaders::create_resources()
 		return 1;
 	}
 
-	const int EFFECT_COUNT = 16;
+	const int EFFECT_COUNT = 17;
 
 	effect *effects[EFFECT_COUNT] = {
 		default_effect,
@@ -757,6 +759,7 @@ int shaders::create_resources()
 		prescale_effect,
 		phosphor_effect,
 		correction_effect,
+		expand_effect,
 		focus_effect,
 		scanline_effect,
 		deconverge_effect,
@@ -876,6 +879,7 @@ void shaders::begin_draw()
 	prescale_effect->set_technique("DefaultTechnique");
 	phosphor_effect->set_technique("DefaultTechnique");
 	correction_effect->set_technique("DefaultTechnique");
+	expand_effect->set_technique("GammaTechnique");
 	focus_effect->set_technique("DefaultTechnique");
 	scanline_effect->set_technique("DefaultTechnique");
 	deconverge_effect->set_technique("DefaultTechnique");
@@ -1164,6 +1168,59 @@ int shaders::defocus_pass(d3d_render_target *rt, int source_index, poly_info *po
 	next_index = rt->next_index(next_index);
 	blit(rt->target_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
 
+	return next_index;
+}
+
+int shaders::expand_pass(d3d_render_target *rt, int source_index, poly_info *poly, int vertnum)
+{
+	int next_index = source_index;
+
+	curr_effect = expand_effect;
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("GammaTechnique");
+	curr_effect->set_texture("DiffuseTexture", rt->target_texture[next_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	rt->next_expand_r1_index();
+	blit(rt->expand_r1_surface[rt->expand_r1_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("VerticalTechniqueR1");
+	curr_effect->set_texture("DiffuseTexture", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	blit(rt->expand_r1_surface[rt->expand_r1_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("HorizontalTechniqueR1");
+	curr_effect->set_texture("DiffuseTexture", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	blit(rt->expand_r1_surface[rt->expand_r1_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("GammaTechnique");
+	curr_effect->set_texture("DiffuseTexture", rt->target_texture[next_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	rt->next_expand_r2_index();
+	blit(rt->expand_r2_surface[rt->expand_r2_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("VerticalTechniqueR2");
+	curr_effect->set_texture("DiffuseTexture", rt->expand_r2_texture[rt->expand_r2_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	blit(rt->expand_r2_surface[rt->expand_r2_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("HorizontalTechniqueR2");
+	curr_effect->set_texture("DiffuseTexture", rt->expand_r2_texture[rt->expand_r2_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	blit(rt->expand_r2_surface[rt->expand_r2_index], false, D3DPT_TRIANGLELIST, 0, 2);
+	curr_effect->update_uniforms();
+	curr_effect->set_technique("DifferenceTechnique");
+	curr_effect->set_texture("DiffuseTexture", rt->target_texture[next_index]);
+	curr_effect->set_texture("ExpandTextureR1", rt->expand_r1_texture[rt->expand_r1_index]);
+	curr_effect->set_texture("ExpandTextureR2", rt->expand_r2_texture[rt->expand_r2_index]);
+	next_index = rt->next_index(next_index);
+	blit(rt->target_surface[next_index], false, D3DPT_TRIANGLELIST, 0, 2);
 	return next_index;
 }
 
@@ -1470,14 +1527,15 @@ void shaders::render_quad(poly_info *poly, int vertnum)
 		next_index = deconverge_pass(rt, next_index, poly, vertnum); // handled in bgfx
 		next_index = scanline_pass(rt, next_index, poly, vertnum);
 		next_index = defocus_pass(rt, next_index, poly, vertnum);
+		next_index = expand_pass(rt, next_index, poly, vertnum);
 
 		// create bloom textures
-		int defocus_index = next_index;
+		int cached_index = next_index;
 		next_index = post_pass(rt, next_index, poly, vertnum, true);
 		next_index = downsample_pass(rt, next_index, poly, vertnum);
 
 		// apply bloom textures
-		next_index = defocus_index;
+		next_index = cached_index;
 		next_index = post_pass(rt, next_index, poly, vertnum, false);
 		next_index = bloom_pass(rt, next_index, poly, vertnum);
 		next_index = phosphor_pass(rt, next_index, poly, vertnum);
@@ -1864,6 +1922,11 @@ void shaders::delete_resources()
 	{
 		delete focus_effect;
 		focus_effect = nullptr;
+	}
+	if (expand_effect != nullptr)
+	{
+		delete expand_effect;
+		expand_effect = nullptr;
 	}
 	if (scanline_effect != nullptr)
 	{

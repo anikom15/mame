@@ -1,5 +1,5 @@
 // license:BSD-3-Clause
-// copyright-holders:Ryan Holtz
+// copyright-holders:Ryan Holtz, Westley M. Martinez
 //-----------------------------------------------------------------------------
 // PhosphorRGB Effect
 //-----------------------------------------------------------------------------

@@ -2673,6 +2673,18 @@ d3d_render_target::~d3d_render_target()
 		if (target_surface[index] != nullptr)
 			target_surface[index]->Release();
 
+		if (expand_r1_texture[index] != nullptr)
+			expand_r1_texture[index]->Release();
+
+		if (expand_r1_surface[index] != nullptr)
+			expand_r1_surface[index]->Release();
+
+		if (expand_r2_texture[index] != nullptr)
+			expand_r2_texture[index]->Release();
+
+		if (expand_r2_surface[index] != nullptr)
+			expand_r2_surface[index]->Release();
+
 		if (cache_texture[index] != nullptr)
 			cache_texture[index]->Release();
 
@@ -2723,6 +2735,18 @@ bool d3d_render_target::init(renderer_d3d9 *d3d, int source_width, int source_he
 			return false;
 
 		cache_texture[index]->GetSurfaceLevel(0, &cache_surface[index]);
+
+		result = d3d->get_device()->CreateTexture(target_width, target_height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &expand_r1_texture[index], nullptr);
+		if (FAILED(result))
+			return false;
+
+		expand_r1_texture[index]->GetSurfaceLevel(0, &expand_r1_surface[index]);
+
+		result = d3d->get_device()->CreateTexture(target_width, target_height, 1, D3DUSAGE_RENDERTARGET, D3DFMT_A16B16G16R16F, D3DPOOL_DEFAULT, &expand_r2_texture[index], nullptr);
+		if (FAILED(result))
+			return false;
+
+		expand_r2_texture[index]->GetSurfaceLevel(0, &expand_r2_surface[index]);
 	}
 
 	auto win = d3d->assert_window();
