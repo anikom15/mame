@@ -506,11 +506,6 @@ bool shaders::init(d3d_base *d3dintf, running_machine *machine, renderer_d3d9 *r
 		options->display_gamma = winoptions.screen_display_gamma();
 		options->display_gain = winoptions.screen_display_gain();
 		options->display_black_level = winoptions.screen_display_black_level();
-		get_vector(winoptions.screen_converge_x(), 3, options->converge_x, true);
-		get_vector(winoptions.screen_converge_y(), 3, options->converge_y, true);
-		get_vector(winoptions.screen_radial_converge_x(), 3, options->radial_converge_x, true);
-		get_vector(winoptions.screen_radial_converge_y(), 3, options->radial_converge_y, true);
-		get_vector(winoptions.screen_defocus(), 2, options->defocus, true);
 		options->scanline_alpha = winoptions.screen_scanline_amount();
 		options->scanline_scale = winoptions.screen_scanline_scale();
 		options->scanline_height = winoptions.screen_scanline_height();
@@ -518,6 +513,15 @@ bool shaders::init(d3d_base *d3dintf, running_machine *machine, renderer_d3d9 *r
 		options->scanline_bright_scale = winoptions.screen_scanline_bright_scale();
 		options->scanline_bright_offset = winoptions.screen_scanline_bright_offset();
 		options->scanline_jitter = winoptions.screen_scanline_jitter();
+		get_vector(winoptions.screen_converge_x(), 3, options->converge_x, true);
+		get_vector(winoptions.screen_converge_y(), 3, options->converge_y, true);
+		get_vector(winoptions.screen_radial_converge_x(), 3, options->radial_converge_x, true);
+		get_vector(winoptions.screen_radial_converge_y(), 3, options->radial_converge_y, true);
+		get_vector(winoptions.screen_defocus(), 2, options->defocus, true);
+		options->expand_mode = winoptions.screen_expand_mode();
+		options->expand_alpha = winoptions.screen_expand_alpha();
+		options->expand_gamma = winoptions.screen_expand_gamma();
+		get_vector(winoptions.screen_expand_radius(), 2, options->expand_radius, true);
 		options->hum_bar_alpha = winoptions.screen_hum_bar_alpha();
 		strncpy(options->shadow_mask_texture, winoptions.screen_shadow_mask_texture(), sizeof(options->shadow_mask_texture));
 		options->shadow_mask_tile_mode = winoptions.screen_shadow_mask_tile_mode();
@@ -821,6 +825,11 @@ int shaders::create_resources()
 	scanline_effect->add_uniform("ScanlineBrightOffset", uniform::UT_FLOAT, uniform::CU_POST_SCANLINE_BRIGHT_OFFSET);
 
 	focus_effect->add_uniform("Defocus", uniform::UT_VEC2, uniform::CU_FOCUS_SIZE);
+
+	expand_effect->add_uniform("Mode", uniform::UT_INT, uniform::CU_EXPAND_MODE);
+	expand_effect->add_uniform("Alpha", uniform::UT_FLOAT, uniform::CU_EXPAND_ALPHA);
+	expand_effect->add_uniform("Gamma", uniform::UT_FLOAT, uniform::CU_EXPAND_GAMMA);
+	expand_effect->add_uniform("Radius", uniform::UT_VEC2, uniform::CU_EXPAND_RADIUS);
 
 	phosphor_effect->add_uniform("DecayModel", uniform::UT_INT, uniform::CU_PHOSPHOR_DECAY_MODEL);
 	phosphor_effect->add_uniform("RateMode", uniform::UT_INT, uniform::CU_PHOSPHOR_RATE_MODE);
@@ -1175,6 +1184,11 @@ int shaders::expand_pass(d3d_render_target *rt, int source_index, poly_info *pol
 {
 	int next_index = source_index;
 
+	if ((options->expand_alpha == 0.0f && options->expand_mode == 0) ||
+	    (options->expand_radius[0] == 0.0f &&
+	     options->expand_radius[1] == 0.0f))
+		return next_index;
+
 	curr_effect = expand_effect;
 	curr_effect->update_uniforms();
 	curr_effect->set_technique("GammaTechnique");
@@ -1524,10 +1538,10 @@ void shaders::render_quad(poly_info *poly, int vertnum)
 		next_index = color_convolution_pass(rt, next_index, poly, vertnum); // handled in bgfx
 		next_index = gamma_pass(rt, next_index, poly, vertnum);
 		next_index = prescale_pass(rt, next_index, poly, vertnum); // handled in bgfx
-		next_index = deconverge_pass(rt, next_index, poly, vertnum); // handled in bgfx
-		next_index = scanline_pass(rt, next_index, poly, vertnum);
-		next_index = defocus_pass(rt, next_index, poly, vertnum);
 		next_index = expand_pass(rt, next_index, poly, vertnum);
+		next_index = scanline_pass(rt, next_index, poly, vertnum);
+		next_index = deconverge_pass(rt, next_index, poly, vertnum); // handled in bgfx
+		next_index = defocus_pass(rt, next_index, poly, vertnum);
 
 		// create bloom textures
 		int cached_index = next_index;
@@ -2129,11 +2143,6 @@ enum slider_option
 	SLIDER_DISPLAY_GAMMA,
 	SLIDER_DISPLAY_GAIN,
 	SLIDER_DISPLAY_BLACK_LEVEL,
-	SLIDER_CONVERGE_X,
-	SLIDER_CONVERGE_Y,
-	SLIDER_RADIAL_CONVERGE_X,
-	SLIDER_RADIAL_CONVERGE_Y,
-	SLIDER_DEFOCUS,
 	SLIDER_SCANLINE_ALPHA,
 	SLIDER_SCANLINE_SCALE,
 	SLIDER_SCANLINE_HEIGHT,
@@ -2141,6 +2150,15 @@ enum slider_option
 	SLIDER_SCANLINE_BRIGHT_SCALE,
 	SLIDER_SCANLINE_BRIGHT_OFFSET,
 	SLIDER_SCANLINE_JITTER,
+	SLIDER_CONVERGE_X,
+	SLIDER_CONVERGE_Y,
+	SLIDER_RADIAL_CONVERGE_X,
+	SLIDER_RADIAL_CONVERGE_Y,
+	SLIDER_DEFOCUS,
+	SLIDER_EXPAND_MODE,
+	SLIDER_EXPAND_ALPHA,
+	SLIDER_EXPAND_GAMMA,
+	SLIDER_EXPAND_RADIUS,
 	SLIDER_HUM_BAR_ALPHA,
 	SLIDER_SHADOW_MASK_TILE_MODE,
 	SLIDER_SHADOW_MASK_ALPHA,
@@ -2218,11 +2236,6 @@ slider_desc shaders::s_sliders[] =
 	{ "Screen Gain",                        0,   100,   200, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_DISPLAY_GAIN,              0.01f,    "%1.2f", {} },
 	{ "Screen Black Level",              -100,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_DISPLAY_BLACK_LEVEL,       0.01f,    "%1.2f", {} },
 	{ "Hum Bar Amount",                     0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_HUM_BAR_ALPHA,           0.01f,    "%2.2f", {} },
-	{ "Linear Convergence X,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_CONVERGE_X,              0.1f,     "%3.1f",{} },
-	{ "Linear Convergence Y,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_CONVERGE_Y,              0.1f,     "%3.1f", {} },
-	{ "Radial Convergence X,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_RADIAL_CONVERGE_X,       0.1f,     "%3.1f", {} },
-	{ "Radial Convergence Y,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_RADIAL_CONVERGE_Y,       0.1f,     "%3.1f", {} },
-	{ "Beam Defocus",                       0,     0,    20, 1, SLIDER_VEC2,     SLIDER_SCREEN_TYPE_ANY,           SLIDER_DEFOCUS,                 0.1f,     "%1.1f", {} },
 	{ "Scanline Amount",                    0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_SCANLINE_ALPHA,          0.01f,    "%1.2f", {} },
 	{ "Overall Scanline Scale",             0,   100,   400, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_SCANLINE_SCALE,          0.01f,    "%1.2f", {} },
 	{ "Individual Scanline Scale",          0,   100,   400, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_SCANLINE_HEIGHT,         0.01f,    "%1.2f", {} },
@@ -2230,6 +2243,15 @@ slider_desc shaders::s_sliders[] =
 	{ "Scanline Brightness Scale",          0,   100,   200, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_SCANLINE_BRIGHT_SCALE,   0.01f,    "%1.2f", {} },
 	{ "Scanline Brightness Offset",         0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_SCANLINE_BRIGHT_OFFSET,  0.01f,    "%1.2f", {} },
 	{ "Scanline Jitter Amount",             0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_LCD_OR_RASTER, SLIDER_SCANLINE_JITTER,         0.01f,    "%1.2f", {} },
+	{ "Linear Convergence X,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_CONVERGE_X,              0.1f,     "%3.1f",{} },
+	{ "Linear Convergence Y,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_CONVERGE_Y,              0.1f,     "%3.1f", {} },
+	{ "Radial Convergence X,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_RADIAL_CONVERGE_X,       0.1f,     "%3.1f", {} },
+	{ "Radial Convergence Y,",           -100,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_RADIAL_CONVERGE_Y,       0.1f,     "%3.1f", {} },
+	{ "Beam Defocus",                       0,     0,    20, 1, SLIDER_VEC2,     SLIDER_SCREEN_TYPE_ANY,           SLIDER_DEFOCUS,                 0.1f,     "%1.1f", {} },
+	{ "Beam Expansion Mode",                0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_EXPAND_MODE,             0,        "%s",    { "Brighten", "Darken" } },
+	{ "Beam Expansion Amount",              0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_EXPAND_ALPHA,            0.01f,    "%1.2f", {} },
+	{ "Beam Expansion Gamma",               0,   300,   500, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_EXPAND_GAMMA,            0.01f,    "%1.2f", {} },
+	{ "Beam Expansion Radius",              0,     0,    20, 1, SLIDER_VEC2,     SLIDER_SCREEN_TYPE_ANY,           SLIDER_EXPAND_RADIUS,           0.1f,     "%1.1f", {} },
 	{ "Shadow Mask Tile Mode",              0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_TILE_MODE,   0,        "%s",    { "Screen", "Source" } },
 	{ "Shadow Mask Amount",                 0,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_ALPHA,       0.01f,    "%1.2f", {} },
 	{ "Shadow Mask Pixel X Count",          1,     1,  1024, 1, SLIDER_INT,      SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_X_COUNT,     0,        "%d",    {} },
@@ -2298,11 +2320,6 @@ void *shaders::get_slider_option(int id, int index)
 		case SLIDER_DISPLAY_GAMMA: return &(options->display_gamma);
 		case SLIDER_DISPLAY_GAIN: return &(options->display_gain);
 		case SLIDER_DISPLAY_BLACK_LEVEL: return &(options->display_black_level);
-		case SLIDER_CONVERGE_X: return &(options->converge_x[index]);
-		case SLIDER_CONVERGE_Y: return &(options->converge_y[index]);
-		case SLIDER_RADIAL_CONVERGE_X: return &(options->radial_converge_x[index]);
-		case SLIDER_RADIAL_CONVERGE_Y: return &(options->radial_converge_y[index]);
-		case SLIDER_DEFOCUS: return &(options->defocus[index]);
 		case SLIDER_SCANLINE_ALPHA: return &(options->scanline_alpha);
 		case SLIDER_SCANLINE_SCALE: return &(options->scanline_scale);
 		case SLIDER_SCANLINE_HEIGHT: return &(options->scanline_height);
@@ -2310,6 +2327,15 @@ void *shaders::get_slider_option(int id, int index)
 		case SLIDER_SCANLINE_BRIGHT_SCALE: return &(options->scanline_bright_scale);
 		case SLIDER_SCANLINE_BRIGHT_OFFSET: return &(options->scanline_bright_offset);
 		case SLIDER_SCANLINE_JITTER: return &(options->scanline_jitter);
+		case SLIDER_CONVERGE_X: return &(options->converge_x[index]);
+		case SLIDER_CONVERGE_Y: return &(options->converge_y[index]);
+		case SLIDER_RADIAL_CONVERGE_X: return &(options->radial_converge_x[index]);
+		case SLIDER_RADIAL_CONVERGE_Y: return &(options->radial_converge_y[index]);
+		case SLIDER_DEFOCUS: return &(options->defocus[index]);
+		case SLIDER_EXPAND_MODE: return &(options->expand_mode);
+		case SLIDER_EXPAND_ALPHA: return &(options->expand_alpha);
+		case SLIDER_EXPAND_GAMMA: return &(options->expand_gamma);
+		case SLIDER_EXPAND_RADIUS: return &(options->expand_radius[index]);
 		case SLIDER_HUM_BAR_ALPHA: return &(options->hum_bar_alpha);
 		case SLIDER_SHADOW_MASK_TILE_MODE: return &(options->shadow_mask_tile_mode);
 		case SLIDER_SHADOW_MASK_ALPHA: return &(options->shadow_mask_alpha);
@@ -2610,6 +2636,25 @@ void uniform::update()
 		case CU_COLOR_TINT:
 			m_shader->set_float("Tint", options->tint);
 
+		case CU_POST_SCANLINE_ALPHA:
+			m_shader->set_float("ScanlineAlpha", options->scanline_alpha);
+			break;
+		case CU_POST_SCANLINE_SCALE:
+			m_shader->set_float("ScanlineScale", options->scanline_scale);
+			break;
+		case CU_POST_SCANLINE_HEIGHT:
+			m_shader->set_float("ScanlineHeight", options->scanline_height);
+			break;
+		case CU_POST_SCANLINE_VARIATION:
+			m_shader->set_float("ScanlineVariation", options->scanline_variation);
+			break;
+		case CU_POST_SCANLINE_BRIGHT_SCALE:
+			m_shader->set_float("ScanlineBrightScale", options->scanline_bright_scale);
+			break;
+		case CU_POST_SCANLINE_BRIGHT_OFFSET:
+			m_shader->set_float("ScanlineBrightOffset", options->scanline_bright_offset);
+			break;
+
 		case CU_CONVERGE_LINEAR_X:
 			m_shader->set_vector("ConvergeX", 3, options->converge_x);
 			break;
@@ -2626,6 +2671,18 @@ void uniform::update()
 		case CU_FOCUS_SIZE:
 			m_shader->set_vector("Defocus", 2, &options->defocus[0]);
 			break;
+
+		case CU_EXPAND_MODE:
+			m_shader->set_int("Mode", options->expand_mode);
+			break;
+		case CU_EXPAND_ALPHA:
+			m_shader->set_float("Alpha", options->expand_alpha);
+			break;
+		case CU_EXPAND_GAMMA:
+			m_shader->set_float("Gamma", options->expand_gamma);
+			break;
+		case CU_EXPAND_RADIUS:
+			m_shader->set_vector("Radius", 2, options->expand_radius);
 
 		case CU_PHOSPHOR_TYPE:
 			m_shader->set_int("PhosphorType", options->phosphor_type);
@@ -2708,24 +2765,6 @@ void uniform::update()
 			m_shader->set_vector("ShadowDims", 2, &shadow_dims.c.x);
 			break;
 		}
-		case CU_POST_SCANLINE_ALPHA:
-			m_shader->set_float("ScanlineAlpha", options->scanline_alpha);
-			break;
-		case CU_POST_SCANLINE_SCALE:
-			m_shader->set_float("ScanlineScale", options->scanline_scale);
-			break;
-		case CU_POST_SCANLINE_HEIGHT:
-			m_shader->set_float("ScanlineHeight", options->scanline_height);
-			break;
-		case CU_POST_SCANLINE_VARIATION:
-			m_shader->set_float("ScanlineVariation", options->scanline_variation);
-			break;
-		case CU_POST_SCANLINE_BRIGHT_SCALE:
-			m_shader->set_float("ScanlineBrightScale", options->scanline_bright_scale);
-			break;
-		case CU_POST_SCANLINE_BRIGHT_OFFSET:
-			m_shader->set_float("ScanlineBrightOffset", options->scanline_bright_offset);
-			break;
 	}
 }
 

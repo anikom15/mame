@@ -70,13 +70,6 @@
 #define WINOPTION_DISPLAY_GAIN              "display_gain"
 #define WINOPTION_DISPLAY_BLACK_LEVEL       "display_black_level"
 
-// Convergence
-#define WINOPTION_CONVERGE_X                "converge_x"
-#define WINOPTION_CONVERGE_Y                "converge_y"
-#define WINOPTION_RADIAL_CONVERGE_X         "radial_converge_x"
-#define WINOPTION_RADIAL_CONVERGE_Y         "radial_converge_y"
-#define WINOPTION_DEFOCUS                   "defocus"
-
 // Scanlines
 #define WINOPTION_SCANLINE_AMOUNT           "scanline_alpha"
 #define WINOPTION_SCANLINE_SCALE            "scanline_size"
@@ -85,6 +78,19 @@
 #define WINOPTION_SCANLINE_BRIGHT_SCALE     "scanline_bright_scale"
 #define WINOPTION_SCANLINE_BRIGHT_OFFSET    "scanline_bright_offset"
 #define WINOPTION_SCANLINE_JITTER           "scanline_jitter"
+
+// Convergence
+#define WINOPTION_CONVERGE_X                "converge_x"
+#define WINOPTION_CONVERGE_Y                "converge_y"
+#define WINOPTION_RADIAL_CONVERGE_X         "radial_converge_x"
+#define WINOPTION_RADIAL_CONVERGE_Y         "radial_converge_y"
+#define WINOPTION_DEFOCUS                   "defocus"
+
+// Expansion
+#define WINOPTION_EXPAND_MODE               "expand_mode"
+#define WINOPTION_EXPAND_ALPHA              "expand_alpha"
+#define WINOPTION_EXPAND_GAMMA              "expand_gamma"
+#define WINOPTION_EXPAND_RADIUS             "expand_radius"
 
 // Hum bar
 #define WINOPTION_HUM_BAR_ALPHA             "hum_bar_alpha"
@@ -202,12 +208,6 @@ public:
 	float screen_display_gain() const { return float_value(WINOPTION_DISPLAY_GAIN); }
 	float screen_display_black_level() const { return float_value(WINOPTION_DISPLAY_BLACK_LEVEL); }
 
-	const char *screen_converge_x() const { return value(WINOPTION_CONVERGE_X); }
-	const char *screen_converge_y() const { return value(WINOPTION_CONVERGE_Y); }
-	const char *screen_radial_converge_x() const { return value(WINOPTION_RADIAL_CONVERGE_X); }
-	const char *screen_radial_converge_y() const { return value(WINOPTION_RADIAL_CONVERGE_Y); }
-	const char *screen_defocus() const { return value(WINOPTION_DEFOCUS); }
-
 	float screen_scanline_amount() const { return float_value(WINOPTION_SCANLINE_AMOUNT); }
 	float screen_scanline_scale() const { return float_value(WINOPTION_SCANLINE_SCALE); }
 	float screen_scanline_height() const { return float_value(WINOPTION_SCANLINE_HEIGHT); }
@@ -216,6 +216,17 @@ public:
 	float screen_scanline_bright_offset() const { return float_value(WINOPTION_SCANLINE_BRIGHT_OFFSET); }
 	float screen_scanline_jitter() const { return float_value(WINOPTION_SCANLINE_JITTER); }
 
+	const char *screen_converge_x() const { return value(WINOPTION_CONVERGE_X); }
+	const char *screen_converge_y() const { return value(WINOPTION_CONVERGE_Y); }
+	const char *screen_radial_converge_x() const { return value(WINOPTION_RADIAL_CONVERGE_X); }
+	const char *screen_radial_converge_y() const { return value(WINOPTION_RADIAL_CONVERGE_Y); }
+	const char *screen_defocus() const { return value(WINOPTION_DEFOCUS); }
+
+	int screen_expand_mode() const { return int_value(WINOPTION_EXPAND_MODE); }
+	float screen_expand_alpha() const { return float_value(WINOPTION_EXPAND_ALPHA); }
+	float screen_expand_gamma() const { return float_value(WINOPTION_EXPAND_GAMMA); }
+	const char *screen_expand_radius() const { return value(WINOPTION_EXPAND_RADIUS); }
+	
 	float screen_hum_bar_alpha() const { return float_value(WINOPTION_HUM_BAR_ALPHA); }
 
 	int screen_shadow_mask_tile_mode() const { return int_value(WINOPTION_SHADOW_MASK_TILE_MODE); }

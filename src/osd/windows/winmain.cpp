@@ -213,14 +213,8 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_DISPLAY_GAIN";fs_sgain",                        "1.0",               OPTION_FLOAT,      "gain applied to signal by the display" },
 	{ WINOPTION_DISPLAY_BLACK_LEVEL";fs_sblacklvl",             "0.0",               OPTION_FLOAT,      "black level of the display" },
 	// Hum bar
-	{ WINOPTION_HUM_BAR_ALPHA";fs_humba(0.0-1.0)",              "0.0",               OPTION_FLOAT,      "overall alpha scaling value for hum bar" },
-	// Beam convergence
 	{ nullptr,                                                  nullptr,             OPTION_HEADER,     "CRT POST-PROCESSING OPTIONS" },
-	{ WINOPTION_CONVERGE_X";fs_convx",                          "0.0,0.0,0.0",       OPTION_STRING,     "convergence in screen-relative x direction" },
-	{ WINOPTION_CONVERGE_Y";fs_convy",                          "0.0,0.0,0.0",       OPTION_STRING,     "convergence in screen-relative y direction" },
-	{ WINOPTION_RADIAL_CONVERGE_X";fs_rconvx",                  "0.0,0.0,0.0",       OPTION_STRING,     "radial convergence in screen-relative x direction" },
-	{ WINOPTION_RADIAL_CONVERGE_Y";fs_rconvy",                  "0.0,0.0,0.0",       OPTION_STRING,     "radial convergence in screen-relative y direction" },
-	{ WINOPTION_DEFOCUS";fs_focus",                             "0.0,0.0",           OPTION_STRING,     "overall defocus value in screen-relative coords" },
+	{ WINOPTION_HUM_BAR_ALPHA";fs_humba(0.0-1.0)",              "0.0",               OPTION_FLOAT,      "overall alpha scaling value for hum bar" },
 	// Scanlines
 	{ WINOPTION_SCANLINE_AMOUNT";fs_scanam(0.0-4.0)",           "0.0",               OPTION_FLOAT,      "overall alpha scaling value for scanlines" },
 	{ WINOPTION_SCANLINE_SCALE";fs_scansc(0.0-4.0)",            "1.0",               OPTION_FLOAT,      "overall height scaling value for scanlines" },
@@ -229,6 +223,17 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_SCANLINE_BRIGHT_SCALE";fs_scanbs(0.0-2.0)",     "1.0",               OPTION_FLOAT,      "overall brightness scaling value for scanlines (multiplicative)" },
 	{ WINOPTION_SCANLINE_BRIGHT_OFFSET";fs_scanbo(0.0-1.0)",    "0.0",               OPTION_FLOAT,      "overall brightness offset value for scanlines (additive)" },
 	{ WINOPTION_SCANLINE_JITTER";fs_scanjt(0.0-4.0)",           "0.0",               OPTION_FLOAT,      "overall interlace jitter scaling value for scanlines" },
+	// Beam convergence
+	{ WINOPTION_CONVERGE_X";fs_convx",                          "0.0,0.0,0.0",       OPTION_STRING,     "convergence in screen-relative x direction" },
+	{ WINOPTION_CONVERGE_Y";fs_convy",                          "0.0,0.0,0.0",       OPTION_STRING,     "convergence in screen-relative y direction" },
+	{ WINOPTION_RADIAL_CONVERGE_X";fs_rconvx",                  "0.0,0.0,0.0",       OPTION_STRING,     "radial convergence in screen-relative x direction" },
+	{ WINOPTION_RADIAL_CONVERGE_Y";fs_rconvy",                  "0.0,0.0,0.0",       OPTION_STRING,     "radial convergence in screen-relative y direction" },
+	{ WINOPTION_DEFOCUS";fs_focus",                             "0.0,0.0",           OPTION_STRING,     "overall defocus value in screen-relative coords" },
+	// Beam expansion
+	{ WINOPTION_EXPAND_MODE";fs_exmode",                        "0",                 OPTION_INTEGER,    "expansion blend mode" },
+	{ WINOPTION_EXPAND_ALPHA";fs_exalpha",                      "0.0",               OPTION_FLOAT,      "overall alpha scaling value for expansion" },
+	{ WINOPTION_EXPAND_GAMMA";fs_exgamma",                      "3.0",               OPTION_FLOAT,      "expansion processing gamma" },
+	{ WINOPTION_EXPAND_RADIUS";fs_exradius",                    "0.0,0.0",           OPTION_STRING,     "expansion sampling radius factor" },
 	// Shadow mask
 	{ nullptr,                                                  nullptr,             OPTION_HEADER,     "SHADOW MASK POST-PROCESSING OPTIONS" },
 	{ WINOPTION_SHADOW_MASK_TILE_MODE,                          "0",                 OPTION_INTEGER,    "shadow mask tile mode (0 for screen based, 1 for source based)" },

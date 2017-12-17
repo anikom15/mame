@@ -78,6 +78,13 @@ public:
 		CU_DISPLAY_GAIN,
 		CU_DISPLAY_BLACK_LEVEL,
 
+		CU_POST_SCANLINE_ALPHA,
+		CU_POST_SCANLINE_SCALE,
+		CU_POST_SCANLINE_HEIGHT,
+		CU_POST_SCANLINE_VARIATION,
+		CU_POST_SCANLINE_BRIGHT_SCALE,
+		CU_POST_SCANLINE_BRIGHT_OFFSET,
+
 		CU_CONVERGE_LINEAR_X,
 		CU_CONVERGE_LINEAR_Y,
 		CU_CONVERGE_RADIAL_X,
@@ -85,12 +92,10 @@ public:
 
 		CU_FOCUS_SIZE,
 
-		CU_POST_SCANLINE_ALPHA,
-		CU_POST_SCANLINE_SCALE,
-		CU_POST_SCANLINE_HEIGHT,
-		CU_POST_SCANLINE_VARIATION,
-		CU_POST_SCANLINE_BRIGHT_SCALE,
-		CU_POST_SCANLINE_BRIGHT_OFFSET,
+		CU_EXPAND_MODE,
+		CU_EXPAND_ALPHA,
+		CU_EXPAND_GAMMA,
+		CU_EXPAND_RADIUS,
 
 		CU_POST_SHADOW_ALPHA,
 		CU_POST_SHADOW_COUNT,
@@ -219,13 +224,6 @@ struct hlsl_options
 	float                   display_gain;
 	float                   display_black_level;
 
-	// Beam convergence
-	float                   converge_x[3];
-	float                   converge_y[3];
-	float                   radial_converge_x[3];
-	float                   radial_converge_y[3];
-	float                   defocus[2];
-
 	// Scanlines
 	float                   scanline_alpha;
 	float                   scanline_scale;
@@ -234,6 +232,19 @@ struct hlsl_options
 	float                   scanline_bright_scale;
 	float                   scanline_bright_offset;
 	float                   scanline_jitter;
+
+	// Beam convergence
+	float                   converge_x[3];
+	float                   converge_y[3];
+	float                   radial_converge_x[3];
+	float                   radial_converge_y[3];
+	float                   defocus[2];
+
+	// Expansion
+	int                     expand_mode;
+	float                   expand_alpha;
+	float                   expand_gamma;
+	float                   expand_radius[2];
 
 	// Hum bar
 	float                   hum_bar_alpha;
