@@ -122,8 +122,7 @@
 
 // Phosphor
 #define WINOPTION_PHOSPHOR_TYPE             "phosphor_type"
-#define WINOPTION_PHOSPHOR_CHROMA_X         "phosphor_chroma_x"
-#define WINOPTION_PHOSPHOR_CHROMA_Y         "phosphor_chroma_y"
+#define WINOPTION_PHOSPHOR_CHROMA           "phosphor_chroma"
 #define WINOPTION_PHOSPHOR_DECAY_MODEL      "phosphor_decay_model"
 #define WINOPTION_PHOSPHOR_RATE_MODE        "phosphor_rate_mode"
 #define WINOPTION_PHOSPHOR                  "phosphor_life"
@@ -240,8 +239,7 @@ public:
 	float screen_shadow_mask_v_offset() const { return float_value(WINOPTION_SHADOW_MASK_VOFFSET); }
 
 	int screen_phosphor_type() const { return int_value(WINOPTION_PHOSPHOR_TYPE); }
-	float screen_phosphor_chroma_x() const { return float_value(WINOPTION_PHOSPHOR_CHROMA_X); }
-	float screen_phosphor_chroma_y() const { return float_value(WINOPTION_PHOSPHOR_CHROMA_Y); }
+	const char *screen_phosphor_chroma() const { return value(WINOPTION_PHOSPHOR_CHROMA); }
 	int screen_phosphor_decay_model() const { return int_value(WINOPTION_PHOSPHOR_DECAY_MODEL); }
 	int screen_phosphor_rate_mode() const { return int_value(WINOPTION_PHOSPHOR_RATE_MODE); }
 	const char *screen_phosphor() const { return value(WINOPTION_PHOSPHOR); }

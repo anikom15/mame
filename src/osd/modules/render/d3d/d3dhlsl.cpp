@@ -545,8 +545,7 @@ bool shaders::init(d3d_base *d3dintf, running_machine *machine, renderer_d3d9 *r
 		options->bloom_level7_weight = winoptions.screen_bloom_lvl7_weight();
 		options->bloom_level8_weight = winoptions.screen_bloom_lvl8_weight();
 		options->phosphor_type = winoptions.screen_phosphor_type();
-		options->phosphor_chroma_x = winoptions.screen_phosphor_chroma_x();
-		options->phosphor_chroma_y = winoptions.screen_phosphor_chroma_y();
+		get_vector(winoptions.screen_phosphor_chroma(), 2, options->phosphor_chroma, true);
 		options->phosphor_decay_model = winoptions.screen_phosphor_decay_model();
 		options->phosphor_rate_mode = winoptions.screen_phosphor_rate_mode();
 		get_vector(winoptions.screen_phosphor(), 3, options->phosphor, true);
@@ -837,8 +836,7 @@ int shaders::create_resources()
 	phosphor_effect->add_uniform("Beta", uniform::UT_VEC3, uniform::CU_PHOSPHOR_BETA);
 
 	phosphor_effect->add_uniform("PhosphorType", uniform::UT_INT, uniform::CU_PHOSPHOR_TYPE);
-	phosphor_effect->add_uniform("PhosphorChromaX", uniform::UT_FLOAT, uniform::CU_PHOSPHOR_CHROMA_X);
-	phosphor_effect->add_uniform("PhosphorChromaY", uniform::UT_FLOAT, uniform::CU_PHOSPHOR_CHROMA_Y);
+	phosphor_effect->add_uniform("PhosphorChroma", uniform::UT_VEC2, uniform::CU_PHOSPHOR_CHROMA);
 	phosphor_effect->add_uniform("ColorSpace", uniform::UT_INT, uniform::CU_COLOR_SPACE);
 
 	correction_effect->add_uniform("ColorSpace", uniform::UT_INT, uniform::CU_COLOR_SPACE);
@@ -2169,8 +2167,7 @@ enum slider_option
 	SLIDER_SHADOW_MASK_U_OFFSET,
 	SLIDER_SHADOW_MASK_V_OFFSET,
 	SLIDER_PHOSPHOR_TYPE,
-	SLIDER_PHOSPHOR_CHROMA_X,
-	SLIDER_PHOSPHOR_CHROMA_Y,
+	SLIDER_PHOSPHOR_CHROMA,
 	SLIDER_PHOSPHOR_DECAY_MODEL,
 	SLIDER_PHOSPHOR_RATE_MODE,
 	SLIDER_PHOSPHOR,
@@ -2261,8 +2258,7 @@ slider_desc shaders::s_sliders[] =
 	{ "Shadow Mask U Offset",            -100,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_U_OFFSET,    0.01f,    "%1.2f", {} },
 	{ "Shadow Mask V Offset",            -100,     0,   100, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_SHADOW_MASK_V_OFFSET,    0.01f,    "%1.2f", {} },
 	{ "Phosphor Type",                      0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_TYPE,           0,        "%s",    { "Color", "Monochrome" } },
-	{ "Phosphor Chromaticity x",            0,   333,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA_X,       0.001f,   "%1.3f", {} },
-	{ "Phosphor Chromaticity y",            0,   333,  1000, 1, SLIDER_FLOAT,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA_Y,       0.001f,   "%1.3f", {} },
+	{ "Phosphor Chromaticity",              0,   333,  1000, 1, SLIDER_VEC2,     SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_CHROMA,       0.001f,   "%1.3f", {} },
 	{ "Phosphor Decay Model" ,              0,     0,     1, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_DECAY_MODEL,    0,        "%s",    { "Exponential", "Inverse Power" } },
 	{ "Phospor Base Decay Rate",            0,     3,     5, 1, SLIDER_INT_ENUM, SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR_RATE_MODE,      0,        "%s",    { "Very Short", "Short", "Medium-Short", "Medium", "Long", "Very Long" } },
 	{ "Phosphor Persistence,",              0,     0,   100, 1, SLIDER_COLOR,    SLIDER_SCREEN_TYPE_ANY,           SLIDER_PHOSPHOR,                0.01f,    "%2.2f", {} },
@@ -2358,8 +2354,7 @@ void *shaders::get_slider_option(int id, int index)
 		case SLIDER_BLOOM_LVL7_SCALE: return &(options->bloom_level7_weight);
 		case SLIDER_BLOOM_LVL8_SCALE: return &(options->bloom_level8_weight);
 		case SLIDER_PHOSPHOR_TYPE: return &(options->phosphor_type);
-		case SLIDER_PHOSPHOR_CHROMA_X: return &(options->phosphor_chroma_x);
-		case SLIDER_PHOSPHOR_CHROMA_Y: return &(options->phosphor_chroma_y);
+		case SLIDER_PHOSPHOR_CHROMA: return &(options->phosphor_chroma[index]);
 		case SLIDER_PHOSPHOR_DECAY_MODEL: return &(options->phosphor_decay_model);
 		case SLIDER_PHOSPHOR_RATE_MODE: return &(options->phosphor_rate_mode);
 		case SLIDER_PHOSPHOR: return &(options->phosphor[index]);
@@ -2687,11 +2682,8 @@ void uniform::update()
 		case CU_PHOSPHOR_TYPE:
 			m_shader->set_int("PhosphorType", options->phosphor_type);
 			break;
-		case CU_PHOSPHOR_CHROMA_X:
-			m_shader->set_float("PhosphorChromaX", options->phosphor_chroma_x);
-			break;
-		case CU_PHOSPHOR_CHROMA_Y:
-			m_shader->set_float("PhosphorChromaY", options->phosphor_chroma_y);
+		case CU_PHOSPHOR_CHROMA:
+			m_shader->set_vector("PhosphorChroma", 2, options->phosphor_chroma);
 			break;
 		case CU_PHOSPHOR_DECAY_MODEL:
 			m_shader->set_int("DecayModel", options->phosphor_decay_model);

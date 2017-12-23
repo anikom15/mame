@@ -175,8 +175,7 @@ uniform float3 PhosphorRGB = { 0.0f, 0.0f, 0.0f };
 uniform int RateMode = 0;
 
 uniform int ColorSpace = 0;
-uniform float PhosphorChromaX = 0.0f;
-uniform float PhosphorChromaY = 0.0f;
+uniform float2 PhosphorChroma = { 0.0f, 0.0f };
 uniform int PhosphorType = 0;
 
 float4 ps_main(PS_INPUT Input) : COLOR
@@ -195,8 +194,8 @@ float4 ps_main(PS_INPUT Input) : COLOR
 
 	if (PhosphorType != 0)
 	{
-		const float x = PhosphorChromaX;
-		const float y = PhosphorChromaY;
+		const float x = PhosphorChroma[0];
+		const float y = PhosphorChroma[1];
 		const float Y = dot(LUMA[ColorSpace], CurrPix.rgb);
 		const float X = x * (Y / y);
 		const float Z = (1.0f - x - y) * (Y / y);
@@ -226,10 +225,7 @@ float4 ps_main(PS_INPUT Input) : COLOR
 		PrevPix = float3(r, g, b);
 	}
 
-	//const float3 one3 = { 1.0f, 1.0f, 1.0f };
-	//float3 OutRGB = one3 - (one3 - PrevPix) * (one3 - CurrPix.rgb);
 	float3 OutRGB = max(CurrPix.rgb, PrevPix);
-	//float3 OutRGB = CurrPix.rgb + PrevPix;
 
 	return Passthrough ?
 	       CurrPix : float4(OutRGB, CurrPix.a);

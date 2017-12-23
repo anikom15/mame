@@ -247,8 +247,7 @@ const options_entry windows_options::s_option_entries[] =
 	{ WINOPTION_SHADOW_MASK_VOFFSET";fs_shadwov(-1.0-1.0)",     "0.0",               OPTION_FLOAT,      "shadow mask texture offset, in v direction" },
 	// Phosphor
 	{ WINOPTION_PHOSPHOR_TYPE";fs_phostype",                    "0",                 OPTION_INTEGER,    "screen phosphor to simulate (0 is color, 1 is monochrome)" },
-	{ WINOPTION_PHOSPHOR_CHROMA_X";fs_phoscx",                  "0.333",             OPTION_FLOAT,      "phosphor x chromaticity coordinate" },
-	{ WINOPTION_PHOSPHOR_CHROMA_Y";fs_phoscy",                  "0.333",             OPTION_FLOAT,      "phosphor y chromaticity coordinate" },
+	{ WINOPTION_PHOSPHOR_CHROMA";fs_phosc",                     "0.333,0.333",       OPTION_STRING,      "phosphor chromaticity coordinates" },
 	{ WINOPTION_PHOSPHOR_DECAY_MODEL";fs_phosmodel",            "0",                 OPTION_INTEGER,    "phosphorescence decay model (0 is exponential, 1 is inverse power)" },
 	{ WINOPTION_PHOSPHOR_RATE_MODE";fs_phosrate",               "3",                 OPTION_INTEGER,    "phosphorescence base rate (0: VS, 1: S, 2: MS, 3: M, 4: L, 5: VL)" },
 	{ WINOPTION_PHOSPHOR";fs_phosphor",                         "0.0,0.0,0.0",       OPTION_STRING,     "phosphorescence decay rate for screens (0.0 is instant, 1.0 is forever)" },

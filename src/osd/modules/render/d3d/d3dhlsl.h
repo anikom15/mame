@@ -104,8 +104,7 @@ public:
 		CU_POST_SHADOW_DIMS,
 
 		CU_PHOSPHOR_TYPE,
-		CU_PHOSPHOR_CHROMA_X,
-		CU_PHOSPHOR_CHROMA_Y,
+		CU_PHOSPHOR_CHROMA,
 		CU_PHOSPHOR_RATE_MODE,
 		CU_PHOSPHOR_DECAY_MODEL,
 		CU_PHOSPHOR_LIFE,
@@ -276,8 +275,7 @@ struct hlsl_options
 
 	// Phosphors
 	int                     phosphor_type;
-	float                   phosphor_chroma_x;
-	float                   phosphor_chroma_y;
+	float                   phosphor_chroma[2];
 	int                     phosphor_rate_mode;
 	int                     phosphor_decay_model;
 	float                   phosphor[3];
