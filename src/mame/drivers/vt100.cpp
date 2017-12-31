@@ -116,7 +116,7 @@ ADDRESS_MAP_END
 READ8_MEMBER( vt100_state::vt100_flags_r )
 {
 	uint8_t ret = 0;
-	ret |= m_crtc->lba7_r(space, 0) << 6;
+	ret |= m_crtc->lba7_r() << 6;
 	ret |= m_keyboard_int << 7;
 	return ret;
 }
@@ -413,10 +413,8 @@ static MACHINE_CONFIG_START( vt100 )
 
 	/* video hardware */
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
-	MCFG_SCREEN_REFRESH_RATE(60)
-	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(2500)) /* not accurate */
-	MCFG_SCREEN_SIZE(80*10, 25*10)
-	MCFG_SCREEN_VISIBLE_AREA(0, 80*10-1, 0, 25*10-1)
+	MCFG_SCREEN_RAW_PARAMS(XTAL_24_0734MHz*2/3, 102*10, 0, 80*10, 262, 0, 25*10)
+	//MCFG_SCREEN_RAW_PARAMS(XTAL_24_0734MHz, 170*9, 0, 132*9, 262, 0, 25*10)
 	MCFG_SCREEN_UPDATE_DRIVER(vt100_state, screen_update_vt100)
 	MCFG_SCREEN_PALETTE("vt100_video:palette")
 
@@ -425,7 +423,7 @@ static MACHINE_CONFIG_START( vt100 )
 
 	MCFG_DEFAULT_LAYOUT( layout_vt100 )
 
-	MCFG_DEVICE_ADD("vt100_video", VT100_VIDEO, 0)
+	MCFG_DEVICE_ADD("vt100_video", VT100_VIDEO, XTAL_24_0734MHz)
 	MCFG_VT_SET_SCREEN("screen")
 	MCFG_VT_CHARGEN("chargen")
 	MCFG_VT_VIDEO_RAM_CALLBACK(READ8(vt100_state, vt100_read_video_ram_r))
@@ -440,7 +438,7 @@ static MACHINE_CONFIG_START( vt100 )
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("i8251", i8251_device, write_rxd))
 	MCFG_RS232_DSR_HANDLER(DEVWRITELINE("i8251", i8251_device, write_dsr))
 
-	MCFG_DEVICE_ADD(COM5016T_TAG, COM8116, XTAL_5_0688MHz/*XTAL_24_8832MHz / 9*/) // COM5016T-013, 2.7648Mhz Clock, currently hacked wrongly
+	MCFG_DEVICE_ADD(COM5016T_TAG, COM8116, 5068800/*XTAL_24_8832MHz / 9*/) // COM5016T-013, 2.7648Mhz Clock, currently hacked wrongly
 	MCFG_COM8116_FR_HANDLER(DEVWRITELINE("i8251", i8251_device, write_rxc))
 	MCFG_COM8116_FT_HANDLER(DEVWRITELINE("i8251", i8251_device, write_txc))
 

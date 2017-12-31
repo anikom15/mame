@@ -26,7 +26,7 @@ public:
 
 	static void set_chargen_tag(device_t &device, const char *tag) { downcast<vt100_video_device &>(device).m_char_rom.set_tag(tag); }
 
-	DECLARE_READ8_MEMBER(lba7_r);
+	DECLARE_READ_LINE_MEMBER(lba7_r);
 	DECLARE_WRITE8_MEMBER(dc012_w);
 	DECLARE_WRITE8_MEMBER(dc011_w);
 	DECLARE_WRITE8_MEMBER(brightness_w);
@@ -65,8 +65,8 @@ protected:
 	uint8_t m_height;
 	uint8_t m_height_MAX;
 	uint8_t m_fill_lines;
-	uint8_t m_frequency;
-	uint8_t m_interlaced;
+	bool m_is_50hz;
+	bool m_interlaced;
 	emu_timer * m_lba7_change_timer;
 
 	required_region_ptr<uint8_t> m_char_rom; /* character rom region */

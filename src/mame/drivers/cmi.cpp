@@ -122,10 +122,10 @@
 #include "speaker.h"
 
 
-#define Q209_CPU_CLOCK      4000000 // ?
+#define Q209_CPU_CLOCK      XTAL_40_210MHz / 40 // divider not verified (very complex circuit)
 
 #define M6809_CLOCK             8000000 // wrong
-#define MASTER_OSCILLATOR       34291712
+#define MASTER_OSCILLATOR       XTAL_34_291712MHz
 
 #define CPU_1                   0
 #define CPU_2                   1
@@ -141,7 +141,7 @@
 #define PAGE_MASK               (PAGE_SIZE - 1)
 #define PAGE_SHIFT              5
 
-#define PIXEL_CLOCK             10380000        // Add to xtal.h
+#define PIXEL_CLOCK             XTAL_10_38MHz
 #define HTOTAL                  672
 #define HBLANK_END              0
 #define HBLANK_START            512
@@ -559,12 +559,12 @@ public:
 
 protected:
 
-	required_device<m6809e_device> m_maincpu1;
-	required_device<m6809e_device> m_maincpu2;
+	required_device<mc6809e_device> m_maincpu1;
+	required_device<mc6809e_device> m_maincpu2;
 	required_device<m6802_cpu_device> m_muskeyscpu;
 	required_device<m6802_cpu_device> m_alphakeyscpu;
 	required_device<m68000_device> m_midicpu;
-	required_device<m6809e_device> m_cmi07cpu;
+	required_device<mc6809e_device> m_cmi07cpu;
 
 	required_device<msm5832_device> m_msm5832;
 	required_device<i8214_device> m_i8214_0;
@@ -1081,10 +1081,8 @@ static ADDRESS_MAP_START( muskeys_map, AS_PROGRAM, 8, cmi_state)
 	AM_RANGE(0x0000, 0x007f) AM_RAM
 	AM_RANGE(0x0080, 0x0083) AM_DEVREADWRITE("cmi10_pia_u21", pia6821_device, read, write)
 	AM_RANGE(0x0090, 0x0093) AM_DEVREADWRITE("cmi10_pia_u20", pia6821_device, read, write)
-	AM_RANGE(0x00a0, 0x00a0) AM_DEVREADWRITE("acia_mkbd_kbd", acia6850_device, status_r, control_w)
-	AM_RANGE(0x00a1, 0x00a1) AM_DEVREADWRITE("acia_mkbd_kbd", acia6850_device, data_r, data_w)
-	AM_RANGE(0x00b0, 0x00b0) AM_DEVREADWRITE("acia_mkbd_cmi", acia6850_device, status_r, control_w)
-	AM_RANGE(0x00b1, 0x00b1) AM_DEVREADWRITE("acia_mkbd_cmi", acia6850_device, data_r, data_w)
+	AM_RANGE(0x00a0, 0x00a1) AM_DEVREADWRITE("acia_mkbd_kbd", acia6850_device, read, write)
+	AM_RANGE(0x00b0, 0x00b1) AM_DEVREADWRITE("acia_mkbd_cmi", acia6850_device, read, write)
 	AM_RANGE(0x4000, 0x47ff) AM_RAM
 	AM_RANGE(0xb000, 0xb400) AM_ROM
 	AM_RANGE(0xf000, 0xffff) AM_ROM
@@ -2740,28 +2738,28 @@ static SLOT_INTERFACE_START( cmi2x_floppies )
 SLOT_INTERFACE_END
 
 static MACHINE_CONFIG_START( cmi2x )
-	MCFG_CPU_ADD("maincpu1", M6809E, Q209_CPU_CLOCK)
+	MCFG_CPU_ADD("maincpu1", MC6809E, Q209_CPU_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(maincpu1_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", cmi_state, cmi_iix_vblank)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(cmi_state, cpu1_interrupt_callback)
 	MCFG_QUANTUM_PERFECT_CPU("maincpu1")
 
-	MCFG_CPU_ADD("maincpu2", M6809E, Q209_CPU_CLOCK)
+	MCFG_CPU_ADD("maincpu2", MC6809E, Q209_CPU_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(maincpu2_map)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(cmi_state, cpu2_interrupt_callback)
 	MCFG_QUANTUM_PERFECT_CPU("maincpu2")
 
-	MCFG_CPU_ADD("muskeys", M6802, 3840000)
+	MCFG_CPU_ADD("muskeys", M6802, XTAL_4MHz)
 	MCFG_CPU_PROGRAM_MAP(muskeys_map)
 
-	MCFG_CPU_ADD("alphakeys", M6802, 3840000)
+	MCFG_CPU_ADD("alphakeys", M6802, XTAL_3_84MHz)
 	MCFG_CPU_PROGRAM_MAP(alphakeys_map)
-	MCFG_CPU_PERIODIC_INT_DRIVER(cmi_state, irq0_line_hold, 9600) // TODO: PIA controls this
+	MCFG_CPU_PERIODIC_INT_DRIVER(cmi_state, irq0_line_hold, XTAL_3_84MHz / 400) // TODO: PIA controls this
 
-	MCFG_CPU_ADD("smptemidi", M68000, 10000000)
+	MCFG_CPU_ADD("smptemidi", M68000, XTAL_20MHz / 2)
 	MCFG_CPU_PROGRAM_MAP(midicpu_map)
 
-	MCFG_CPU_ADD("cmi07cpu", M6809E, 4000000) // ?
+	MCFG_CPU_ADD("cmi07cpu", MC6809E, Q209_CPU_CLOCK) // ?
 	MCFG_CPU_PROGRAM_MAP(cmi07cpu_map)
 
 	/* alpha-numeric display */
@@ -2817,7 +2815,7 @@ static MACHINE_CONFIG_START( cmi2x )
 	MCFG_PTM6840_OUT1_CB(WRITELINE(cmi_state, cmi02_ptm_o1))
 	MCFG_PTM6840_IRQ_CB(WRITELINE(cmi_state, cmi02_ptm_irq))
 
-	MCFG_DEVICE_ADD("mkbd_acia_clock", CLOCK, 9600*16)
+	MCFG_DEVICE_ADD("mkbd_acia_clock", CLOCK, XTAL_1_8432MHz / 12)
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(cmi_state, mkbd_acia_clock))
 
 	MCFG_DEVICE_ADD("q133_acia_0", MOS6551, XTAL_1_8432MHz)

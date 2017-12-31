@@ -439,6 +439,17 @@ uint16_t vga_device::offset()
 		return vga.crtc.offset << 2;
 }
 
+uint32_t vga_device::start_addr()
+{
+//  popmessage("Offset: %04x  %s %s **",vga.crtc.offset,vga.crtc.dw?"DW":"--",vga.crtc.word_mode?"BYTE":"WORD");
+	if(vga.crtc.dw)
+		return vga.crtc.start_addr << 2;
+	if(vga.crtc.word_mode)
+		return vga.crtc.start_addr << 0;
+	else
+		return vga.crtc.start_addr << 1;
+}
+
 void vga_device::vga_vh_text(bitmap_rgb32 &bitmap, const rectangle &cliprect)
 {
 	uint8_t ch, attr;
@@ -579,7 +590,7 @@ void vga_device::vga_vh_vga(bitmap_rgb32 &bitmap, const rectangle &cliprect)
 	curr_addr = 0;
 	if(!(vga.sequencer.data[4] & 0x08))
 	{
-		for (addr = VGA_START_ADDRESS, line=0; line<LINES; line+=height, addr+=offset(), curr_addr+=offset())
+		for (addr = start_addr(), line=0; line<LINES; line+=height, addr+=offset(), curr_addr+=offset())
 		{
 			for(yi = 0;yi < height; yi++)
 			{
@@ -608,7 +619,7 @@ void vga_device::vga_vh_vga(bitmap_rgb32 &bitmap, const rectangle &cliprect)
 	}
 	else
 	{
-		for (addr = VGA_START_ADDRESS, line=0; line<LINES; line+=height, addr+=offset(), curr_addr+=offset())
+		for (addr = start_addr(), line=0; line<LINES; line+=height, addr+=offset(), curr_addr+=offset())
 		{
 			for(yi = 0;yi < height; yi++)
 			{
@@ -1611,8 +1622,8 @@ READ8_MEMBER(vga_device::vga_crtc_r)
 		vga.attribute.state = 0;
 		data = 0;
 
-		hsync = space.machine().first_screen()->hblank() & 1;
-		vsync = vga_vblank(); //space.machine().first_screen()->vblank() & 1;
+		hsync = machine().first_screen()->hblank() & 1;
+		vsync = vga_vblank(); //machine().first_screen()->vblank() & 1;
 
 		data |= (hsync | vsync) & 1; // DD - display disable register
 		data |= (vsync & 1) << 3; // VRetrace register
@@ -1663,10 +1674,10 @@ WRITE8_MEMBER(vga_device::vga_crtc_w)
 			}
 
 			crtc_reg_write(vga.crtc.index,data);
-			//space.machine().first_screen()->update_partial(space.machine().first_screen()->vpos());
+			//machine().first_screen()->update_partial(machine().first_screen()->vpos());
 			#if 0
 			if((vga.crtc.index & 0xfe) != 0x0e)
-				printf("%02x %02x %d\n",vga.crtc.index,data,space.machine().first_screen()->vpos());
+				printf("%02x %02x %d\n",vga.crtc.index,data,machine().first_screen()->vpos());
 			#endif
 			break;
 
@@ -1858,7 +1869,7 @@ READ8_MEMBER(vga_device::port_03d0_r)
 		data = vga_crtc_r(space, offset, mem_mask);
 	if(offset == 8)
 	{
-		logerror("VGA: 0x3d8 read at %08x\n",space.device().safe_pc());
+		logerror("VGA: 0x3d8 read %s\n", machine().describe_context());
 		data = 0; // TODO: PC-200 reads back CGA register here, everything else returns open bus OR CGA emulation of register 0x3d8
 	}
 
@@ -2183,12 +2194,12 @@ WRITE8_MEMBER(vga_device::mem_w)
 
 READ8_MEMBER(vga_device::mem_linear_r)
 {
-	return vga.memory[offset];
+	return vga.memory[offset % vga.svga_intf.vram_size];
 }
 
 WRITE8_MEMBER(vga_device::mem_linear_w)
 {
-	vga.memory[offset] = data;
+	vga.memory[offset % vga.svga_intf.vram_size] = data;
 }
 
 MACHINE_CONFIG_START( pcvideo_vga )
@@ -2591,7 +2602,7 @@ WRITE8_MEMBER(tseng_vga_device::port_03d0_w)
 				vga.crtc.data[vga.crtc.index] = data;
 				tseng_crtc_reg_write(vga.crtc.index,data);
 				//if((vga.crtc.index & 0xfe) != 0x0e)
-				//  printf("%02x %02x %d\n",vga.crtc.index,data,space.machine().first_screen()->vpos());
+				//  printf("%02x %02x %d\n",vga.crtc.index,data,machine().first_screen()->vpos());
 				break;
 			case 8:
 				et4k.reg_3d8 = data;
@@ -3856,6 +3867,7 @@ WRITE16_MEMBER(ibm8514a_device::ibm8514_cmd_w)
 		ibm8514.gpbusy = false;
 		break;
 	case 0xc000:  // BitBLT
+		// TODO: a10cuba sets up blantantly invalid parameters here, CPU core bug maybe?
 		if(LOG_8514) logerror("8514/A: Command (%04x) - BitBLT from %i,%i to %i,%i  Width: %i  Height: %i\n",ibm8514.current_cmd,
 				ibm8514.curr_x,ibm8514.curr_y,ibm8514.dest_x,ibm8514.dest_y,ibm8514.rect_width,ibm8514.rect_height);
 		off = 0;

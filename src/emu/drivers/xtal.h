@@ -58,6 +58,7 @@ enum
 	XTAL_1MHz           = 1000000,      /* Used to drive OKI M6295 chips */
 	XTAL_1_2944MHz      = 1294400,      /* BBN BitGraph PSG */
 	XTAL_1_75MHz        = 1750000,      /* RCA CDP1861 */
+	XTAL_1_7971MHz      = 1797100,      /* SWTPC 6800 (with MIKBUG) */
 	XTAL_1_8432MHz      = 1843200,      /* Bondwell 12/14 */
 	XTAL_1_9968MHz      = 1996800,      /* NEC PC-98xx */
 	XTAL_2MHz           = 2000000,
@@ -75,6 +76,7 @@ enum
 	XTAL_3_57864MHz     = 3578640,      /* Atari Portfolio PCD3311T */
 	XTAL_3_579545MHz    = 3579545,      /* NTSC color subcarrier, extremely common, used on 100's of PCBs (Keytronic custom part #48-300-010 is equivalent) */
 	XTAL_3_6864MHz      = 3686400,      /* Baud rate clock for MC68681 and similar UARTs */
+	XTAL_3_84MHz        = 3840000,      /* Fairlight CMI Alphanumeric Keyboard */
 	XTAL_4MHz           = 4000000,
 	XTAL_4_028MHz       = 4028000,      /* Sony SMC-777 */
 	XTAL_4_032MHz       = 4032000,      /* GRiD Compass modem board */
@@ -88,7 +90,6 @@ enum
 	XTAL_4_9152MHz      = 4915200,
 	XTAL_5MHz           = 5000000,      /* Mutant Night */
 	XTAL_5_0688MHz      = 5068800,      /* Usually used as MC2661 or COM8116 baud rate clock */
-	XTAL_5_3586MHz      = 5358600,      /* Eltec EurocomII */
 	XTAL_5_46MHz        = 5460000,      /* ec1840 and ec1841 keyboard */
 	XTAL_5_5296MHz      = 5529600,      /* Kontron PSI98 keyboard */
 	XTAL_5_626MHz       = 5626000,      /* RCA CDP1869 PAL dot clock */
@@ -99,6 +100,7 @@ enum
 	XTAL_6MHz           = 6000000,      /* American Poker II, Taito SJ System */
 	XTAL_6_144MHz       = 6144000,      /* Used on Alpha Denshi early 80's games sound board, Casio FP-200 and Namco Universal System 16 */
 	XTAL_6_5MHz         = 6500000,      /* Jupiter Ace */
+	XTAL_6_88MHz        = 6880000,      /* Barcrest MPU4 */
 	XTAL_6_9MHz         = 6900000,      /* BBN BitGraph CPU */
 	XTAL_7MHz           = 7000000,      /* Jaleco Mega System PCBs */
 	XTAL_7_15909MHz     = 7159090,      /* Blood Bros (2x NTSC subcarrier) */
@@ -121,10 +123,12 @@ enum
 	XTAL_9_987MHz       = 9987000,      /* Crazy Balloon */
 	XTAL_10MHz          = 10000000,
 	XTAL_10_245MHz      = 10245000,     /* PES Speech box */
+	XTAL_10_38MHz       = 10380000,     /* Fairlight Q219 Lightpen/Graphics Card */
 	XTAL_10_5MHz        = 10500000,     /* Agat-7 */
 	XTAL_10_595MHz      = 10595000,     /* Mad Alien */
 	XTAL_10_6875MHz     = 10687500,     /* BBC Bridge Companion */
 	XTAL_10_69425MHz    = 10694250,     /* Xerox 820 */
+	XTAL_10_7172MHz     = 10717200,     /* Eltec EurocomII */
 	XTAL_10_730MHz      = 10730000,     /* Ruleta RE-900 VDP Clock */
 	XTAL_10_733MHz      = 10733000,     /* The Fairyland Story */
 	XTAL_10_738635MHz   = 10738635,     /* TMS9918 family (3x NTSC subcarrier) */
@@ -166,14 +170,17 @@ enum
 	XTAL_14_7456MHz     = 14745600,     /* Namco System 12 & System Super 22/23 for JVS */
 	XTAL_14_916MHz      = 14916000,     /* ADDS Viewpoint 122 */
 	XTAL_15MHz          = 15000000,     /* Sinclair QL, Amusco Poker */
+	XTAL_15_1488MHz     = 15148800,     /* Zentec 9002/9003 */
 	XTAL_15_30072MHz    = 15300720,     /* Microterm 420 */
 	XTAL_15_36MHz       = 15360000,     /* Visual 1050 */
 	XTAL_15_4MHz        = 15400000,     /* DVK KSM */
 	XTAL_15_468MHz      = 15468480,     /* Bank Panic h/w, Sega G80 */
+	XTAL_15_582MHz      = 15582000,     /* Zentec Zephyr */
 	XTAL_15_8976MHz     = 15897600,     /* IAI Swyft */
 	XTAL_15_92MHz       = 15920000,     /* HP Integral PC */
 	XTAL_15_9744MHz     = 15974400,     /* Osborne 1 (9600 * 52 * 32) */
 	XTAL_16MHz          = 16000000,     /* Extremely common, used on 100's of PCBs */
+	XTAL_16_128MHz      = 16128000,     /* Fujitsu FM-7 */
 	XTAL_16_384MHz      = 16384000,
 	XTAL_16_4MHz        = 16400000,     /* MS 6102 */
 	XTAL_16_5888MHz     = 16588800,     /* SM 7238 */
@@ -183,6 +190,7 @@ enum
 	XTAL_16_9344MHz     = 16934400,     /* Usually used to drive 90's Yamaha OPL/FM chips (44100 * 384) */
 	XTAL_17_064MHz      = 17064000,     /* Memorex 1377 */
 	XTAL_17_36MHz       = 17360000,     /* OMTI Series 10 SCSI controller */
+	XTAL_17_55MHz       = 17550000,     /* HP 264x display clock (50 Hz configuration) */
 	XTAL_17_73447MHz    = 17734470,     /* (~4x PAL subcarrier) */
 	XTAL_17_734472MHz   = 17734472,     /* actually ~4x PAL subcarrier */
 	XTAL_17_9712MHz     = 17971200,
@@ -201,6 +209,8 @@ enum
 	XTAL_20_079MHz      = 20790000,     /* Blockade-hardware Gremlin games */
 	XTAL_20_625MHz      = 20625000,     /* SM 7238 */
 	XTAL_21MHz          = 21000000,     /* Lock-On pixel clock */
+	XTAL_21_0526MHz     = 21052600,     /* NEC PC-98xx pixel clock */
+	XTAL_21_06MHz       = 21060000,     /* HP 264x display clock (60 Hz configuration) */
 	XTAL_21_3MHz        = 21300000,
 	XTAL_21_4772MHz     = 21477272,     /* BMC bowling, some Data East 90's games, Vtech Socrates; (6x NTSC subcarrier) */
 	XTAL_22MHz          = 22000000,
@@ -216,6 +226,7 @@ enum
 	XTAL_24_8832MHz     = 24883200,     /* DEC VT100 */
 	XTAL_25MHz          = 25000000,     /* Namco System 22, Taito GNET, Dogyuun h/w */
 	XTAL_25_1748MHz     = 25174800,     /* Sega System 16A/16B (1600x NTSC line rate) */
+	XTAL_25_2MHz        = 25200000,     /* Tektronix 4404 video clock */
 	XTAL_25_39836MHz    = 25398360,     /* Tandberg TDV 2324 */
 	XTAL_25_447MHz      = 25447000,     /* Namco EVA3A (Funcube2) */
 	XTAL_25_590906MHz   = 25590906,     /* Atari Jaguar NTSC */
@@ -234,6 +245,7 @@ enum
 	XTAL_28MHz          = 28000000,
 	XTAL_28_322MHz      = 28322000,     /* Saitek RISC 2500, Mephisto Montreux */
 	XTAL_28_37516MHz    = 28375160,     /* Amiga PAL systems */
+	XTAL_28_475MHz      = 28475000,     /* CoCo 3 PAL */
 	XTAL_28_48MHz       = 28480000,     /* Chromatics CGC-7900 */
 	XTAL_28_63636MHz    = 28636363,     /* Later Leland games and Atari GT, Amiga NTSC, Raiden2 h/w (8x NTSC subcarrier)*/
 	XTAL_28_64MHz       = 28640000,     /* Fukki FG-1c AI AM-2 PCB */
@@ -244,6 +256,7 @@ enum
 	XTAL_30_4761MHz     = 30476100,     /* Taito JC */
 	XTAL_30_8MHz        = 30800000,     /* 15IE-00-013 */
 	XTAL_31_684MHz      = 31684000,     /* TeleVideo TVI-955 132-column display clock */
+	XTAL_31_9488MHz     = 31948800,     /* NEC PC-88xx, PC-98xx */
 	XTAL_32MHz          = 32000000,
 	XTAL_32_22MHz       = 32220000,     /* Typically used on 90's Data East PCBs (close to 9x NTSC subcarrier which is 32.215905Mhz*/
 	XTAL_32_5304MHz     = 32530400,     /* Seta 2 */
@@ -253,18 +266,20 @@ enum
 	XTAL_33_833MHz      = 33833000,
 	XTAL_33_8688MHz     = 33868800,     /* Usually used to drive 90's Yamaha OPL/FM chips with /2 divider */
 	XTAL_34MHz          = 34000000,     /* Gaelco PCBs */
+	XTAL_34_291712MHz   = 34291712,     /* Fairlight CMI master card */
 	XTAL_36MHz          = 36000000,     /* Sega Model 1 video board */
 	XTAL_38_76922MHz    = 38769220,     /* Namco System 21 video board */
 	XTAL_39_3216MHz     = 39321600,     /* Sun 2/120 */
 	XTAL_40MHz          = 40000000,
+	XTAL_40_210MHz      = 40210000,     /* Fairlight CMI IIx */
 	XTAL_42MHz          = 42000000,     /* BMC A-00211 - Popo Bear */
+	XTAL_42_1052MHz     = 42105200,     /* NEC PC-88xx */
 	XTAL_42_9545MHz     = 42954545,     /* CPS3 (12x NTSC subcarrier)*/
 	XTAL_43_320MHz      = 43320000,     /* DEC VT420 */
 	XTAL_44_1MHz        = 44100000,     /* Subsino's Bishou Jan */
 	XTAL_44_4528MHz     = 44452800,     /* TeleVideo 965 */
 	XTAL_45MHz          = 45000000,     /* Eolith with Hyperstone CPUs */
 	XTAL_45_158MHz      = 45158000,     /* Sega Model 2A video board, Model 3 CPU board */
-	XTAL_45_582MHz      = 45582000,     /* Zentec Zephyr */
 	XTAL_45_6192MHz     = 45619200,     /* DEC VK100 */
 	XTAL_45_8304MHz     = 45830400,     /* Microterm 5510 */
 	XTAL_47_736MHz      = 47736000,     /* Visual 100 */
