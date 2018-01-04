@@ -126,10 +126,18 @@ float4 ps_vector_buffer_main(PS_INPUT Input) : COLOR
 	return BaseTexel;
 }
 
+static const float3x3 CORRECTION = {
+	1.1763f, 0.0000f, -0.0000f,
+	0.0001f, 0.9756f, -0.0000f,
+	0.0000f, 0.0000f,  0.7218f
+};
+
 float4 ps_ui_main(PS_INPUT Input) : COLOR
 {
 	float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
 	BaseTexel *= Input.Color;
+	BaseTexel.rgb = mul(CORRECTION, BaseTexel.rgb);
+	BaseTexel.rgb *= 0.5f;
 
 	return BaseTexel;
 }

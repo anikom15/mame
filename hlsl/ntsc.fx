@@ -95,9 +95,16 @@ static const float4 YDot = float4(0.299f, 0.587f, 0.114f, 0.0f);
 static const float4 IDot = float4(0.595716f, -0.274453f, -0.321263f, 0.0f);
 static const float4 QDot = float4(0.211456f, -0.522591f, 0.311135f, 0.0f);
 
-static const float3 RDot = float3(1.0f, 0.956f, 0.621f);
-static const float3 GDot = float3(1.0f, -0.272f, -0.647f);
-static const float3 BDot = float3(1.0f, -1.106f, 1.703f);
+static const float3x3 RGB_TO_YIQ = {
+	0.299f,     0.587f,     0.114f,
+	0.595716f, -0.274453f, -0.321263f,
+	0.211456f, -0.522591f, 0.311135f
+};
+static const float3x3 YIQ_TO_RGB = {
+	1.0f,  0.956f,  0.621f,
+	1.0f, -0.272f, -0.647f,
+	1.0f, -1.106f,  1.703f
+};
 
 static const float4 OffsetX = float4(0.0f, 0.25f, 0.50f, 0.75f);
 static const float4 NotchOffset = float4(0.0f, 1.0f, 2.0f, 3.0f);
@@ -115,10 +122,10 @@ float4 GetCompositeYIQ(float2 TexCoord)
 	float2 C3 = TexCoord + PValueSourceTexel * OffsetX.w;
 	float4 Cx = float4(C0.x, C1.x, C2.x, C3.x);
 	float4 Cy = float4(C0.y, C1.y, C2.y, C3.y);
-	float4 Texel0 = tex2D(DiffuseSampler, C0);
-	float4 Texel1 = tex2D(DiffuseSampler, C1);
-	float4 Texel2 = tex2D(DiffuseSampler, C2);
-	float4 Texel3 = tex2D(DiffuseSampler, C3);
+	float3 Texel0 = tex2D(DiffuseSampler, C0).rgb;
+	float3 Texel1 = tex2D(DiffuseSampler, C1).rgb;
+	float3 Texel2 = tex2D(DiffuseSampler, C2).rgb;
+	float3 Texel3 = tex2D(DiffuseSampler, C3).rgb;
 
 	float4 HPosition = Cx;
 	float4 VPosition = Cy;
@@ -220,10 +227,11 @@ float4 ps_main(PS_INPUT Input) : COLOR
 		(IAccum.r + IAccum.g + IAccum.b + IAccum.a) * 2.0f,
 		(QAccum.r + QAccum.g + QAccum.b + QAccum.a) * 2.0f);
 
-	float3 RGB = float3(
-		dot(YIQ, RDot),
-		dot(YIQ, GDot),
-		dot(YIQ, BDot));
+	//float3 RGB = float3(
+	//	dot(YIQ, RDot),
+	//	dot(YIQ, GDot),
+	//	dot(YIQ, BDot));
+	float3 RGB = mul(YIQ_TO_RGB, YIQ);
 
 	return float4(RGB, BaseTexel.a);
 }
