@@ -1475,7 +1475,7 @@ WRITE16_MEMBER(seta_state::timer_regs_w)
 			uPD71054->max[offset] = (uPD71054->max[offset]&0x00ff)+(data<<8);
 		}
 		if( uPD71054->max[offset] != 0 ) {
-			uPD71054_update_timer( &space.device(), offset );
+			uPD71054_update_timer( m_maincpu.target(), offset );
 		}
 		break;
 		case 0x0003:
@@ -2791,7 +2791,7 @@ READ16_MEMBER(seta_state::kiwame_input_r)
 		case 0x08/2:    return 0xffff;
 
 		default:
-			logerror("PC %06X - Read input %02X !\n", space.device().safe_pc(), offset*2);
+			logerror("PC %06X - Read input %02X !\n", m_maincpu->pc(), offset*2);
 			return 0x0000;
 	}
 }
@@ -2817,12 +2817,12 @@ ADDRESS_MAP_END
 
 READ16_MEMBER(seta_state::thunderl_protection_r)
 {
-//  logerror("PC %06X - Protection Read\n", space.device().safe_pc());
+//  logerror("PC %06X - Protection Read\n", m_maincpu->pc());
 	return 0x00dd;
 }
 WRITE16_MEMBER(seta_state::thunderl_protection_w)
 {
-//  logerror("PC %06X - Protection Written: %04X <- %04X\n", space.device().safe_pc(), offset*2, data);
+//  logerror("PC %06X - Protection Written: %04X <- %04X\n", m_maincpu->pc(), offset*2, data);
 }
 
 /* Similar to downtown etc. */
@@ -2975,14 +2975,14 @@ READ16_MEMBER(seta_state::pairlove_prot_r)
 	int retdata;
 
 	retdata = m_pairslove_protram[offset];
-	//osd_printf_debug("pairs love protection? read %06x %04x %04x\n",space.device().safe_pc(), offset,retdata);
+	//osd_printf_debug("pairs love protection? read %06x %04x %04x\n",m_maincpu->pc(), offset,retdata);
 	m_pairslove_protram[offset] = m_pairslove_protram_old[offset];
 	return retdata;
 }
 
 WRITE16_MEMBER(seta_state::pairlove_prot_w)
 {
-	//osd_printf_debug("pairs love protection? write %06x %04x %04x\n",space.device().safe_pc(), offset,data);
+	//osd_printf_debug("pairs love protection? write %06x %04x %04x\n",m_maincpu->pc(), offset,data);
 	m_pairslove_protram_old[offset] = m_pairslove_protram[offset];
 	m_pairslove_protram[offset] = data;
 }
@@ -3071,7 +3071,7 @@ READ16_MEMBER(jockeyc_state::mux_r)
 		case 0x40:  return (m_key2[3]->read() << 8) | m_key1[3]->read();
 		case 0x80:  return (m_key2[4]->read() << 8) | m_key1[4]->read();
 	}
-	logerror("%06X: unknown key read, mux = %04x\n", space.device().safe_pc(), m_mux);
+	logerror("%06X: unknown key read, mux = %04x\n", m_maincpu->pc(), m_mux);
 	return 0xffff;
 }
 
@@ -3443,7 +3443,7 @@ WRITE8_MEMBER(seta_state::calibr50_sub_bankswitch_w)
 WRITE8_MEMBER(seta_state::calibr50_soundlatch2_w)
 {
 	m_soundlatch2->write(space,0,data);
-	space.device().execute().spin_until_time(attotime::from_usec(50));  // Allow the other cpu to reply
+	m_subcpu->spin_until_time(attotime::from_usec(50));  // Allow the other cpu to reply
 }
 
 static ADDRESS_MAP_START( calibr50_sub_map, AS_PROGRAM, 8, seta_state )
@@ -9134,6 +9134,7 @@ static MACHINE_CONFIG_START( kiwame )
 	/* lev 1-7 are the same. WARNING: the interrupt table is written to. */
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", seta_state,  irq1_line_hold)
 	MCFG_DEVICE_ADD("tmp68301", TMP68301, 0)
+	MCFG_TMP68301_CPU("maincpu")
 	MCFG_TMP68301_OUT_PARALLEL_CB(WRITE16(seta_state, kiwame_row_select_w))
 
 	MCFG_NVRAM_ADD_0FILL("nvram")
@@ -11696,12 +11697,12 @@ READ16_MEMBER(seta_state::twineagl_debug_r)
 READ16_MEMBER(seta_state::twineagl_200100_r)
 {
 	// protection check at boot
-	logerror("%04x: twineagl_200100_r %d\n",space.device().safe_pc(),offset);
+	logerror("%04x: twineagl_200100_r %d\n",m_maincpu->pc(),offset);
 	return m_twineagl_xram[offset];
 }
 WRITE16_MEMBER(seta_state::twineagl_200100_w)
 {
-	logerror("%04x: twineagl_200100_w %d = %02x\n",space.device().safe_pc(),offset,data);
+	logerror("%04x: twineagl_200100_w %d = %02x\n",m_maincpu->pc(),offset,data);
 
 	if (ACCESSING_BITS_0_7)
 	{

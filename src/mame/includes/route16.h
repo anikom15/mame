@@ -7,6 +7,8 @@ class route16_state : public driver_device
 public:
 	route16_state(const machine_config &mconfig, device_type type, const char *tag)
 		: driver_device(mconfig, type, tag)
+		, m_cpu1(*this, "cpu1")
+		, m_cpu2(*this, "cpu2")
 		, m_sn(*this, "snsnd")
 		, m_sharedram(*this, "sharedram")
 		, m_videoram1(*this, "videoram1")
@@ -17,7 +19,7 @@ public:
 
 	DECLARE_WRITE8_MEMBER(out0_w);
 	DECLARE_WRITE8_MEMBER(out1_w);
-	DECLARE_WRITE8_MEMBER(route16_sharedram_w);
+	template<bool cpu1> DECLARE_WRITE8_MEMBER(route16_sharedram_w);
 	DECLARE_READ8_MEMBER(route16_prot_read);
 	DECLARE_READ8_MEMBER(routex_prot_read);
 	DECLARE_WRITE8_MEMBER(ttmahjng_input_port_matrix_w);
@@ -33,6 +35,8 @@ public:
 	uint32_t screen_update_ttmahjng(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
 private:
+	required_device<cpu_device> m_cpu1;
+	required_device<cpu_device> m_cpu2;
 	optional_device<sn76477_device> m_sn;
 
 	required_shared_ptr<uint8_t> m_sharedram;

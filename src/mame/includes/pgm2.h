@@ -70,8 +70,8 @@ public:
 	DECLARE_READ32_MEMBER(orleg2_speedup_r);
 	DECLARE_READ32_MEMBER(kov2nl_speedup_r);
 	DECLARE_READ32_MEMBER(kof98umh_speedup_r);
-	DECLARE_READ32_MEMBER(ddpdojh_speedup_r);
-	DECLARE_READ32_MEMBER(ddpdojh_speedup2_r);
+	DECLARE_READ32_MEMBER(ddpdojt_speedup_r);
+	DECLARE_READ32_MEMBER(ddpdojt_speedup2_r);
 	DECLARE_READ32_MEMBER(kov3_speedup_r);
 
 	DECLARE_READ8_MEMBER(encryption_r);
@@ -81,7 +81,7 @@ public:
 
 	DECLARE_DRIVER_INIT(kov2nl);
 	DECLARE_DRIVER_INIT(orleg2);
-	DECLARE_DRIVER_INIT(ddpdojh);
+	DECLARE_DRIVER_INIT(ddpdojt);
 	DECLARE_DRIVER_INIT(kov3);
 	DECLARE_DRIVER_INIT(kov3_104);
 	DECLARE_DRIVER_INIT(kov3_102);
@@ -114,8 +114,8 @@ private:
 
 	void skip_sprite_chunk(int &palette_offset, uint32_t maskdata, int reverse);
 	void draw_sprite_pixel(const rectangle &cliprect, int palette_offset, int realx, int realy, int pal);
-	void draw_sprite_chunk(const rectangle &cliprect, int &palette_offset, int x, int realy, int sizex, int xdraw, int pal, uint32_t maskdata, uint32_t zoomx_bits, int growx, int &realxdraw, int realdraw_inc, int palette_inc);
-	void draw_sprite_line(const rectangle &cliprect, int &mask_offset, int &palette_offset, int x, int realy, int flipx, int reverse, int sizex, int pal, int zoomybit, int zoomx_bits, int growx);
+	void draw_sprite_chunk(const rectangle &cliprect, int &palette_offset, int x, int realy, int sizex, int xdraw, int pal, uint32_t maskdata, uint32_t zoomx_bits, int repeats, int &realxdraw, int realdraw_inc, int palette_inc);
+	void draw_sprite_line(const rectangle &cliprect, int &mask_offset, int &palette_offset, int x, int realy, int flipx, int reverse, int sizex, int pal, int zoomybit, int zoomx_bits, int xrepeats);
 	void draw_sprites(screen_device &screen, const rectangle &cliprect, uint32_t* spriteram);
 	void copy_sprites_from_bitmap(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect, int pri);
 
@@ -125,6 +125,7 @@ private:
 	void common_encryption_init();
 	uint8_t m_encryption_table[0x100];
 	int m_has_decrypted;    // so we only do it once.
+	int m_has_decrypted_kov3_module;
 	uint32_t m_spritekey;
 	uint32_t m_realspritekey;
 	int m_sprite_predecrypted;
@@ -148,6 +149,8 @@ private:
 	int module_clk_cnt;
 	uint8_t module_rcv_buf[10];
 	uint8_t module_send_buf[9];
+
+	void postload();
 
 	// devices
 	required_device<cpu_device> m_maincpu;

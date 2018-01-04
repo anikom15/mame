@@ -10499,6 +10499,7 @@ vsavu                           // 19/05/1997 (c) 1997 (USA)
 xmcota                          // 31/03/1995 (c) 1994 (Euro)
 xmcotaa                         // 05/01/1995 (c) 1994 (Asia)
 xmcotaar1                       // 17/12/1994 (c) 1994 (Asia)
+xmcotab                         // 31/03/1995 (c) 1995 (Brazil)
 xmcotah                         // 31/03/1995 (c) 1994 (Hispanic)
 xmcotahr1                       // 05/01/1995 (c) 1994 (Hispanic)
 xmcotaj                         // 05/01/1995 (c) 1994 (Japan)
@@ -12901,6 +12902,7 @@ jolycdic                        // 1993 bootleg
 jolycdid                        // 1990 bootleg
 jolycdie                        // 1990 bootleg
 jolycdif                        // 1990 bootleg
+jolycdig                        // 1993 bootleg
 jolycdit                        // 199? bootleg
 jolycdsp                        // (c) 1992 TAB-Austria
 jolycmzs                        // (c) 1993 MZS Tech
@@ -14732,14 +14734,14 @@ uspbball                        // US Games
 
 @source:hh_sm510.cpp
 exospace                        // Elektronika
-gnw_bx301                       // Nintendo
-gnw_dj101                       // Nintendo
-gnw_dm53                        // Nintendo
-gnw_eg26                        // Nintendo
-gnw_jr55                        // Nintendo
-gnw_mc25                        // Nintendo
-gnw_ml102                       // Nintendo
-gnw_mw56                        // Nintendo
+gnw_boxing                      // Nintendo
+gnw_dkjr                        // Nintendo
+gnw_dkong2                      // Nintendo
+gnw_egg                         // Nintendo
+gnw_mario                       // Nintendo
+gnw_mariocm                     // Nintendo
+gnw_mmouse                      // Nintendo
+gnw_mickdon                     // Nintendo
 kbilly                          // Konami
 kblades                         // Konami
 kbucky                          // Konami
@@ -14761,6 +14763,8 @@ tbtoads                         // Tiger
 tddragon                        // Tiger
 tgaiden                         // Tiger
 tgaunt                          // Tiger
+tgoldnaxe                       // Tiger
+tigarden                        // Tronica
 tjdredd                         // Tiger
 tkarnov                         // Tiger
 tmchammer                       // Tiger
@@ -14845,6 +14849,7 @@ tbreakup                        // Tomy
 tc4                             // Coleco
 tcfball                         // Tandy Radio Shack
 tcfballa                        // Tandy Radio Shack
+timaze                          // Texas Instruments
 xl25                            // Vulcan
 zodiac                          // Coleco
 
@@ -29923,6 +29928,9 @@ vandykeb                        // bootleg
 vandykejal                      // UPL-90064 (c) Jaleco
 vandykejal2                     // UPL-90064 (c) Jaleco
 
+@source:nmkmedal.cpp
+trocana                         // NTC / NMK
+
 @source:nokia_3310.cpp
 noki3210                        //
 noki3310                        //
@@ -31370,11 +31378,14 @@ theglad101                      //
 thegladpcb                      //
 
 @source:pgm2.cpp
-ddpdojh                         //
+ddpdojt                         // (c) 2010
 kov2nl                          // (c) 2008
 kov2nl_301                      //
 kov2nl_300                      //
-kov3                            //
+kov2nl_302cn                    //
+kov2nl_301cn                    //
+kov2nl_300cn                    //
+kov3                            // (c) 2011
 kov3_102                        //
 kov3_100                        //
 orleg2                          // (c) 2007

@@ -78,6 +78,7 @@ vt100_video_device::vt100_video_device(const machine_config &mconfig, device_typ
 	, device_video_interface(mconfig, *this)
 	, m_read_ram(*this)
 	, m_write_clear_video_interrupt(*this)
+	, m_write_lba7(*this)
 	, m_char_rom(*this, finder_base::DUMMY_TAG)
 	, m_palette(*this, "palette")
 {
@@ -105,6 +106,7 @@ void vt100_video_device::device_start()
 	/* resolve callbacks */
 	m_read_ram.resolve_safe(0);
 	m_write_clear_video_interrupt.resolve_safe();
+	m_write_lba7.resolve_safe();
 
 	// LBA7 is scan line frequency update
 	m_lba7_change_timer = machine().scheduler().timer_alloc(timer_expired_delegate(FUNC(vt100_video_device::lba7_change), this));
@@ -238,7 +240,7 @@ WRITE8_MEMBER(vt100_video_device::dc012_w)
 	else
 	{
 //      if (MHFU_FLAG == false)
-//          LOG("MHFU  ___ENABLED___ %05x \n", space.device().safe_pc());
+//          LOG("MHFU  ___ENABLED___ %s \n", m_maincpu->pc());
 		MHFU_FLAG = true;
 		MHFU_counter = 0;
 	}
@@ -354,7 +356,8 @@ void vt100_video_device::display_char(bitmap_ind16 &bitmap, uint8_t code, int x,
 	int char_lines = m_linedoubler ? 20 : 10;
 	for (int i = 0; i < char_lines; i++)
 	{
-		int yy = y * 10 + i;
+		int yy = y * char_lines + i;
+		assert(yy < bitmap.height());
 
 		switch (display_type)
 		{
@@ -427,15 +430,19 @@ void vt100_video_device::video_update(bitmap_ind16 &bitmap, const rectangle &cli
 		return;
 
 	int vert_charlines_MAX = m_height;
+	int fill_lines = m_fill_lines;
 	if (m_linedoubler)
+	{
 		vert_charlines_MAX *= 2;
+		fill_lines *= 2;
+	}
 	while (line < vert_charlines_MAX)
 	{
 		code = m_read_ram(addr + xpos);
 		if (code == 0x7f)
 		{
 			// end of line, fill empty till end of line
-			if (line >= m_fill_lines)
+			if (line >= fill_lines)
 			{
 				for (x = xpos; x < ((display_type == 2) ? (m_columns / 2) : m_columns); x++)
 				{
@@ -449,19 +456,17 @@ void vt100_video_device::video_update(bitmap_ind16 &bitmap, const rectangle &cli
 			if (addr & 0x1000) addr &= 0xfff; else addr |= 0x2000;
 			scroll_region = (temp >> 15) & 1;
 			display_type = (temp >> 13) & 3;
-			if (line >= m_fill_lines)
-			{
+			if (line >= fill_lines)
 				ypos++;
-				if (m_linedoubler)
-					ypos++;
-			}
 			xpos = 0;
 			line++;
+			if (m_linedoubler)
+				line++;
 		}
 		else
 		{
 			// display regular char
-			if (line >= m_fill_lines)
+			if (line >= fill_lines)
 			{
 				display_char(bitmap, code, xpos, ypos, scroll_region, display_type);
 			}
@@ -875,6 +880,7 @@ int rainbow_video_device::MHFU(int ASK)
 TIMER_CALLBACK_MEMBER(vt100_video_device::lba7_change)
 {
 	m_lba7 = (m_lba7) ? 0 : 1;
+	m_write_lba7(m_lba7);
 }
 
 
