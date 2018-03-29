@@ -34,7 +34,7 @@ Video emulation TODO:
  \-complete windows effects
  \-mosaic effect
  \-ODD bit/H/V Counter not yet emulated properly
- \-Reduction enable bits
+ \-Reduction enable bits (zooming limiters)
  \-Check if there are any remaining video registers that are yet to be macroized & added to the rumble.
 -batmanfr:
  \-If you reset the game after the character selection screen,when you get again to it there's garbage
@@ -44,10 +44,10 @@ Video emulation TODO:
 -hanagumi:
  \-ending screens have corrupt graphics. (*untested*)
 -kiwames:
- \-incorrect color emulation for the alpha blended flames on the title screen,it's caused by a schizoid
+ \-(fixed) incorrect color emulation for the alpha blended flames on the title screen,it's caused by a schizoid
    linescroll emulation quirk.
  \-the VDP1 sprites refresh is too slow,causing the "Draw by request" mode to
-   flicker.Moved back to default ATM.
+   flicker. Moved back to default ATM.
 -pblbeach:
  \-Sprites are offset, because it doesn't clear vdp1 local coordinates set by bios,
    I guess that they are cleared when some vdp1 register is written (kludged for now)
@@ -55,7 +55,15 @@ Video emulation TODO:
  \-Attract mode presentation has corrupted graphics in various places,probably caused by incomplete
    framebuffer data delete.
 -seabass:
- \-Player sprite is corrupt/missing during movements,caused by incomplete framebuffer switching.
+ \-(fixed) Player sprite is corrupt/missing during movements,caused by incomplete framebuffer switching.
+-shienryu:
+ \-level 2 background colors on statues, caused by special color calculation usage (per dot);
+(Saturn games)
+- scud the disposable assassin:
+ \- when zooming on melee attack background gets pink, color calculation issue?
+- virtual hydlide:
+ \- transparent pens usage on most vdp1 items should be black instead.
+ \- likewise "press start button" is the other way around, i.e. black pen where it should be transparent instead.
 
 Notes of Interest & Unclear features:
 
@@ -102,8 +110,6 @@ In other words,the first three types uses the offset and not the color allocated
 
 #include "emu.h"
 #include "includes/saturn.h" // FIXME: this is a dependency from devices on MAME
-
-#include "screen.h"
 
 
 #define DEBUG_MODE 0
@@ -5772,7 +5778,7 @@ READ16_MEMBER ( saturn_state::saturn_vdp2_regs_r )
 			/* latch h/v signals through HV latch*/
 			if(!STV_VDP2_EXLTEN)
 			{
-				if(!machine().side_effect_disabled())
+				if(!machine().side_effects_disabled())
 				{
 					m_vdp2.h_count = get_hcounter();
 					m_vdp2.v_count = get_vcounter();
@@ -5799,7 +5805,7 @@ READ16_MEMBER ( saturn_state::saturn_vdp2_regs_r )
 				m_vdp2_regs[offset] |= 1 << 3;
 
 			/* HV latches clears if this register is read */
-			if(!machine().side_effect_disabled())
+			if(!machine().side_effects_disabled())
 			{
 				m_vdp2.exltfg &= ~1;
 				m_vdp2.exsyfg &= ~1;
@@ -5813,7 +5819,7 @@ READ16_MEMBER ( saturn_state::saturn_vdp2_regs_r )
 
 			/* Games basically r/w the entire VDP2 register area when this is tripped. (example: Silhouette Mirage)
 			   Disable log for the time being. */
-			//if(!machine().side_effect_disabled())
+			//if(!machine().side_effects_disabled())
 			//  printf("Warning: VDP2 version read\n");
 			break;
 		}
@@ -5833,7 +5839,7 @@ READ16_MEMBER ( saturn_state::saturn_vdp2_regs_r )
 		}
 
 		default:
-			//if(!machine().side_effect_disabled())
+			//if(!machine().side_effects_disabled())
 			//  printf("VDP2: read from register %08x %08x\n",offset*4,mem_mask);
 			break;
 	}
@@ -6010,7 +6016,7 @@ int saturn_state::get_pixel_clock( void )
 {
 	int res,divider;
 
-	res = m_vdp2.dotsel ? MASTER_CLOCK_352 : MASTER_CLOCK_320;
+	res = (m_vdp2.dotsel ? MASTER_CLOCK_352 : MASTER_CLOCK_320).value();
 	/* TODO: divider is ALWAYS 8, this thing is just to over-compensate for MAME framework faults ... */
 	divider = 8;
 
@@ -6029,8 +6035,8 @@ int saturn_state::get_pixel_clock( void )
 /* TODO: hblank position and hblank firing doesn't really match HW behaviour. */
 uint8_t saturn_state::get_hblank( void )
 {
-	const rectangle &visarea = machine().first_screen()->visible_area();
-	int cur_h = machine().first_screen()->hpos();
+	const rectangle &visarea = m_screen->visible_area();
+	int cur_h = m_screen->hpos();
 
 	if (cur_h > visarea.max_x) //TODO
 		return 1;
@@ -6041,7 +6047,7 @@ uint8_t saturn_state::get_hblank( void )
 uint8_t saturn_state::get_vblank( void )
 {
 	int cur_v,vblank;
-	cur_v = machine().first_screen()->vpos();
+	cur_v = m_screen->vpos();
 
 	vblank = get_vblank_start_position() * get_ystep_count();
 
@@ -6060,7 +6066,7 @@ uint8_t saturn_state::get_odd_bit( void )
 //       But the documentation claims that "non-interlaced" mode is always 1.
 //       grdforce tests this bit to be 1 from title screen to gameplay, ditto for finlarch/sasissu/magzun.
 //       Assume documentation is wrong and actually always flip this bit.
-	return m_vdp2.odd;//machine().first_screen()->frame_number() & 1;
+	return m_vdp2.odd;//m_screen->frame_number() & 1;
 }
 
 int saturn_state::get_vblank_start_position( void )
@@ -6080,7 +6086,7 @@ int saturn_state::get_vblank_start_position( void )
 
 int saturn_state::get_ystep_count( void )
 {
-	int max_y = machine().first_screen()->height();
+	int max_y = m_screen->height();
 	int y_step;
 
 	y_step = 2;
@@ -6096,7 +6102,7 @@ int saturn_state::get_hcounter( void )
 {
 	int hcount;
 
-	hcount = machine().first_screen()->hpos();
+	hcount = m_screen->hpos();
 
 	switch(STV_VDP2_HRES & 6)
 	{
@@ -6127,7 +6133,7 @@ int saturn_state::get_vcounter( void )
 {
 	int vcount;
 
-	vcount = machine().first_screen()->vpos();
+	vcount = m_screen->vpos();
 
 	/* Exclusive Monitor */
 	if(STV_VDP2_HRES & 4)
@@ -6135,7 +6141,7 @@ int saturn_state::get_vcounter( void )
 
 	/* Double Density Interlace */
 	if((STV_VDP2_LSMD & 3) == 3)
-		return (vcount & ~1) | (machine().first_screen()->frame_number() & 1);
+		return (vcount & ~1) | (m_screen->frame_number() & 1);
 
 	/* docs says << 1, but according to HW tests it's a typo. */
 	assert((vcount & 0x1ff) < ARRAY_LENGTH(true_vcount));
@@ -6212,7 +6218,7 @@ int saturn_state::stv_vdp2_start ( void )
 VIDEO_START_MEMBER(saturn_state,stv_vdp2)
 {
 	int i;
-	machine().first_screen()->register_screen_bitmap(m_tmpbitmap);
+	m_screen->register_screen_bitmap(m_tmpbitmap);
 	stv_vdp2_start();
 	stv_vdp1_start();
 	m_vdpdebug_roz = 0;
@@ -6279,9 +6285,9 @@ void saturn_state::stv_vdp2_dynamic_res_change( void )
 		refresh  = HZ_TO_ATTOSECONDS(get_pixel_clock()) * (hblank_period) * vblank_period;
 		//printf("%d %d %d %d\n",horz_res,vert_res,horz_res+hblank_period,vblank_period);
 
-		machine().first_screen()->configure(hblank_period, vblank_period, visarea, refresh );
+		m_screen->configure(hblank_period, vblank_period, visarea, refresh );
 	}
-//  machine().first_screen()->set_visible_area(0*8, horz_res-1,0*8, vert_res-1);
+//  m_screen->set_visible_area(0*8, horz_res-1,0*8, vert_res-1);
 }
 
 /*This is for calculating the rgb brightness*/

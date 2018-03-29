@@ -174,12 +174,12 @@ static const char *const delayn[] =
 };
 
 // device type definition
-DEFINE_DEVICE_TYPE(CXD8530AQ, cxd8530aq_device, "cxd8530aq", "CXD8530AQ")
-DEFINE_DEVICE_TYPE(CXD8530BQ, cxd8530bq_device, "cxd8530bq", "CXD8530BQ")
-DEFINE_DEVICE_TYPE(CXD8530CQ, cxd8530cq_device, "cxd8530cq", "CXD8530CQ")
-DEFINE_DEVICE_TYPE(CXD8661R,  cxd8661r_device,  "cxd8661r",  "CXD8661R")
-DEFINE_DEVICE_TYPE(CXD8606BQ, cxd8606bq_device, "cxd8606bq", "CXD8606BQ")
-DEFINE_DEVICE_TYPE(CXD8606CQ, cxd8606cq_device, "cxd8606cq", "CXD8606CQ")
+DEFINE_DEVICE_TYPE(CXD8530AQ, cxd8530aq_device, "cxd8530aq", "Sony CXD8530AQ")
+DEFINE_DEVICE_TYPE(CXD8530BQ, cxd8530bq_device, "cxd8530bq", "Sony CXD8530BQ")
+DEFINE_DEVICE_TYPE(CXD8530CQ, cxd8530cq_device, "cxd8530cq", "Sony CXD8530CQ")
+DEFINE_DEVICE_TYPE(CXD8661R,  cxd8661r_device,  "cxd8661r",  "Sony CXD8661R")
+DEFINE_DEVICE_TYPE(CXD8606BQ, cxd8606bq_device, "cxd8606bq", "Sony CXD8606BQ")
+DEFINE_DEVICE_TYPE(CXD8606CQ, cxd8606cq_device, "cxd8606cq", "Sony CXD8606CQ")
 
 static const uint32_t mtc0_writemask[]=
 {
@@ -203,14 +203,14 @@ static const uint32_t mtc0_writemask[]=
 
 READ32_MEMBER( psxcpu_device::berr_r )
 {
-	if( !machine().side_effect_disabled() )
+	if( !machine().side_effects_disabled() )
 		m_berr = 1;
 	return 0;
 }
 
 WRITE32_MEMBER( psxcpu_device::berr_w )
 {
-	if( !machine().side_effect_disabled() )
+	if( !machine().side_effects_disabled() )
 		m_berr = 1;
 }
 
@@ -309,7 +309,7 @@ WRITE32_MEMBER( psxcpu_device::biu_w )
 void psxcpu_device::stop()
 {
 	machine().debug_break();
-	debugger_instruction_hook( this,  m_pc );
+	debugger_instruction_hook( m_pc );
 }
 
 uint32_t psxcpu_device::cache_readword( uint32_t offset )
@@ -1724,7 +1724,7 @@ int psxcpu_device::store_data_address_breakpoint( uint32_t address )
 }
 
 // On-board RAM and peripherals
-static ADDRESS_MAP_START( psxcpu_internal_map, AS_PROGRAM, 32, psxcpu_device )
+ADDRESS_MAP_START(psxcpu_device::psxcpu_internal_map)
 	AM_RANGE( 0x1f800000, 0x1f8003ff ) AM_NOP /* scratchpad */
 	AM_RANGE( 0x1f800400, 0x1f800fff ) AM_READWRITE( berr_r, berr_w )
 	AM_RANGE( 0x1f801000, 0x1f801003 ) AM_READWRITE( exp_base_r, exp_base_w )
@@ -1768,7 +1768,7 @@ ADDRESS_MAP_END
 
 psxcpu_device::psxcpu_device( const machine_config &mconfig, device_type type, const char *tag, device_t *owner, uint32_t clock ) :
 	cpu_device( mconfig, type, tag, owner, clock ),
-	m_program_config( "program", ENDIANNESS_LITTLE, 32, 32, 0, ADDRESS_MAP_NAME( psxcpu_internal_map ) ),
+	m_program_config( "program", ENDIANNESS_LITTLE, 32, 32, 0, address_map_constructor(FUNC(psxcpu_device::psxcpu_internal_map), this)),
 	m_gpu_read_handler( *this ),
 	m_gpu_write_handler( *this ),
 	m_spu_read_handler( *this ),
@@ -1964,7 +1964,7 @@ void psxcpu_device::device_start()
 	state_add( PSXCPU_CP2CR31, "flag", m_gte.m_cp2cr[ 31 ].d );
 
 	// set our instruction counter
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 
 	m_gpu_read_handler.resolve_safe( 0 );
 	m_gpu_write_handler.resolve_safe();
@@ -2077,9 +2077,9 @@ void psxcpu_device::state_string_export( const device_state_entry &entry, std::s
 //  helper function
 //-------------------------------------------------
 
-util::disasm_interface *psxcpu_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> psxcpu_device::create_disassembler()
 {
-	return new psxcpu_disassembler(this);
+	return std::make_unique<psxcpu_disassembler>(static_cast<psxcpu_disassembler::config *>(this));
 }
 
 
@@ -2316,7 +2316,7 @@ void psxcpu_device::execute_run()
 	do
 	{
 		if( LOG_BIOSCALL ) log_bioscall();
-		debugger_instruction_hook( this,  m_pc );
+		debugger_instruction_hook( m_pc );
 
 		int breakpoint = program_counter_breakpoint();
 
@@ -3381,11 +3381,6 @@ void psxcpu_device::setcp3cr( int reg, uint32_t value )
 {
 }
 
-psxcpu_device *psxcpu_device::getcpu( device_t &device, const char *cputag )
-{
-	return downcast<psxcpu_device *>( device.subdevice( cputag ) );
-}
-
 READ32_MEMBER( psxcpu_device::gpu_r )
 {
 	return m_gpu_read_handler( space, offset, mem_mask );
@@ -3432,7 +3427,7 @@ device_memory_interface::space_config_vector psxcpu_device::memory_space_config(
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( psxcpu_device::device_add_mconfig )
+MACHINE_CONFIG_START(psxcpu_device::device_add_mconfig)
 	MCFG_DEVICE_ADD( "irq", PSX_IRQ, 0 )
 	MCFG_PSX_IRQ_HANDLER( INPUTLINE( DEVICE_SELF, PSXCPU_IRQ0 ) )
 

@@ -21,7 +21,7 @@
 #include "mb86233d.h"
 
 
-DEFINE_DEVICE_TYPE(MB86233, mb86233_cpu_device, "mb86233", "MB86233")
+DEFINE_DEVICE_TYPE(MB86233, mb86233_cpu_device, "mb86233", "Fujitsu MB86233 \"TGP\"")
 
 
 mb86233_cpu_device::mb86233_cpu_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
@@ -47,9 +47,9 @@ device_memory_interface::space_config_vector mb86233_cpu_device::memory_space_co
 }
 
 
-util::disasm_interface *mb86233_cpu_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> mb86233_cpu_device::create_disassembler()
 {
-	return new mb86233_disassembler;
+	return std::make_unique<mb86233_disassembler>();
 }
 
 
@@ -167,7 +167,7 @@ void mb86233_cpu_device::device_start()
 	state_add( STATE_GENPCBASE, "CURPC", m_pc).noshow();
 	state_add( STATE_GENFLAGS, "GENFLAGS", m_sr).formatstr("%2s").noshow();
 
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 }
 
 
@@ -375,9 +375,9 @@ void mb86233_cpu_device::ALU( uint32_t alu)
 		case 0x0F:  /* D = int(D) */
 			switch((m_fpucontrol>>1)&3)
 			{
-				//case 0: GETD().i = floor(GETD().f+0.5f); break;
-				//case 1: GETD().i = ceil(GETD().f); break;
-				case 2: GETD().i = floor(GETD().f); break; // Manx TT
+				//case 0: GETD().i = floorf(GETD().f+0.5f); break;
+				//case 1: GETD().i = ceilf(GETD().f); break;
+				case 2: GETD().i = floorf(GETD().f); break; // Manx TT
 				case 3: GETD().i = (int32_t)GETD().f; break;
 				default: popmessage("TGP uses D = int(D) with FPU control = %02x, contact MAMEdev",m_fpucontrol>>1); break;
 			}
@@ -1004,7 +1004,7 @@ void mb86233_cpu_device::execute_run()
 		uint32_t      val;
 		uint32_t      opcode;
 
-		debugger_instruction_hook(this, GETPC());
+		debugger_instruction_hook(GETPC());
 
 		opcode = ROPCODE(GETPC());
 

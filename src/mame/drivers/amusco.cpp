@@ -86,8 +86,8 @@
 #include "amusco.lh"
 
 
-#define MASTER_CLOCK        XTAL_22_1184MHz     /* confirmed */
-#define SECOND_CLOCK        XTAL_15MHz          /* confirmed */
+#define MASTER_CLOCK        XTAL(22'118'400)     /* confirmed */
+#define SECOND_CLOCK        XTAL(15'000'000)          /* confirmed */
 
 #define CPU_CLOCK           MASTER_CLOCK / 4    /* guess */
 #define CRTC_CLOCK          SECOND_CLOCK / 8    /* guess */
@@ -127,6 +127,10 @@ public:
 	MC6845_ON_UPDATE_ADDR_CHANGED(crtc_addr);
 	MC6845_UPDATE_ROW(update_row);
 	DECLARE_PALETTE_INIT(amusco);
+	void amusco(machine_config &config);
+	void draw88pkr(machine_config &config);
+	void amusco_io_map(address_map &map);
+	void amusco_mem_map(address_map &map);
 protected:
 	virtual void video_start() override;
 	virtual void machine_start() override;
@@ -195,10 +199,11 @@ void amusco_state::machine_start()
 * Memory Map Information *
 *************************/
 
-static ADDRESS_MAP_START( amusco_mem_map, AS_PROGRAM, 8, amusco_state )
-	AM_RANGE(0x00000, 0x0ffff) AM_RAM
-	AM_RANGE(0xf8000, 0xfffff) AM_ROM
-ADDRESS_MAP_END
+void amusco_state::amusco_mem_map(address_map &map)
+{
+	map(0x00000, 0x0ffff).ram();
+	map(0xf8000, 0xfffff).rom();
+}
 
 READ8_MEMBER( amusco_state::mc6845_r)
 {
@@ -354,17 +359,18 @@ WRITE8_MEMBER(amusco_state::rtc_control_w)
 	m_rtc->read_w(BIT(data, 4));
 }
 
-static ADDRESS_MAP_START( amusco_io_map, AS_IO, 8, amusco_state )
-	AM_RANGE(0x0000, 0x0001) AM_READWRITE(mc6845_r, mc6845_w)
-	AM_RANGE(0x0010, 0x0011) AM_DEVWRITE("pic8259", pic8259_device, write)
-	AM_RANGE(0x0020, 0x0023) AM_DEVWRITE("pit8253", pit8253_device, write)
-	AM_RANGE(0x0030, 0x0033) AM_DEVREADWRITE("ppi_outputs", i8255_device, read, write)
-	AM_RANGE(0x0040, 0x0043) AM_DEVREADWRITE("ppi_inputs", i8255_device, read, write)
-	AM_RANGE(0x0060, 0x0060) AM_DEVWRITE("sn", sn76489a_device, write)
-	AM_RANGE(0x0070, 0x0071) AM_WRITE(vram_w)
-	AM_RANGE(0x0280, 0x0283) AM_DEVREADWRITE("lpt_interface", i8155_device, io_r, io_w)
-	AM_RANGE(0x0380, 0x0383) AM_DEVREADWRITE("rtc_interface", i8155_device, io_r, io_w)
-ADDRESS_MAP_END
+void amusco_state::amusco_io_map(address_map &map)
+{
+	map(0x0000, 0x0001).rw(this, FUNC(amusco_state::mc6845_r), FUNC(amusco_state::mc6845_w));
+	map(0x0010, 0x0011).w(m_pic, FUNC(pic8259_device::write));
+	map(0x0020, 0x0023).w(m_pit, FUNC(pit8253_device::write));
+	map(0x0030, 0x0033).rw("ppi_outputs", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x0040, 0x0043).rw("ppi_inputs", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x0060, 0x0060).w("sn", FUNC(sn76489a_device::write));
+	map(0x0070, 0x0071).w(this, FUNC(amusco_state::vram_w));
+	map(0x0280, 0x0283).rw("lpt_interface", FUNC(i8155_device::io_r), FUNC(i8155_device::io_w));
+	map(0x0380, 0x0383).rw("rtc_interface", FUNC(i8155_device::io_r), FUNC(i8155_device::io_w));
+}
 
 /* I/O byte R/W
 
@@ -520,7 +526,7 @@ PALETTE_INIT_MEMBER(amusco_state,amusco)
 *    Machine Drivers     *
 *************************/
 
-static MACHINE_CONFIG_START( amusco )
+MACHINE_CONFIG_START(amusco_state::amusco)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8088, CPU_CLOCK)        // 5 MHz ?
@@ -552,7 +558,7 @@ static MACHINE_CONFIG_START( amusco )
 	MCFG_I8155_IN_PORTB_CB(READ8(amusco_state, lpt_status_r))
 	// Port C uses ALT 3 mode, which MAME does not currently emulate
 
-	MCFG_MSM5832_ADD("rtc", XTAL_32_768kHz)
+	MCFG_MSM5832_ADD("rtc", XTAL(32'768))
 
 	MCFG_DEVICE_ADD("rtc_interface", I8155, 0)
 	MCFG_I8155_OUT_PORTA_CB(WRITE8(amusco_state, rtc_control_w))
@@ -587,7 +593,8 @@ static MACHINE_CONFIG_START( amusco )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( draw88pkr, amusco )
+MACHINE_CONFIG_START(amusco_state::draw88pkr)
+	amusco(config);
 	//MCFG_DEVICE_MODIFY("ppi_outputs") // Some bits are definitely different
 MACHINE_CONFIG_END
 

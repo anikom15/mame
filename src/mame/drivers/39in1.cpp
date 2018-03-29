@@ -98,6 +98,9 @@ public:
 	void pxa255_start();
 	required_device<cpu_device> m_maincpu;
 	required_device<palette_device> m_palette;
+	void _60in1(machine_config &config);
+	void _39in1(machine_config &config);
+	void _39in1_map(address_map &map);
 };
 
 
@@ -1355,7 +1358,7 @@ READ32_MEMBER(_39in1_state::unknown_r)
 
 READ32_MEMBER(_39in1_state::cpld_r)
 {
-	//if (space.device().safe_pc() != 0xe3af4) printf("CPLD read @ %x (PC %x state %d)\n", offset, space.device().safe_pc(), state);
+	//if (m_maincpu->pc() != 0xe3af4) printf("CPLD read @ %x (PC %x state %d)\n", offset, m_maincpu->pc(), state);
 
 	if (m_maincpu->pc() == 0x3f04)
 	{
@@ -1451,18 +1454,19 @@ DRIVER_INIT_MEMBER(_39in1_state,39in1)
 
 
 
-static ADDRESS_MAP_START( 39in1_map, AS_PROGRAM, 32, _39in1_state )
-	AM_RANGE(0x00000000, 0x0007ffff) AM_ROM
-	AM_RANGE(0x00400000, 0x005fffff) AM_ROM AM_REGION("data", 0)
-	AM_RANGE(0x04000000, 0x047fffff) AM_READWRITE(cpld_r, cpld_w )
-	AM_RANGE(0x40000000, 0x400002ff) AM_READWRITE(pxa255_dma_r, pxa255_dma_w )
-	AM_RANGE(0x40400000, 0x40400083) AM_READWRITE(pxa255_i2s_r, pxa255_i2s_w )
-	AM_RANGE(0x40a00000, 0x40a0001f) AM_READWRITE(pxa255_ostimer_r, pxa255_ostimer_w )
-	AM_RANGE(0x40d00000, 0x40d00017) AM_READWRITE(pxa255_intc_r, pxa255_intc_w )
-	AM_RANGE(0x40e00000, 0x40e0006b) AM_READWRITE(pxa255_gpio_r, pxa255_gpio_w )
-	AM_RANGE(0x44000000, 0x4400021f) AM_READWRITE(pxa255_lcd_r,  pxa255_lcd_w )
-	AM_RANGE(0xa0000000, 0xa07fffff) AM_RAM AM_SHARE("ram")
-ADDRESS_MAP_END
+void _39in1_state::_39in1_map(address_map &map)
+{
+	map(0x00000000, 0x0007ffff).rom();
+	map(0x00400000, 0x005fffff).rom().region("data", 0);
+	map(0x04000000, 0x047fffff).rw(this, FUNC(_39in1_state::cpld_r), FUNC(_39in1_state::cpld_w));
+	map(0x40000000, 0x400002ff).rw(this, FUNC(_39in1_state::pxa255_dma_r), FUNC(_39in1_state::pxa255_dma_w));
+	map(0x40400000, 0x40400083).rw(this, FUNC(_39in1_state::pxa255_i2s_r), FUNC(_39in1_state::pxa255_i2s_w));
+	map(0x40a00000, 0x40a0001f).rw(this, FUNC(_39in1_state::pxa255_ostimer_r), FUNC(_39in1_state::pxa255_ostimer_w));
+	map(0x40d00000, 0x40d00017).rw(this, FUNC(_39in1_state::pxa255_intc_r), FUNC(_39in1_state::pxa255_intc_w));
+	map(0x40e00000, 0x40e0006b).rw(this, FUNC(_39in1_state::pxa255_gpio_r), FUNC(_39in1_state::pxa255_gpio_w));
+	map(0x44000000, 0x4400021f).rw(this, FUNC(_39in1_state::pxa255_lcd_r), FUNC(_39in1_state::pxa255_lcd_w));
+	map(0xa0000000, 0xa07fffff).ram().share("ram");
+}
 
 static INPUT_PORTS_START( 39in1 )
 	PORT_START("MCUIPT")
@@ -1572,10 +1576,10 @@ MACHINE_START_MEMBER(_39in1_state,60in1)
 	pxa255_start();
 }
 
-static MACHINE_CONFIG_START( 39in1 )
+MACHINE_CONFIG_START(_39in1_state::_39in1)
 
 	MCFG_CPU_ADD("maincpu", PXA255, 200000000)
-	MCFG_CPU_PROGRAM_MAP(39in1_map)
+	MCFG_CPU_PROGRAM_MAP(_39in1_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", _39in1_state,  pxa255_vblank_start)
 
 	MCFG_SCREEN_ADD("screen", RASTER)
@@ -1597,7 +1601,8 @@ static MACHINE_CONFIG_START( 39in1 )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "rspeaker", 1.0)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( 60in1, 39in1 )
+MACHINE_CONFIG_START(_39in1_state::_60in1)
+	_39in1(config);
 	MCFG_MACHINE_START_OVERRIDE(_39in1_state,60in1)
 MACHINE_CONFIG_END
 
@@ -1718,11 +1723,11 @@ ROM_START( 19in1 )
 	ROM_LOAD16_WORD_SWAP( "19in1_eeprom.bin", 0x000, 0x200, NO_DUMP )
 ROM_END
 
-GAME(2004, 4in1a,  39in1, 39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "4 in 1 MAME bootleg (set 1, ver 3.00)",             MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
-GAME(2004, 4in1b,  39in1, 39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "4 in 1 MAME bootleg (set 2)",                       MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
-GAME(2004, 19in1,  39in1, 39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "19 in 1 MAME bootleg",                              MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
-GAME(2004, 39in1,  0,     39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "39 in 1 MAME bootleg",                              MACHINE_IMPERFECT_SOUND)
-GAME(2004, 48in1,  39in1, 39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "48 in 1 MAME bootleg (set 1, ver 3.09)",            MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
-GAME(2004, 48in1b, 39in1, 39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "48 in 1 MAME bootleg (set 2, ver 3.09, alt flash)", MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
-GAME(2004, 48in1a, 39in1, 39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "48 in 1 MAME bootleg (set 3, ver 3.02)",            MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
-GAME(2004, 60in1,  39in1, 60in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "60 in 1 MAME bootleg (ver 3.00)",                   MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 4in1a,  39in1, _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "4 in 1 MAME bootleg (set 1, ver 3.00)",             MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 4in1b,  39in1, _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "4 in 1 MAME bootleg (set 2)",                       MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 19in1,  39in1, _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "19 in 1 MAME bootleg",                              MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 39in1,  0,     _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "39 in 1 MAME bootleg",                              MACHINE_IMPERFECT_SOUND)
+GAME(2004, 48in1,  39in1, _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "48 in 1 MAME bootleg (set 1, ver 3.09)",            MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 48in1b, 39in1, _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "48 in 1 MAME bootleg (set 2, ver 3.09, alt flash)", MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 48in1a, 39in1, _39in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "48 in 1 MAME bootleg (set 3, ver 3.02)",            MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)
+GAME(2004, 60in1,  39in1, _60in1, 39in1, _39in1_state, 39in1, ROT270, "bootleg", "60 in 1 MAME bootleg (ver 3.00)",                   MACHINE_NOT_WORKING|MACHINE_IMPERFECT_SOUND)

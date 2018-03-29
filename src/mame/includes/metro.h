@@ -26,25 +26,27 @@ public:
 	};
 
 	metro_state(const machine_config &mconfig, device_type type, const char *tag)
-		: driver_device(mconfig, type, tag),
-		m_maincpu(*this, "maincpu"),
-		m_audiocpu(*this, "audiocpu"),
-		m_oki(*this, "oki"),
-		m_ymsnd(*this, "ymsnd"),
-		m_essnd(*this, "essnd"),
-		m_vdp(*this, "vdp"),
-		m_vdp2(*this, "vdp2"),
-		m_vdp3(*this, "vdp3"),
-		m_k053936(*this, "k053936") ,
-		m_eeprom(*this, "eeprom"),
-		m_gfxdecode(*this, "gfxdecode"),
-		m_screen(*this, "screen"),
-		m_soundlatch(*this, "soundlatch"),
-		m_irq_enable(*this, "irq_enable"),
-		m_irq_levels(*this, "irq_levels"),
-		m_irq_vectors(*this, "irq_vectors"),
-		m_input_sel(*this, "input_sel"),
-		m_k053936_ram(*this, "k053936_ram")
+		: driver_device(mconfig, type, tag)
+		, m_maincpu(*this, "maincpu")
+		, m_audiocpu(*this, "audiocpu")
+		, m_oki(*this, "oki")
+		, m_ymsnd(*this, "ymsnd")
+		, m_essnd(*this, "essnd")
+		, m_vdp(*this, "vdp")
+		, m_vdp2(*this, "vdp2")
+		, m_vdp3(*this, "vdp3")
+		, m_k053936(*this, "k053936")
+		, m_eeprom(*this, "eeprom")
+		, m_gfxdecode(*this, "gfxdecode")
+		, m_screen(*this, "screen")
+		, m_soundlatch(*this, "soundlatch")
+		, m_irq_enable(*this, "irq_enable")
+		, m_irq_levels(*this, "irq_levels")
+		, m_irq_vectors(*this, "irq_vectors")
+		, m_input_sel(*this, "input_sel")
+		, m_k053936_ram(*this, "k053936_ram")
+		, m_audiobank(*this, "audiobank")
+		, m_okibank(*this, "okibank")
 	{ }
 
 	DECLARE_READ16_MEMBER(metro_irq_cause_r);
@@ -63,7 +65,6 @@ public:
 	DECLARE_WRITE16_MEMBER(metro_coin_lockout_4words_w);
 	DECLARE_READ16_MEMBER(balcube_dsw_r);
 	DECLARE_READ16_MEMBER(gakusai_input_r);
-	DECLARE_WRITE16_MEMBER(blzntrnd_sound_w);
 	DECLARE_WRITE8_MEMBER(blzntrnd_sh_bankswitch_w);
 	DECLARE_WRITE16_MEMBER(puzzlet_irq_enable_w);
 	DECLARE_WRITE16_MEMBER(puzzlet_portb_w);
@@ -85,7 +86,6 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(vmetal_es8712_irq);
 
 	DECLARE_DRIVER_INIT(karatour);
-	DECLARE_DRIVER_INIT(daitorid);
 	DECLARE_DRIVER_INIT(blzntrnd);
 	DECLARE_DRIVER_INIT(vmetal);
 	DECLARE_DRIVER_INIT(mouja);
@@ -109,6 +109,72 @@ public:
 	IRQ_CALLBACK_MEMBER(metro_irq_callback);
 	DECLARE_READ_LINE_MEMBER(metro_rxd_r);
 
+	void i4100_config(machine_config &config);
+	void i4100_config_360x224(machine_config &config);
+	void i4220_config(machine_config &config);
+	void i4220_config_320x240(machine_config &config);
+	void i4220_config_304x224(machine_config &config);
+	void i4300_config(machine_config &config);
+	void i4300_config_384x224(machine_config &config);
+	void i4300_config_320x240(machine_config &config);
+	void metro_upd7810_sound(machine_config &config);
+	void daitorid_upd7810_sound(machine_config &config);
+	void poitto(machine_config &config);
+	void blzntrnd(machine_config &config);
+	void sankokushi(machine_config &config);
+	void mouja(machine_config &config);
+	void toride2g(machine_config &config);
+	void karatour(machine_config &config);
+	void skyalert(machine_config &config);
+	void gakusai(machine_config &config);
+	void batlbubl(machine_config &config);
+	void pururun(machine_config &config);
+	void vmetal(machine_config &config);
+	void daitorid(machine_config &config);
+	void puzzli(machine_config &config);
+	void pangpoms(machine_config &config);
+	void dokyusp(machine_config &config);
+	void dokyusei(machine_config &config);
+	void daitoa(machine_config &config);
+	void lastfort(machine_config &config);
+	void puzzlet(machine_config &config);
+	void gakusai2(machine_config &config);
+	void balcube(machine_config &config);
+	void msgogo(machine_config &config);
+	void gstrik2(machine_config &config);
+	void lastforg(machine_config &config);
+	void bangball(machine_config &config);
+	void dharma(machine_config &config);
+	void balcube_map(address_map &map);
+	void bangball_map(address_map &map);
+	void batlbubl_map(address_map &map);
+	void blzntrnd_map(address_map &map);
+	void blzntrnd_sound_io_map(address_map &map);
+	void blzntrnd_sound_map(address_map &map);
+	void daitoa_map(address_map &map);
+	void daitorid_map(address_map &map);
+	void dharma_map(address_map &map);
+	void dokyusei_map(address_map &map);
+	void dokyusp_map(address_map &map);
+	void gakusai2_map(address_map &map);
+	void gakusai_map(address_map &map);
+	void karatour_map(address_map &map);
+	void kokushi_map(address_map &map);
+	void lastforg_map(address_map &map);
+	void lastfort_map(address_map &map);
+	void metro_sound_map(address_map &map);
+	void mouja_map(address_map &map);
+	void mouja_okimap(address_map &map);
+	void msgogo_map(address_map &map);
+	void pangpoms_map(address_map &map);
+	void poitto_map(address_map &map);
+	void pururun_map(address_map &map);
+	void puzzlet_io_map(address_map &map);
+	void puzzlet_map(address_map &map);
+	void skyalert_map(address_map &map);
+	void toride2g_map(address_map &map);
+	void vmetal_map(address_map &map);
+	void ymf278_map(address_map &map);
 protected:
 	virtual void machine_start() override;
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
@@ -137,6 +203,9 @@ private:
 	optional_shared_ptr<uint16_t> m_input_sel;
 	optional_shared_ptr<uint16_t> m_k053936_ram;
 
+	optional_memory_bank m_audiobank;
+	optional_memory_bank m_okibank;
+
 	/* video-related */
 	tilemap_t   *m_k053936_tilemap;
 
@@ -153,6 +222,7 @@ private:
 	int         m_porta;
 	int         m_portb;
 	int         m_busy_sndcpu;
+	int         m_essnd_bank;
 	bool        m_essnd_gate;
 
 	/* misc */

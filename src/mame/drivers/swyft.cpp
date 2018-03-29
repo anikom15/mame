@@ -367,18 +367,11 @@ public:
 
 	DECLARE_WRITE_LINE_MEMBER(write_acia_clock);
 
-	/* gate array 2 has a 16-bit counter inside which counts at 10mhz and
-	   rolls over at FFFF->0000; on roll-over (or likely at FFFF terminal count)
-	   it triggers the KTOBF output. It does this every 6.5535ms, which causes
-	   a 74LS74 d-latch at IC100 to invert the state of the DUART IP2 line;
-	   this causes the DUART to fire an interrupt, which makes the 68000 read
-	   the keyboard.
-	   The watchdog counter and the 6ms counter are both incremented
-	   every time the KTOBF pulses.
-	 */
 	uint8_t m_keyboard_line;
 	uint8_t m_floppy_control;
 
+	void swyft(machine_config &config);
+	void swyft_mem(address_map &map);
 //protected:
 	//virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr);
 };
@@ -568,16 +561,17 @@ x   x   x   x   1   1  ?1? ?0?  ?   1   0   0   x   x   *   *   *   *   x   x   
 
 */
 
-static ADDRESS_MAP_START(swyft_mem, AS_PROGRAM, 8, swyft_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xfffff)
-	AM_RANGE(0x000000, 0x00ffff) AM_ROM // 64 KB ROM
-	AM_RANGE(0x040000, 0x07ffff) AM_RAM AM_SHARE("p_swyft_vram") // 256 KB RAM
-	AM_RANGE(0x0d0000, 0x0d000f) AM_READ(swyft_d0000) // status of something? reads from d0000, d0004, d0008, d000a, d000e
-	AM_RANGE(0x0e1000, 0x0e1000) AM_DEVWRITE("acia6850", acia6850_device, control_w) // 6850 ACIA lives here
-	AM_RANGE(0x0e2000, 0x0e2fff) AM_READWRITE(swyft_via0_r, swyft_via0_w) // io area with selector on a9 a8 a7 a6?
-	AM_RANGE(0x0e4000, 0x0e4fff) AM_READWRITE(swyft_via1_r, swyft_via1_w)
-ADDRESS_MAP_END
+void swyft_state::swyft_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xfffff);
+	map(0x000000, 0x00ffff).rom(); // 64 KB ROM
+	map(0x040000, 0x07ffff).ram().share("p_swyft_vram"); // 256 KB RAM
+	map(0x0d0000, 0x0d000f).r(this, FUNC(swyft_state::swyft_d0000)); // status of something? reads from d0000, d0004, d0008, d000a, d000e
+	map(0x0e1000, 0x0e1000).w(m_acia6850, FUNC(acia6850_device::control_w)); // 6850 ACIA lives here
+	map(0x0e2000, 0x0e2fff).rw(this, FUNC(swyft_state::swyft_via0_r), FUNC(swyft_state::swyft_via0_w)); // io area with selector on a9 a8 a7 a6?
+	map(0x0e4000, 0x0e4fff).rw(this, FUNC(swyft_state::swyft_via1_r), FUNC(swyft_state::swyft_via1_w));
+}
 
 MACHINE_START_MEMBER(swyft_state,swyft)
 {
@@ -768,10 +762,10 @@ WRITE_LINE_MEMBER( swyft_state::write_acia_clock )
 	m_acia6850->write_rxc(state);
 }
 
-static MACHINE_CONFIG_START( swyft )
+MACHINE_CONFIG_START(swyft_state::swyft)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",M68008, XTAL_15_8976MHz/2) //MC68008P8, Y1=15.8976Mhz, clock GUESSED at Y1 / 2
+	MCFG_CPU_ADD("maincpu",M68008, XTAL(15'897'600)/2) //MC68008P8, Y1=15.8976Mhz, clock GUESSED at Y1 / 2
 	MCFG_CPU_PROGRAM_MAP(swyft_mem)
 
 	MCFG_MACHINE_START_OVERRIDE(swyft_state,swyft)
@@ -792,10 +786,10 @@ static MACHINE_CONFIG_START( swyft )
 
 	MCFG_DEVICE_ADD("acia6850", ACIA6850, 0)
 	// acia rx and tx clocks come from one of the VIA pins and are tied together, fix this below? acia e clock comes from 68008
-	MCFG_DEVICE_ADD("acia_clock", CLOCK, (XTAL_15_8976MHz/2)/5) // out e clock from 68008, ~ 10in clocks per out clock
+	MCFG_DEVICE_ADD("acia_clock", CLOCK, (XTAL(15'897'600)/2)/5) // out e clock from 68008, ~ 10in clocks per out clock
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(swyft_state, write_acia_clock))
 
-	MCFG_DEVICE_ADD("via6522_0", VIA6522, (XTAL_15_8976MHz/2)/5) // out e clock from 68008
+	MCFG_DEVICE_ADD("via6522_0", VIA6522, (XTAL(15'897'600)/2)/5) // out e clock from 68008
 	MCFG_VIA6522_READPA_HANDLER(READ8(swyft_state, via0_pa_r))
 	MCFG_VIA6522_READPB_HANDLER(READ8(swyft_state, via0_pb_r))
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(swyft_state, via0_pa_w))
@@ -805,7 +799,7 @@ static MACHINE_CONFIG_START( swyft )
 	MCFG_VIA6522_CB2_HANDLER(WRITELINE(swyft_state, via0_cb2_w))
 	MCFG_VIA6522_IRQ_HANDLER(WRITELINE(swyft_state, via0_int_w))
 
-	MCFG_DEVICE_ADD("via6522_1", VIA6522, (XTAL_15_8976MHz/2)/5) // out e clock from 68008
+	MCFG_DEVICE_ADD("via6522_1", VIA6522, (XTAL(15'897'600)/2)/5) // out e clock from 68008
 	MCFG_VIA6522_READPA_HANDLER(READ8(swyft_state, via1_pa_r))
 	MCFG_VIA6522_READPB_HANDLER(READ8(swyft_state, via1_pb_r))
 	MCFG_VIA6522_WRITEPA_HANDLER(WRITE8(swyft_state, via1_pa_w))

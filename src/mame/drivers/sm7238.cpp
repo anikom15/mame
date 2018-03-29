@@ -89,6 +89,10 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void sm7238(machine_config &config);
+	void sm7238_io(address_map &map);
+	void sm7238_mem(address_map &map);
+	void videobank_map(address_map &map);
 private:
 	void recompute_parameters();
 
@@ -121,37 +125,40 @@ private:
 	required_device<screen_device> m_screen;
 };
 
-static ADDRESS_MAP_START( sm7238_mem, AS_PROGRAM, 8, sm7238_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE (0x0000, 0x9fff) AM_ROM
-	AM_RANGE (0xa000, 0xa7ff) AM_RAM
-	AM_RANGE (0xb000, 0xb3ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE (0xb800, 0xb800) AM_WRITE(text_control_w)
-	AM_RANGE (0xbc00, 0xbc00) AM_WRITE(control_w)
-	AM_RANGE (0xc000, 0xcfff) AM_RAM // chargen
-	AM_RANGE (0xe000, 0xffff) AM_DEVICE("videobank", address_map_bank_device, amap8)
-ADDRESS_MAP_END
+void sm7238_state::sm7238_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x9fff).rom();
+	map(0xa000, 0xa7ff).ram();
+	map(0xb000, 0xb3ff).ram().share("nvram");
+	map(0xb800, 0xb800).w(this, FUNC(sm7238_state::text_control_w));
+	map(0xbc00, 0xbc00).w(this, FUNC(sm7238_state::control_w));
+	map(0xc000, 0xcfff).ram(); // chargen
+	map(0xe000, 0xffff).m(m_videobank, FUNC(address_map_bank_device::amap8));
+}
 
-static ADDRESS_MAP_START( videobank_map, AS_PROGRAM, 8, sm7238_state )
-	AM_RANGE (0x0000, 0x1fff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE (0x2000, 0x2fff) AM_MIRROR(0x1000) AM_WRITE(vmem_w)
-ADDRESS_MAP_END
+void sm7238_state::videobank_map(address_map &map)
+{
+	map(0x0000, 0x1fff).ram().share("videoram");
+	map(0x2000, 0x2fff).mirror(0x1000).w(this, FUNC(sm7238_state::vmem_w));
+}
 
-static ADDRESS_MAP_START( sm7238_io, AS_IO, 8, sm7238_state )
-	ADDRESS_MAP_UNMAP_HIGH
+void sm7238_state::sm7238_io(address_map &map)
+{
+	map.unmap_value_high();
 //  AM_RANGE (0x40, 0x4f) AM_RAM // LUT
-	AM_RANGE (0xa0, 0xa0) AM_DEVREADWRITE("i8251line", i8251_device, data_r, data_w)
-	AM_RANGE (0xa1, 0xa1) AM_DEVREADWRITE("i8251line", i8251_device, status_r, control_w)
-	AM_RANGE (0xa4, 0xa4) AM_DEVREADWRITE("i8251kbd", i8251_device, data_r, data_w)
-	AM_RANGE (0xa5, 0xa5) AM_DEVREADWRITE("i8251kbd", i8251_device, status_r, control_w)
-	AM_RANGE (0xa8, 0xab) AM_DEVREADWRITE("t_color", pit8253_device, read, write)
-	AM_RANGE (0xac, 0xad) AM_DEVREADWRITE("pic8259", pic8259_device, read, write)
-	AM_RANGE (0xb0, 0xb3) AM_DEVREADWRITE("t_hblank", pit8253_device, read, write)
-	AM_RANGE (0xb4, 0xb7) AM_DEVREADWRITE("t_vblank", pit8253_device, read, write)
-	AM_RANGE (0xb8, 0xb8) AM_DEVREADWRITE("i8251prn", i8251_device, data_r, data_w)
-	AM_RANGE (0xb9, 0xb9) AM_DEVREADWRITE("i8251prn", i8251_device, status_r, control_w)
-	AM_RANGE (0xbc, 0xbf) AM_DEVREADWRITE("t_iface", pit8253_device, read, write)
-ADDRESS_MAP_END
+	map(0xa0, 0xa0).rw(m_i8251line, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xa1, 0xa1).rw(m_i8251line, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xa4, 0xa4).rw(m_i8251kbd, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xa5, 0xa5).rw(m_i8251kbd, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xa8, 0xab).rw(m_t_color, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xac, 0xad).rw(m_pic8259, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0xb0, 0xb3).rw(m_t_hblank, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xb4, 0xb7).rw(m_t_vblank, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xb8, 0xb8).rw(m_i8251prn, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xb9, 0xb9).rw(m_i8251prn, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xbc, 0xbf).rw(m_t_iface, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+}
 
 void sm7238_state::machine_reset()
 {
@@ -219,14 +226,14 @@ void sm7238_state::recompute_parameters()
 
 	if (m_video.stride == 80)
 	{
-		refresh = HZ_TO_ATTOSECONDS(XTAL_12_5MHz) * m_video.stride * 10 * KSM_TOTAL_VERT;
+		refresh = HZ_TO_ATTOSECONDS(12.5_MHz_XTAL) * m_video.stride * 10 * KSM_TOTAL_VERT;
 	}
 	else
 	{
-		refresh = HZ_TO_ATTOSECONDS(XTAL_20_625MHz) * m_video.stride * 10 * KSM_TOTAL_VERT;
+		refresh = HZ_TO_ATTOSECONDS(20.625_MHz_XTAL) * m_video.stride * 10 * KSM_TOTAL_VERT;
 	}
 
-	machine().first_screen()->configure(m_video.stride * 10, KSM_TOTAL_VERT, visarea, refresh);
+	m_screen->configure(m_video.stride * 10, KSM_TOTAL_VERT, visarea, refresh);
 }
 
 uint32_t sm7238_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect)
@@ -353,8 +360,8 @@ PALETTE_INIT_MEMBER(sm7238_state, sm7238)
 	palette.set_pen_color(2, 0x00, 0xff, 0x00); // highlight
 }
 
-static MACHINE_CONFIG_START( sm7238 )
-	MCFG_CPU_ADD("maincpu", I8080, XTAL_16_5888MHz/9)
+MACHINE_CONFIG_START(sm7238_state::sm7238)
+	MCFG_CPU_ADD("maincpu", I8080, 16.5888_MHz_XTAL/9)
 	MCFG_CPU_PROGRAM_MAP(sm7238_mem)
 	MCFG_CPU_IO_MAP(sm7238_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic8259", pic8259_device, inta_cb)
@@ -368,7 +375,7 @@ static MACHINE_CONFIG_START( sm7238 )
 	MCFG_NVRAM_ADD_0FILL("nvram")
 
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_20_625MHz, KSM_TOTAL_HORZ, 0, KSM_DISP_HORZ, KSM_TOTAL_VERT, 0, KSM_DISP_VERT);
+	MCFG_SCREEN_RAW_PARAMS(20.625_MHz_XTAL, KSM_TOTAL_HORZ, 0, KSM_DISP_HORZ, KSM_TOTAL_VERT, 0, KSM_DISP_VERT);
 	MCFG_SCREEN_UPDATE_DRIVER(sm7238_state, screen_update)
 	MCFG_SCREEN_VBLANK_CALLBACK(DEVWRITELINE("pic8259", pic8259_device, ir2_w))
 	MCFG_SCREEN_PALETTE("palette")
@@ -381,19 +388,19 @@ static MACHINE_CONFIG_START( sm7238 )
 	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
 
 	MCFG_DEVICE_ADD("t_hblank", PIT8253, 0)
-	MCFG_PIT8253_CLK1(XTAL_16_384MHz/9) // XXX workaround -- keyboard is slower and doesn't sync otherwise
+	MCFG_PIT8253_CLK1(16.384_MHz_XTAL/9) // XXX workaround -- keyboard is slower and doesn't sync otherwise
 	MCFG_PIT8253_OUT1_HANDLER(WRITELINE(sm7238_state, write_keyboard_clock))
 
 	MCFG_DEVICE_ADD("t_vblank", PIT8253, 0)
-	MCFG_PIT8253_CLK2(XTAL_16_5888MHz/9)
+	MCFG_PIT8253_CLK2(16.5888_MHz_XTAL/9)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(sm7238_state, write_printer_clock))
 
 	MCFG_DEVICE_ADD("t_color", PIT8253, 0)
 
 	MCFG_DEVICE_ADD("t_iface", PIT8253, 0)
-	MCFG_PIT8253_CLK1(XTAL_16_5888MHz/9)
+	MCFG_PIT8253_CLK1(16.5888_MHz_XTAL/9)
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("i8251line", i8251_device, write_txc))
-	MCFG_PIT8253_CLK2(XTAL_16_5888MHz/9)
+	MCFG_PIT8253_CLK2(16.5888_MHz_XTAL/9)
 	MCFG_PIT8253_OUT2_HANDLER(DEVWRITELINE("i8251line", i8251_device, write_rxc))
 
 	// serial connection to host

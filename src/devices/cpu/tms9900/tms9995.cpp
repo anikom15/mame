@@ -228,7 +228,7 @@ void tms9995_device::device_start()
 	m_dbin_line.resolve();
 
 	// set our instruction counter
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 
 	// Clear the interrupt flags
 	m_int_pending = 0;
@@ -437,7 +437,7 @@ uint16_t tms9995_device::read_workspace_register_debug(int reg)
 	}
 	else
 	{
-		auto dis = machine().disable_side_effect();
+		auto dis = machine().disable_side_effects();
 		value = (m_prgspace->read_byte(addrb) << 8) & 0xff00;
 		value |= m_prgspace->read_byte(addrb+1);
 	}
@@ -457,7 +457,7 @@ void tms9995_device::write_workspace_register_debug(int reg, uint16_t data)
 	}
 	else
 	{
-		auto dis = machine().disable_side_effect();
+		auto dis = machine().disable_side_effects();
 		m_prgspace->write_byte(addrb, (data >> 8) & 0xff);
 		m_prgspace->write_byte(addrb+1, data & 0xff);
 	}
@@ -1606,7 +1606,7 @@ void tms9995_device::next_command()
 			else logerror("%04x\n", PC-2);
 		}
 		PC_debug = PC - 2;
-		debugger_instruction_hook(this, PC_debug);
+		debugger_instruction_hook(PC_debug);
 		m_first_cycle = m_icount;
 	}
 }
@@ -3501,11 +3501,11 @@ uint32_t tms9995_device::execute_input_lines() const
 	return 2;
 }
 
-util::disasm_interface *tms9995_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> tms9995_device::create_disassembler()
 {
-	return new tms9900_disassembler(TMS9995_ID);
+	return std::make_unique<tms9900_disassembler>(TMS9995_ID);
 }
 
 
-DEFINE_DEVICE_TYPE(TMS9995, tms9995_device, "tms9995", "TMS9995")
-DEFINE_DEVICE_TYPE(TMS9995_MP9537, tms9995_mp9537_device, "tms9995_mp9537", "TMS9995-MP9537")
+DEFINE_DEVICE_TYPE(TMS9995, tms9995_device, "tms9995", "Texas Instruments TMS9995")
+DEFINE_DEVICE_TYPE(TMS9995_MP9537, tms9995_mp9537_device, "tms9995_mp9537", "Texas Instruments TMS9995-MP9537")

@@ -81,6 +81,9 @@ public:
 	required_ioport m_in1;
 	required_ioport m_dsw;
 
+	void monzagp(machine_config &config);
+	void monzagp_io(address_map &map);
+	void monzagp_map(address_map &map);
 private:
 	uint8_t m_p1;
 	uint8_t m_p2;
@@ -259,9 +262,10 @@ uint32_t monzagp_state::screen_update_monzagp(screen_device &screen, bitmap_ind1
 	return 0;
 }
 
-static ADDRESS_MAP_START( monzagp_map, AS_PROGRAM, 8, monzagp_state )
-	AM_RANGE(0x0000, 0x0fff) AM_ROM
-ADDRESS_MAP_END
+void monzagp_state::monzagp_map(address_map &map)
+{
+	map(0x0000, 0x0fff).rom();
+}
 
 
 READ8_MEMBER(monzagp_state::port_r)
@@ -402,9 +406,10 @@ WRITE8_MEMBER(monzagp_state::port2_w)
 }
 
 
-static ADDRESS_MAP_START( monzagp_io, AS_IO, 8, monzagp_state )
-	AM_RANGE(0x00, 0xff) AM_READWRITE(port_r, port_w)
-ADDRESS_MAP_END
+void monzagp_state::monzagp_io(address_map &map)
+{
+	map(0x00, 0xff).rw(this, FUNC(monzagp_state::port_r), FUNC(monzagp_state::port_w));
+}
 
 static INPUT_PORTS_START( monzagp )
 	PORT_START("WHEEL")
@@ -484,7 +489,7 @@ static GFXDECODE_START( monzagp )
 	GFXDECODE_ENTRY( "gfx3", 0x0000, tile_layout,   0, 8 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( monzagp )
+MACHINE_CONFIG_START(monzagp_state::monzagp)
 	MCFG_CPU_ADD("maincpu", I8035, 12000000/4) /* 400KHz ??? - Main board Crystal is 12MHz */
 	MCFG_CPU_PROGRAM_MAP(monzagp_map)
 	MCFG_CPU_IO_MAP(monzagp_io)

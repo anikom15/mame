@@ -138,6 +138,17 @@ public:
 	void draw_road(bitmap_ind16 &bitmap);
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect );
 	void zoom_sprite(bitmap_ind16 &bitmap,int big,uint32_t code,uint32_t color,int flipx,int sx,int sy,int sizex,int sizey);
+	void polepos2bi(machine_config &config);
+	void topracern(machine_config &config);
+	void polepos(machine_config &config);
+	void sound_z80_bootleg_iomap(address_map &map);
+	void sound_z80_bootleg_map(address_map &map);
+	void topracern_io(address_map &map);
+	void z8002_map(address_map &map);
+	void z8002_map_1(address_map &map);
+	void z8002_map_2(address_map &map);
+	void z80_io(address_map &map);
+	void z80_map(address_map &map);
 };
 
 

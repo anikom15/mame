@@ -13,7 +13,7 @@
 #include "sound/votrax.h"
 #include "screen.h"
 
-#define ASTROCADE_CLOCK     (XTAL_14_31818MHz/2)
+#define ASTROCADE_CLOCK     (XTAL(14'318'181)/2)
 
 #define AC_SOUND_PRESENT    (0x01)
 #define AC_LIGHTPEN_INTS    (0x02)
@@ -196,6 +196,36 @@ public:
 	DECLARE_READ8_MEMBER( votrax_speech_r );
 	CUSTOM_INPUT_MEMBER( votrax_speech_status_r );
 
+	void astrocade_base(machine_config &config);
+	void astrocade_16color_base(machine_config &config);
+	void astrocade_mono_sound(machine_config &config);
+	void astrocade_stereo_sound(machine_config &config);
+	void spacezap(machine_config &config);
+	void gorf(machine_config &config);
+	void seawolf2(machine_config &config);
+	void profpac(machine_config &config);
+	void robby(machine_config &config);
+	void ebases(machine_config &config);
+	void wow(machine_config &config);
+	void tenpindx(machine_config &config);
+	void demndrgn(machine_config &config);
+	void bank4000_map(address_map &map);
+	void demndrgn_map(address_map &map);
+	void ebases_map(address_map &map);
+	void port_map(address_map &map);
+	void port_map_16col_pattern(address_map &map);
+	void port_map_16col_pattern_nosound(address_map &map);
+	void port_map_16col_pattern_tenpindx(address_map &map);
+	void port_map_mono_pattern(address_map &map);
+	void port_map_stereo_pattern(address_map &map);
+	void profpac_bank4000_map(address_map &map);
+	void profpac_map(address_map &map);
+	void robby_map(address_map &map);
+	void seawolf2_map(address_map &map);
+	void spacezap_map(address_map &map);
+	void tenpin_sub_io_map(address_map &map);
+	void tenpin_sub_map(address_map &map);
+	void wow_map(address_map &map);
 protected:
 	virtual void device_timer(emu_timer &timer, device_timer_id id, int param, void *ptr) override;
 };

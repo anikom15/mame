@@ -106,6 +106,12 @@ public:
 
 	void machine_reset() override;
 	DECLARE_DRIVER_INIT(pcjr);
+	void ibmpcjx(machine_config &config);
+	void ibmpcjr(machine_config &config);
+	void ibmpcjr_io(address_map &map);
+	void ibmpcjr_map(address_map &map);
+	void ibmpcjx_io(address_map &map);
+	void ibmpcjx_map(address_map &map);
 };
 
 static INPUT_PORTS_START( ibmpcjr )
@@ -536,46 +542,50 @@ static GFXDECODE_START( pcjr )
 GFXDECODE_END
 
 
-static ADDRESS_MAP_START(ibmpcjr_map, AS_PROGRAM, 8, pcjr_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0xb8000, 0xbffff) AM_DEVICE("pcvideo_pcjr:vram", address_map_bank_device, amap8)
-	AM_RANGE(0xd0000, 0xdffff) AM_DEVREAD("cartslot2", generic_slot_device, read_rom)
-	AM_RANGE(0xe0000, 0xeffff) AM_DEVREAD("cartslot1", generic_slot_device, read_rom)
-	AM_RANGE(0xf0000, 0xfffff) AM_ROM AM_REGION("bios", 0)
-ADDRESS_MAP_END
+void pcjr_state::ibmpcjr_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0xb8000, 0xbffff).m("pcvideo_pcjr:vram", FUNC(address_map_bank_device::amap8));
+	map(0xd0000, 0xdffff).r(m_cart2, FUNC(generic_slot_device::read_rom));
+	map(0xe0000, 0xeffff).r(m_cart1, FUNC(generic_slot_device::read_rom));
+	map(0xf0000, 0xfffff).rom().region("bios", 0);
+}
 
 
-static ADDRESS_MAP_START(ibmpcjr_io, AS_IO, 8, pcjr_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0020, 0x0021) AM_DEVREADWRITE("pic8259", pic8259_device, read, write)
-	AM_RANGE(0x0040, 0x0043) AM_DEVREADWRITE("pit8253", pit8253_device, read, write)
-	AM_RANGE(0x0060, 0x0063) AM_DEVREADWRITE("ppi8255", i8255_device, read, write)
-	AM_RANGE(0x00a0, 0x00a0) AM_READWRITE(pcjr_nmi_enable_r, pc_nmi_enable_w )
-	AM_RANGE(0x00c0, 0x00c0) AM_DEVWRITE("sn76496", sn76496_device, write)
-	AM_RANGE(0x00f2, 0x00f2) AM_WRITE(pcjr_fdc_dor_w)
-	AM_RANGE(0x00f4, 0x00f5) AM_DEVICE("fdc", upd765a_device, map)
-	AM_RANGE(0x0200, 0x0207) AM_DEVREADWRITE("pc_joy", pc_joy_device, joy_port_r, joy_port_w)
-	AM_RANGE(0x02f8, 0x02ff) AM_DEVREADWRITE("ins8250", ins8250_device, ins8250_r, ins8250_w)
-	AM_RANGE(0x0378, 0x037b) AM_DEVREADWRITE("lpt_0", pc_lpt_device, read, write)
-	AM_RANGE(0x03d0, 0x03df) AM_DEVREADWRITE("pcvideo_pcjr", pcvideo_pcjr_device, read, write)
-ADDRESS_MAP_END
+void pcjr_state::ibmpcjr_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0020, 0x0021).rw(m_pic8259, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0x0040, 0x0043).rw(m_pit8253, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0x0060, 0x0063).rw("ppi8255", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x00a0, 0x00a0).rw(this, FUNC(pcjr_state::pcjr_nmi_enable_r), FUNC(pcjr_state::pc_nmi_enable_w));
+	map(0x00c0, 0x00c0).w("sn76496", FUNC(sn76496_device::write));
+	map(0x00f2, 0x00f2).w(this, FUNC(pcjr_state::pcjr_fdc_dor_w));
+	map(0x00f4, 0x00f5).m(m_fdc, FUNC(upd765a_device::map));
+	map(0x0200, 0x0207).rw("pc_joy", FUNC(pc_joy_device::joy_port_r), FUNC(pc_joy_device::joy_port_w));
+	map(0x02f8, 0x02ff).rw("ins8250", FUNC(ins8250_device::ins8250_r), FUNC(ins8250_device::ins8250_w));
+	map(0x0378, 0x037b).rw("lpt_0", FUNC(pc_lpt_device::read), FUNC(pc_lpt_device::write));
+	map(0x03d0, 0x03df).r("pcvideo_pcjr", FUNC(pcvideo_pcjr_device::read)).w("pcvideo_pcjr", FUNC(pcvideo_pcjr_device::write));
+}
 
-static ADDRESS_MAP_START(ibmpcjx_map, AS_PROGRAM, 8, pcjr_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x80000, 0xb7fff) AM_ROM AM_REGION("kanji",0)
-	AM_RANGE(0x80000, 0x9ffff) AM_RAM AM_SHARE("vram") // TODO: remove this part of vram hack
-	AM_RANGE(0xb8000, 0xbffff) AM_DEVICE("pcvideo_pcjr:vram", address_map_bank_device, amap8)
-	AM_RANGE(0xd0000, 0xdffff) AM_DEVREAD("cartslot1", generic_slot_device, read_rom)
-	AM_RANGE(0xe0000, 0xfffff) AM_ROM AM_REGION("bios", 0)
-ADDRESS_MAP_END
+void pcjr_state::ibmpcjx_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x80000, 0xb7fff).rom().region("kanji", 0);
+	map(0x80000, 0x9ffff).ram().share("vram"); // TODO: remove this part of vram hack
+	map(0xb8000, 0xbffff).m("pcvideo_pcjr:vram", FUNC(address_map_bank_device::amap8));
+	map(0xd0000, 0xdffff).r(m_cart1, FUNC(generic_slot_device::read_rom));
+	map(0xe0000, 0xfffff).rom().region("bios", 0);
+}
 
-static ADDRESS_MAP_START(ibmpcjx_io, AS_IO, 8, pcjr_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x01ff, 0x01ff) AM_READWRITE(pcjx_port_1ff_r, pcjx_port_1ff_w)
-	AM_IMPORT_FROM( ibmpcjr_io )
-ADDRESS_MAP_END
+void pcjr_state::ibmpcjx_io(address_map &map)
+{
+	map.unmap_value_high();
+	ibmpcjr_io(map);
+	map(0x01ff, 0x01ff).rw(this, FUNC(pcjr_state::pcjx_port_1ff_r), FUNC(pcjr_state::pcjx_port_1ff_w));
+}
 
-static MACHINE_CONFIG_START( ibmpcjr )
+MACHINE_CONFIG_START(pcjr_state::ibmpcjr)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", I8088, 4900000)
 	MCFG_CPU_PROGRAM_MAP(ibmpcjr_map)
@@ -588,10 +598,10 @@ static MACHINE_CONFIG_START( ibmpcjr )
   supported yet.
  */
 	MCFG_DEVICE_ADD("pit8253", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_14_31818MHz/12)
+	MCFG_PIT8253_CLK0(XTAL(14'318'181)/12)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_14_31818MHz/12)
-	MCFG_PIT8253_CLK2(XTAL_14_31818MHz/12)
+	MCFG_PIT8253_CLK1(XTAL(14'318'181)/12)
+	MCFG_PIT8253_CLK2(XTAL(14'318'181)/12)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(pcjr_state, out2_changed))
 
 	MCFG_DEVICE_ADD("pic8259", PIC8259, 0)
@@ -602,7 +612,7 @@ static MACHINE_CONFIG_START( ibmpcjr )
 	MCFG_I8255_OUT_PORTB_CB(WRITE8(pcjr_state, pcjr_ppi_portb_w))
 	MCFG_I8255_IN_PORTC_CB(READ8(pcjr_state, pcjr_ppi_portc_r))
 
-	MCFG_DEVICE_ADD( "ins8250", INS8250, XTAL_1_8432MHz )
+	MCFG_DEVICE_ADD( "ins8250", INS8250, XTAL(1'843'200) )
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE("serport", rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE("serport", rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE("serport", rs232_port_device, write_rts))
@@ -625,7 +635,7 @@ static MACHINE_CONFIG_START( ibmpcjr )
 	MCFG_SPEAKER_STANDARD_MONO("mono")
 	MCFG_SOUND_ADD("speaker", SPEAKER_SOUND, 0)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
-	MCFG_SOUND_ADD("sn76496", SN76496, XTAL_14_31818MHz/4)
+	MCFG_SOUND_ADD("sn76496", SN76496, XTAL(14'318'181)/4)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.80)
 
 	/* printer */
@@ -670,7 +680,8 @@ static GFXDECODE_START( ibmpcjx )
 	GFXDECODE_ENTRY( "kanji", 0x0000, kanji_layout, 3, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_DERIVED( ibmpcjx, ibmpcjr )
+MACHINE_CONFIG_START(pcjr_state::ibmpcjx)
+	ibmpcjr(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(ibmpcjx_map)
 	MCFG_CPU_IO_MAP(ibmpcjx_io)

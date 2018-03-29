@@ -68,6 +68,9 @@ public:
 	DECLARE_WRITE8_MEMBER(ppi_pc_w);
 	DECLARE_READ8_MEMBER(ppi_pc_r);
 
+	void pulsar(machine_config &config);
+	void pulsar_io(address_map &map);
+	void pulsar_mem(address_map &map);
 private:
 	floppy_image_device *m_floppy;
 	required_device<cpu_device> m_maincpu;
@@ -78,21 +81,23 @@ private:
 	required_device<msm5832_device> m_rtc;
 };
 
-static ADDRESS_MAP_START(pulsar_mem, AS_PROGRAM, 8, pulsar_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x07ff) AM_READ_BANK("bankr0") AM_WRITE_BANK("bankw0")
-	AM_RANGE(0x0800, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xffff) AM_READ_BANK("bankr1") AM_WRITE_BANK("bankw1")
-ADDRESS_MAP_END
+void pulsar_state::pulsar_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x07ff).bankr("bankr0").bankw("bankw0");
+	map(0x0800, 0xf7ff).ram();
+	map(0xf800, 0xffff).bankr("bankr1").bankw("bankw1");
+}
 
-static ADDRESS_MAP_START(pulsar_io, AS_IO, 8, pulsar_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xc0, 0xc3) AM_MIRROR(0x0c) AM_DEVREADWRITE("dart", z80dart_device, ba_cd_r, ba_cd_w)
-	AM_RANGE(0xd0, 0xd3) AM_MIRROR(0x0c) AM_DEVREADWRITE("fdc", fd1797_device, read, write)
-	AM_RANGE(0xe0, 0xe3) AM_MIRROR(0x0c) AM_DEVREADWRITE("ppi", i8255_device, read, write)
-	AM_RANGE(0xf0, 0xff) AM_WRITE(baud_w)
-ADDRESS_MAP_END
+void pulsar_state::pulsar_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0xc0, 0xc3).mirror(0x0c).rw("dart", FUNC(z80dart_device::ba_cd_r), FUNC(z80dart_device::ba_cd_w));
+	map(0xd0, 0xd3).mirror(0x0c).rw(m_fdc, FUNC(fd1797_device::read), FUNC(fd1797_device::write));
+	map(0xe0, 0xe3).mirror(0x0c).rw("ppi", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xf0, 0xff).w(this, FUNC(pulsar_state::baud_w));
+}
 
 
 WRITE8_MEMBER( pulsar_state::baud_w )
@@ -205,9 +210,9 @@ DRIVER_INIT_MEMBER( pulsar_state, pulsar )
 	membank("bankw1")->configure_entry(0, &main[0xf800]);
 }
 
-static MACHINE_CONFIG_START( pulsar )
+MACHINE_CONFIG_START(pulsar_state::pulsar)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(pulsar_mem)
 	MCFG_CPU_IO_MAP(pulsar_io)
 	MCFG_Z80_DAISY_CHAIN(daisy_chain_intf)
@@ -220,9 +225,9 @@ static MACHINE_CONFIG_START( pulsar )
 	MCFG_I8255_IN_PORTC_CB(READ8(pulsar_state, ppi_pc_r))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(pulsar_state, ppi_pc_w))
 
-	MCFG_MSM5832_ADD("rtc", XTAL_32_768kHz)
+	MCFG_MSM5832_ADD("rtc", XTAL(32'768))
 
-	MCFG_DEVICE_ADD("dart", Z80DART, XTAL_4MHz)
+	MCFG_DEVICE_ADD("dart", Z80DART, XTAL(4'000'000))
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE("rs232", rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE("rs232", rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE("rs232", rs232_port_device, write_rts))
@@ -233,14 +238,14 @@ static MACHINE_CONFIG_START( pulsar )
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("dart", z80dart_device, ctsa_w))
 	MCFG_DEVICE_CARD_DEVICE_INPUT_DEFAULTS("terminal", terminal)
 
-	MCFG_DEVICE_ADD("brg", COM8116, XTAL_5_0688MHz)
+	MCFG_DEVICE_ADD("brg", COM8116, XTAL(5'068'800))
 	// Schematic has the labels for FT and FR the wrong way around, but the pin numbers are correct.
 	MCFG_COM8116_FR_HANDLER(DEVWRITELINE("dart", z80dart_device, txca_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("dart", z80dart_device, rxca_w))
 	MCFG_COM8116_FT_HANDLER(DEVWRITELINE("dart", z80dart_device, txcb_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("dart", z80dart_device, rxcb_w))
 
-	MCFG_FD1797_ADD("fdc", XTAL_4MHz / 2)
+	MCFG_FD1797_ADD("fdc", XTAL(4'000'000) / 2)
 	MCFG_FLOPPY_DRIVE_ADD("fdc:0", pulsar_floppies, "525hd", floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_SOUND(true)
 	MCFG_FLOPPY_DRIVE_ADD("fdc:1", pulsar_floppies, "525hd", floppy_image_device::default_floppy_formats)

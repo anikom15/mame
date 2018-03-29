@@ -115,12 +115,16 @@ public:
 	TIMER_DEVICE_CALLBACK_MEMBER(exelv_hblank_interrupt);
 
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER( exelvision_cartridge );
+	void exeltel(machine_config &config);
+	void exl100(machine_config &config);
+	void tms7020_mem(address_map &map);
+	void tms7040_mem(address_map &map);
 };
 
 
 TIMER_DEVICE_CALLBACK_MEMBER(exelv_state::exelv_hblank_interrupt)
 {
-	m_tms3556->interrupt(machine());
+	m_tms3556->interrupt();
 }
 
 
@@ -405,35 +409,37 @@ READ8_MEMBER(exelv_state::rom_r)
     @>f800-@>ffff: tms7020/tms7040 internal ROM
 */
 
-static ADDRESS_MAP_START(tms7020_mem, AS_PROGRAM, 8, exelv_state)
-	AM_RANGE(0x0080, 0x00ff) AM_NOP
-	AM_RANGE(0x0124, 0x0124) AM_DEVREAD("tms3556", tms3556_device, vram_r)
-	AM_RANGE(0x0125, 0x0125) AM_DEVREAD("tms3556", tms3556_device, reg_r)
-	AM_RANGE(0x0128, 0x0128) AM_DEVREAD("tms3556", tms3556_device, initptr_r)
-	AM_RANGE(0x012d, 0x012d) AM_DEVWRITE("tms3556", tms3556_device, reg_w)
-	AM_RANGE(0x012e, 0x012e) AM_DEVWRITE("tms3556", tms3556_device, vram_w)
+void exelv_state::tms7020_mem(address_map &map)
+{
+	map(0x0080, 0x00ff).noprw();
+	map(0x0124, 0x0124).r(m_tms3556, FUNC(tms3556_device::vram_r));
+	map(0x0125, 0x0125).r(m_tms3556, FUNC(tms3556_device::reg_r));
+	map(0x0128, 0x0128).r(m_tms3556, FUNC(tms3556_device::initptr_r));
+	map(0x012d, 0x012d).w(m_tms3556, FUNC(tms3556_device::reg_w));
+	map(0x012e, 0x012e).w(m_tms3556, FUNC(tms3556_device::vram_w));
 
-	AM_RANGE(0x0130, 0x0130) AM_READWRITE(mailbox_wx319_r, mailbox_wx318_w)
-	AM_RANGE(0x0200, 0x7fff) AM_READ(rom_r)
-	AM_RANGE(0x8000, 0xbfff) AM_NOP
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM                                     /* CPU RAM */
-	AM_RANGE(0xc800, 0xf7ff) AM_NOP
-ADDRESS_MAP_END
+	map(0x0130, 0x0130).rw(this, FUNC(exelv_state::mailbox_wx319_r), FUNC(exelv_state::mailbox_wx318_w));
+	map(0x0200, 0x7fff).r(this, FUNC(exelv_state::rom_r));
+	map(0x8000, 0xbfff).noprw();
+	map(0xc000, 0xc7ff).ram();                                     /* CPU RAM */
+	map(0xc800, 0xf7ff).noprw();
+}
 
 
-static ADDRESS_MAP_START(tms7040_mem, AS_PROGRAM, 8, exelv_state)
-	AM_RANGE(0x0080, 0x00ff) AM_NOP
-	AM_RANGE(0x0124, 0x0124) AM_DEVREAD("tms3556", tms3556_device, vram_r)
-	AM_RANGE(0x0125, 0x0125) AM_DEVREAD("tms3556", tms3556_device, reg_r)
-	AM_RANGE(0x0128, 0x0128) AM_DEVREAD("tms3556", tms3556_device, initptr_r)
-	AM_RANGE(0x012d, 0x012d) AM_DEVWRITE("tms3556", tms3556_device, reg_w)
-	AM_RANGE(0x012e, 0x012e) AM_DEVWRITE("tms3556", tms3556_device, vram_w)
-	AM_RANGE(0x0130, 0x0130) AM_READWRITE(mailbox_wx319_r, mailbox_wx318_w)
-	AM_RANGE(0x0200, 0x7fff) AM_ROMBANK("bank1")                                /* system ROM */
-	AM_RANGE(0x8000, 0xbfff) AM_NOP
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM                                     /* CPU RAM */
-	AM_RANGE(0xc800, 0xefff) AM_NOP
-ADDRESS_MAP_END
+void exelv_state::tms7040_mem(address_map &map)
+{
+	map(0x0080, 0x00ff).noprw();
+	map(0x0124, 0x0124).r(m_tms3556, FUNC(tms3556_device::vram_r));
+	map(0x0125, 0x0125).r(m_tms3556, FUNC(tms3556_device::reg_r));
+	map(0x0128, 0x0128).r(m_tms3556, FUNC(tms3556_device::initptr_r));
+	map(0x012d, 0x012d).w(m_tms3556, FUNC(tms3556_device::reg_w));
+	map(0x012e, 0x012e).w(m_tms3556, FUNC(tms3556_device::vram_w));
+	map(0x0130, 0x0130).rw(this, FUNC(exelv_state::mailbox_wx319_r), FUNC(exelv_state::mailbox_wx318_w));
+	map(0x0200, 0x7fff).bankr("bank1");                                /* system ROM */
+	map(0x8000, 0xbfff).noprw();
+	map(0xc000, 0xc7ff).ram();                                     /* CPU RAM */
+	map(0xc800, 0xefff).noprw();
+}
 
 
 /* keyboard: ??? */
@@ -473,10 +479,10 @@ MACHINE_START_MEMBER( exelv_state, exeltel)
 }
 
 
-static MACHINE_CONFIG_START( exl100 )
+MACHINE_CONFIG_START(exelv_state::exl100)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS7020_EXL, XTAL_4_9152MHz)
+	MCFG_CPU_ADD("maincpu", TMS7020_EXL, XTAL(4'915'200))
 	MCFG_CPU_PROGRAM_MAP(tms7020_mem)
 	MCFG_TMS7000_IN_PORTA_CB(READ8(exelv_state, tms7020_porta_r))
 	MCFG_TMS7000_OUT_PORTB_CB(WRITE8(exelv_state, tms7020_portb_w))
@@ -484,7 +490,7 @@ static MACHINE_CONFIG_START( exl100 )
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", exelv_state, exelv_hblank_interrupt, "screen", 0, 1)
 	MCFG_MACHINE_START_OVERRIDE(exelv_state, exl100)
 
-	MCFG_CPU_ADD("tms7041", TMS7041, XTAL_4_9152MHz)
+	MCFG_CPU_ADD("tms7041", TMS7041, XTAL(4'915'200))
 	MCFG_TMS7000_IN_PORTA_CB(READ8(exelv_state, tms7041_porta_r))
 	MCFG_TMS7000_OUT_PORTB_CB(WRITE8(exelv_state, tms7041_portb_w))
 	MCFG_TMS7000_IN_PORTC_CB(READ8(exelv_state, tms7041_portc_r))
@@ -529,10 +535,10 @@ static MACHINE_CONFIG_START( exl100 )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( exeltel )
+MACHINE_CONFIG_START(exelv_state::exeltel)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS7040, XTAL_4_9152MHz)
+	MCFG_CPU_ADD("maincpu", TMS7040, XTAL(4'915'200))
 	MCFG_CPU_PROGRAM_MAP(tms7040_mem)
 	MCFG_TMS7000_IN_PORTA_CB(READ8(exelv_state, tms7020_porta_r))
 	MCFG_TMS7000_OUT_PORTB_CB(WRITE8(exelv_state, tms7020_portb_w))
@@ -540,7 +546,7 @@ static MACHINE_CONFIG_START( exeltel )
 	MCFG_TIMER_DRIVER_ADD_SCANLINE("scantimer", exelv_state, exelv_hblank_interrupt, "screen", 0, 1)
 	MCFG_MACHINE_START_OVERRIDE(exelv_state, exeltel)
 
-	MCFG_CPU_ADD("tms7042", TMS7042, XTAL_4_9152MHz)
+	MCFG_CPU_ADD("tms7042", TMS7042, XTAL(4'915'200))
 	MCFG_TMS7000_IN_PORTA_CB(READ8(exelv_state, tms7041_porta_r))
 	MCFG_TMS7000_OUT_PORTB_CB(WRITE8(exelv_state, tms7041_portb_w))
 	MCFG_TMS7000_IN_PORTC_CB(READ8(exelv_state, tms7041_portc_r))

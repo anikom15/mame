@@ -61,15 +61,15 @@ alto2_log_t logprintf;
 //  LIVE DEVICE
 //**************************************************************************
 
-DEVICE_ADDRESS_MAP_START( ucode_map, 32, alto2_cpu_device )
+ADDRESS_MAP_START(alto2_cpu_device::ucode_map)
 	AM_RANGE(0,                         4*ALTO2_UCODE_PAGE_SIZE - 1)        AM_READWRITE( crom_cram_r, crom_cram_w )
 ADDRESS_MAP_END
 
-DEVICE_ADDRESS_MAP_START( const_map, 16, alto2_cpu_device )
+ADDRESS_MAP_START(alto2_cpu_device::const_map)
 	AM_RANGE(0,                          ALTO2_CONST_SIZE - 1)              AM_READ     ( const_r )
 ADDRESS_MAP_END
 
-DEVICE_ADDRESS_MAP_START( iomem_map, 16, alto2_cpu_device )
+ADDRESS_MAP_START(alto2_cpu_device::iomem_map)
 	AM_RANGE(0,                          ALTO2_IO_PAGE_BASE - 1)            AM_READWRITE( ioram_r, ioram_w )
 	// page 0376
 	AM_RANGE(0177000,                    0177015)                           AM_READWRITE( noop_r, noop_w )          // UNUSED RANGE
@@ -992,7 +992,7 @@ void alto2_cpu_device::device_start()
 	state_add(STATE_GENPCBASE, "CURPC", m_mpc).noshow();
 	state_add(STATE_GENFLAGS, "CURFLAGS", m_aluc0).formatstr("%5s").noshow();
 
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 }
 
 //-------------------------------------------------
@@ -2318,7 +2318,7 @@ void alto2_cpu_device::execute_run()
 
 		m_rsel = rsel();
 
-		debugger_instruction_hook(this, m_mpc);
+		debugger_instruction_hook(m_mpc);
 		m_cycle++;
 
 		if (f1() == f1_load_mar && check_mem_load_mar_stall(m_rsel)) {
@@ -2982,7 +2982,7 @@ void alto2_cpu_device::soft_reset()
 	m_bitclk_time = 0;              // reset the bitclk timing accu
 }
 
-util::disasm_interface *alto2_cpu_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> alto2_cpu_device::create_disassembler()
 {
-	return new alto2_disassembler;
+	return std::make_unique<alto2_disassembler>();
 }

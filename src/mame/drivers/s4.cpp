@@ -83,6 +83,10 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(audio_nmi);
 	DECLARE_MACHINE_RESET(s4);
 	DECLARE_MACHINE_RESET(s4a);
+	void s4(machine_config &config);
+	void s4a(machine_config &config);
+	void s4_audio_map(address_map &map);
+	void s4_main_map(address_map &map);
 private:
 	uint8_t m_t_c;
 	uint8_t m_sound_data;
@@ -99,23 +103,25 @@ private:
 	optional_device<pia6821_device> m_pias;
 };
 
-static ADDRESS_MAP_START( s4_main_map, AS_PROGRAM, 8, s4_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x00ff) AM_RAM
-	AM_RANGE(0x0100, 0x01ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x2200, 0x2203) AM_DEVREADWRITE("pia22", pia6821_device, read, write) // solenoids
-	AM_RANGE(0x2400, 0x2403) AM_DEVREADWRITE("pia24", pia6821_device, read, write) // lamps
-	AM_RANGE(0x2800, 0x2803) AM_DEVREADWRITE("pia28", pia6821_device, read, write) // display
-	AM_RANGE(0x3000, 0x3003) AM_DEVREADWRITE("pia30", pia6821_device, read, write) // inputs
-	AM_RANGE(0x6000, 0x7fff) AM_ROM AM_REGION("roms", 0)
-ADDRESS_MAP_END
+void s4_state::s4_main_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x00ff).ram();
+	map(0x0100, 0x01ff).ram().share("nvram");
+	map(0x2200, 0x2203).rw(m_pia22, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); // solenoids
+	map(0x2400, 0x2403).rw(m_pia24, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); // lamps
+	map(0x2800, 0x2803).rw(m_pia28, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); // display
+	map(0x3000, 0x3003).rw(m_pia30, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); // inputs
+	map(0x6000, 0x7fff).rom().region("roms", 0);
+}
 
-static ADDRESS_MAP_START( s4_audio_map, AS_PROGRAM, 8, s4_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x0fff)
-	AM_RANGE(0x0000, 0x00ff) AM_RAM
-	AM_RANGE(0x0400, 0x0403) AM_DEVREADWRITE("pias", pia6821_device, read, write) // sounds
-	AM_RANGE(0x0800, 0x0fff) AM_ROM AM_REGION("audioroms", 0)
-ADDRESS_MAP_END
+void s4_state::s4_audio_map(address_map &map)
+{
+	map.global_mask(0x0fff);
+	map(0x0000, 0x00ff).ram();
+	map(0x0400, 0x0403).rw(m_pias, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); // sounds
+	map(0x0800, 0x0fff).rom().region("audioroms", 0);
+}
 
 static INPUT_PORTS_START( s4 )
 	PORT_START("X0")
@@ -418,7 +424,7 @@ TIMER_DEVICE_CALLBACK_MEMBER( s4_state::irq )
 		m_t_c++;
 }
 
-static MACHINE_CONFIG_START( s4 )
+MACHINE_CONFIG_START(s4_state::s4)
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M6800, 3580000)
 	MCFG_CPU_PROGRAM_MAP(s4_main_map)
@@ -429,7 +435,7 @@ static MACHINE_CONFIG_START( s4 )
 	MCFG_DEFAULT_LAYOUT(layout_s4)
 
 	/* Sound */
-	MCFG_FRAGMENT_ADD( genpin_audio )
+	genpin_audio(config);
 
 	/* Devices */
 	MCFG_DEVICE_ADD("pia22", PIA6821, 0)
@@ -470,7 +476,8 @@ static MACHINE_CONFIG_START( s4 )
 	MCFG_NVRAM_ADD_0FILL("nvram")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( s4a, s4 )
+MACHINE_CONFIG_START(s4_state::s4a)
+	s4(config);
 	/* Add the soundcard */
 	MCFG_CPU_ADD("audiocpu", M6808, 3580000)
 	MCFG_CPU_PROGRAM_MAP(s4_audio_map)

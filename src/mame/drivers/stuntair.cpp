@@ -143,6 +143,10 @@ public:
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect);
 	uint32_t screen_update_stuntair(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_PALETTE_INIT(stuntair);
+	void stuntair(machine_config &config);
+	void stuntair_map(address_map &map);
+	void stuntair_sound_map(address_map &map);
+	void stuntair_sound_portmap(address_map &map);
 };
 
 
@@ -316,34 +320,37 @@ WRITE8_MEMBER(stuntair_state::stuntair_sound_w)
 }
 
 // main Z80
-static ADDRESS_MAP_START( stuntair_map, AS_PROGRAM, 8, stuntair_state )
-	AM_RANGE(0x0000, 0x9fff) AM_ROM
-	AM_RANGE(0xc000, 0xc7ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xc800, 0xcbff) AM_RAM_WRITE(stuntair_bgattrram_w) AM_SHARE("bgattrram")
-	AM_RANGE(0xd000, 0xd3ff) AM_RAM_WRITE(stuntair_bgram_w) AM_SHARE("bgram")
-	AM_RANGE(0xd800, 0xdfff) AM_RAM AM_SHARE("sprram")
-	AM_RANGE(0xe000, 0xe000) AM_READ_PORT("DSWB") AM_WRITE(stuntair_coin_w)
-	AM_RANGE(0xe800, 0xe800) AM_READ_PORT("DSWA") AM_WRITE(stuntair_bgxscroll_w)
-	AM_RANGE(0xf000, 0xf000) AM_READ_PORT("IN2")
-	AM_RANGE(0xf002, 0xf002) AM_READ_PORT("IN3")
-	AM_RANGE(0xf003, 0xf003) AM_DEVREAD("watchdog", watchdog_timer_device, reset_r)
-	AM_RANGE(0xf000, 0xf007) AM_DEVWRITE("mainlatch", ls259_device, write_d0)
-	AM_RANGE(0xf800, 0xfbff) AM_RAM_WRITE(stuntair_fgram_w) AM_SHARE("fgram")
-	AM_RANGE(0xfc03, 0xfc03) AM_WRITE(stuntair_sound_w)
-ADDRESS_MAP_END
+void stuntair_state::stuntair_map(address_map &map)
+{
+	map(0x0000, 0x9fff).rom();
+	map(0xc000, 0xc7ff).ram().share("nvram");
+	map(0xc800, 0xcbff).ram().w(this, FUNC(stuntair_state::stuntair_bgattrram_w)).share("bgattrram");
+	map(0xd000, 0xd3ff).ram().w(this, FUNC(stuntair_state::stuntair_bgram_w)).share("bgram");
+	map(0xd800, 0xdfff).ram().share("sprram");
+	map(0xe000, 0xe000).portr("DSWB").w(this, FUNC(stuntair_state::stuntair_coin_w));
+	map(0xe800, 0xe800).portr("DSWA").w(this, FUNC(stuntair_state::stuntair_bgxscroll_w));
+	map(0xf000, 0xf000).portr("IN2");
+	map(0xf002, 0xf002).portr("IN3");
+	map(0xf003, 0xf003).r("watchdog", FUNC(watchdog_timer_device::reset_r));
+	map(0xf000, 0xf007).w("mainlatch", FUNC(ls259_device::write_d0));
+	map(0xf800, 0xfbff).ram().w(this, FUNC(stuntair_state::stuntair_fgram_w)).share("fgram");
+	map(0xfc03, 0xfc03).w(this, FUNC(stuntair_state::stuntair_sound_w));
+}
 
 // sound Z80
-static ADDRESS_MAP_START( stuntair_sound_map, AS_PROGRAM, 8, stuntair_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x4000, 0x43ff) AM_RAM
-ADDRESS_MAP_END
+void stuntair_state::stuntair_sound_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x4000, 0x43ff).ram();
+}
 
-static ADDRESS_MAP_START( stuntair_sound_portmap, AS_IO, 8, stuntair_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x03, 0x03) AM_DEVWRITE("ay2", ay8910_device, address_w)
-	AM_RANGE(0x07, 0x07) AM_DEVWRITE("ay2", ay8910_device, data_w)
-	AM_RANGE(0x0c, 0x0d) AM_DEVREADWRITE("ay1", ay8910_device, data_r, address_data_w)
-ADDRESS_MAP_END
+void stuntair_state::stuntair_sound_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x03, 0x03).w("ay2", FUNC(ay8910_device::address_w));
+	map(0x07, 0x07).w("ay2", FUNC(ay8910_device::data_w));
+	map(0x0c, 0x0d).rw("ay1", FUNC(ay8910_device::data_r), FUNC(ay8910_device::address_data_w));
+}
 
 
 
@@ -506,14 +513,14 @@ void stuntair_state::machine_reset()
 {
 }
 
-static MACHINE_CONFIG_START( stuntair )
+MACHINE_CONFIG_START(stuntair_state::stuntair)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80,  XTAL_18_432MHz/6)         /* 3 MHz? */
+	MCFG_CPU_ADD("maincpu", Z80,  XTAL(18'432'000)/6)         /* 3 MHz? */
 	MCFG_CPU_PROGRAM_MAP(stuntair_map)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", stuntair_state, stuntair_irq)
 
-	MCFG_CPU_ADD("audiocpu", Z80,  XTAL_18_432MHz/6)         /* 3 MHz? */
+	MCFG_CPU_ADD("audiocpu", Z80,  XTAL(18'432'000)/6)         /* 3 MHz? */
 	MCFG_CPU_PROGRAM_MAP(stuntair_sound_map)
 	MCFG_CPU_IO_MAP(stuntair_sound_portmap)
 	MCFG_CPU_PERIODIC_INT_DRIVER(stuntair_state, irq0_line_hold, 420) // drives music tempo, timing is approximate based on PCB audio recording.. and where is irq ack?
@@ -551,12 +558,12 @@ static MACHINE_CONFIG_START( stuntair )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_SOUND_ADD("ay1", AY8910, XTAL_18_432MHz/12)
+	MCFG_SOUND_ADD("ay1", AY8910, XTAL(18'432'000)/12)
 	MCFG_AY8910_PORT_A_READ_CB(DEVREAD8("soundlatch", generic_latch_8_device, read))
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(stuntair_state, ay8910_portb_w))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
-	MCFG_SOUND_ADD("ay2", AY8910, XTAL_18_432MHz/12)
+	MCFG_SOUND_ADD("ay2", AY8910, XTAL(18'432'000)/12)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 MACHINE_CONFIG_END
 

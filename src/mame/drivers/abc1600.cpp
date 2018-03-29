@@ -491,38 +491,40 @@ WRITE8_MEMBER( abc1600_state::spec_contr_reg_w )
 //  ADDRESS_MAP( abc1600_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( abc1600_mem, AS_PROGRAM, 8, abc1600_state )
-	AM_RANGE(0x00000, 0xfffff) AM_DEVICE(ABC1600_MAC_TAG, abc1600_mac_device, map)
-ADDRESS_MAP_END
+void abc1600_state::abc1600_mem(address_map &map)
+{
+	map(0x00000, 0xfffff).m(ABC1600_MAC_TAG, FUNC(abc1600_mac_device::map));
+}
 
 
 //-------------------------------------------------
 //  ADDRESS_MAP( mac_mem )
 //-------------------------------------------------
 
-static ADDRESS_MAP_START( mac_mem, AS_PROGRAM, 8, abc1600_state )
-	AM_RANGE(0x000000, 0x0fffff) AM_RAM
-	AM_RANGE(0x100000, 0x17ffff) AM_DEVICE(ABC1600_MOVER_TAG, abc1600_mover_device, vram_map)
-	AM_RANGE(0x1fe000, 0x1fefff) AM_READWRITE(bus_r, bus_w)
-	AM_RANGE(0x1ff000, 0x1ff000) AM_MIRROR(0xf9) AM_DEVREADWRITE(SAB1797_02P_TAG, fd1797_device, status_r, cmd_w)
-	AM_RANGE(0x1ff002, 0x1ff002) AM_MIRROR(0xf9) AM_DEVREADWRITE(SAB1797_02P_TAG, fd1797_device, track_r, track_w)
-	AM_RANGE(0x1ff004, 0x1ff004) AM_MIRROR(0xf9) AM_DEVREADWRITE(SAB1797_02P_TAG, fd1797_device, sector_r, sector_w)
-	AM_RANGE(0x1ff006, 0x1ff006) AM_MIRROR(0xf9) AM_DEVREADWRITE(SAB1797_02P_TAG, fd1797_device, data_r, data_w)
-	AM_RANGE(0x1ff100, 0x1ff101) AM_MIRROR(0xfe) AM_DEVICE(ABC1600_MOVER_TAG, abc1600_mover_device, crtc_map)
-	AM_RANGE(0x1ff200, 0x1ff207) AM_MIRROR(0xf8) AM_READWRITE(dart_r, dart_w)
-	AM_RANGE(0x1ff300, 0x1ff300) AM_MIRROR(0xff) AM_DEVREADWRITE(Z8410AB1_0_TAG, z80dma_device, read, write)
-	AM_RANGE(0x1ff400, 0x1ff400) AM_MIRROR(0xff) AM_DEVREADWRITE(Z8410AB1_1_TAG, z80dma_device, read, write)
-	AM_RANGE(0x1ff500, 0x1ff500) AM_MIRROR(0xff) AM_DEVREADWRITE(Z8410AB1_2_TAG, z80dma_device, read, write)
-	AM_RANGE(0x1ff600, 0x1ff607) AM_MIRROR(0xf8) AM_READWRITE(scc_r, scc_w)
-	AM_RANGE(0x1ff700, 0x1ff707) AM_MIRROR(0xf8) AM_READWRITE(cio_r, cio_w)
-	AM_RANGE(0x1ff800, 0x1ff8ff) AM_DEVICE(ABC1600_MOVER_TAG, abc1600_mover_device, iowr0_map)
-	AM_RANGE(0x1ff900, 0x1ff9ff) AM_DEVICE(ABC1600_MOVER_TAG, abc1600_mover_device, iowr1_map)
-	AM_RANGE(0x1ffa00, 0x1ffaff) AM_DEVICE(ABC1600_MOVER_TAG, abc1600_mover_device, iowr2_map)
-	AM_RANGE(0x1ffb00, 0x1ffb00) AM_MIRROR(0x7e) AM_WRITE(fw0_w)
-	AM_RANGE(0x1ffb01, 0x1ffb01) AM_MIRROR(0x7e) AM_WRITE(fw1_w)
-	AM_RANGE(0x1ffd00, 0x1ffd07) AM_MIRROR(0xf8) AM_DEVWRITE(ABC1600_MAC_TAG, abc1600_mac_device, dmamap_w)
-	AM_RANGE(0x1ffe00, 0x1ffe00) AM_MIRROR(0xff) AM_WRITE(spec_contr_reg_w)
-ADDRESS_MAP_END
+void abc1600_state::mac_mem(address_map &map)
+{
+	map(0x000000, 0x0fffff).ram();
+	map(0x100000, 0x17ffff).m(ABC1600_MOVER_TAG, FUNC(abc1600_mover_device::vram_map));
+	map(0x1fe000, 0x1fefff).rw(this, FUNC(abc1600_state::bus_r), FUNC(abc1600_state::bus_w));
+	map(0x1ff000, 0x1ff000).mirror(0xf9).rw(m_fdc, FUNC(fd1797_device::status_r), FUNC(fd1797_device::cmd_w));
+	map(0x1ff002, 0x1ff002).mirror(0xf9).rw(m_fdc, FUNC(fd1797_device::track_r), FUNC(fd1797_device::track_w));
+	map(0x1ff004, 0x1ff004).mirror(0xf9).rw(m_fdc, FUNC(fd1797_device::sector_r), FUNC(fd1797_device::sector_w));
+	map(0x1ff006, 0x1ff006).mirror(0xf9).rw(m_fdc, FUNC(fd1797_device::data_r), FUNC(fd1797_device::data_w));
+	map(0x1ff100, 0x1ff101).mirror(0xfe).m(ABC1600_MOVER_TAG, FUNC(abc1600_mover_device::crtc_map));
+	map(0x1ff200, 0x1ff207).mirror(0xf8).rw(this, FUNC(abc1600_state::dart_r), FUNC(abc1600_state::dart_w));
+	map(0x1ff300, 0x1ff300).mirror(0xff).rw(m_dma0, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
+	map(0x1ff400, 0x1ff400).mirror(0xff).rw(m_dma1, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
+	map(0x1ff500, 0x1ff500).mirror(0xff).rw(m_dma2, FUNC(z80dma_device::read), FUNC(z80dma_device::write));
+	map(0x1ff600, 0x1ff607).mirror(0xf8).rw(this, FUNC(abc1600_state::scc_r), FUNC(abc1600_state::scc_w));
+	map(0x1ff700, 0x1ff707).mirror(0xf8).rw(this, FUNC(abc1600_state::cio_r), FUNC(abc1600_state::cio_w));
+	map(0x1ff800, 0x1ff8ff).m(ABC1600_MOVER_TAG, FUNC(abc1600_mover_device::iowr0_map));
+	map(0x1ff900, 0x1ff9ff).m(ABC1600_MOVER_TAG, FUNC(abc1600_mover_device::iowr1_map));
+	map(0x1ffa00, 0x1ffaff).m(ABC1600_MOVER_TAG, FUNC(abc1600_mover_device::iowr2_map));
+	map(0x1ffb00, 0x1ffb00).mirror(0x7e).w(this, FUNC(abc1600_state::fw0_w));
+	map(0x1ffb01, 0x1ffb01).mirror(0x7e).w(this, FUNC(abc1600_state::fw1_w));
+	map(0x1ffd00, 0x1ffd07).mirror(0xf8).w(ABC1600_MAC_TAG, FUNC(abc1600_mac_device::dmamap_w));
+	map(0x1ffe00, 0x1ffe00).mirror(0xff).w(this, FUNC(abc1600_state::spec_contr_reg_w));
+}
 
 
 
@@ -873,9 +875,9 @@ void abc1600_state::machine_reset()
 //  MACHINE_CONFIG( abc1600 )
 //-------------------------------------------------
 
-static MACHINE_CONFIG_START( abc1600 )
+MACHINE_CONFIG_START(abc1600_state::abc1600)
 	// basic machine hardware
-	MCFG_CPU_ADD(MC68008P8_TAG, M68008, XTAL_64MHz/8)
+	MCFG_CPU_ADD(MC68008P8_TAG, M68008, XTAL(64'000'000)/8)
 	MCFG_CPU_PROGRAM_MAP(abc1600_mem)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(abc1600_state,abc1600_int_ack)
 
@@ -885,7 +887,7 @@ static MACHINE_CONFIG_START( abc1600 )
 	// devices
 	MCFG_ABC1600_MAC_ADD(MC68008P8_TAG, mac_mem)
 
-	MCFG_DEVICE_ADD(Z8410AB1_0_TAG, Z80DMA, XTAL_64MHz/16)
+	MCFG_DEVICE_ADD(Z8410AB1_0_TAG, Z80DMA, XTAL(64'000'000)/16)
 	MCFG_Z80DMA_OUT_BUSREQ_CB(WRITELINE(abc1600_state, dbrq_w))
 	MCFG_Z80DMA_OUT_BAO_CB(DEVWRITELINE(Z8410AB1_1_TAG, z80dma_device, bai_w))
 	MCFG_Z80DMA_IN_MREQ_CB(DEVREAD8(ABC1600_MAC_TAG, abc1600_mac_device, dma0_mreq_r))
@@ -893,7 +895,7 @@ static MACHINE_CONFIG_START( abc1600 )
 	MCFG_Z80DMA_IN_IORQ_CB(DEVREAD8(ABC1600_MAC_TAG, abc1600_mac_device, dma0_iorq_r))
 	MCFG_Z80DMA_OUT_IORQ_CB(DEVWRITE8(ABC1600_MAC_TAG, abc1600_mac_device, dma0_iorq_w))
 
-	MCFG_DEVICE_ADD(Z8410AB1_1_TAG, Z80DMA, XTAL_64MHz/16)
+	MCFG_DEVICE_ADD(Z8410AB1_1_TAG, Z80DMA, XTAL(64'000'000)/16)
 	MCFG_Z80DMA_OUT_BUSREQ_CB(WRITELINE(abc1600_state, dbrq_w))
 	MCFG_Z80DMA_OUT_BAO_CB(DEVWRITELINE(Z8410AB1_2_TAG, z80dma_device, bai_w))
 	MCFG_Z80DMA_IN_MREQ_CB(DEVREAD8(ABC1600_MAC_TAG, abc1600_mac_device, dma1_mreq_r))
@@ -901,24 +903,24 @@ static MACHINE_CONFIG_START( abc1600 )
 	MCFG_Z80DMA_IN_IORQ_CB(DEVREAD8(ABC1600_MAC_TAG, abc1600_mac_device, dma1_iorq_r))
 	MCFG_Z80DMA_OUT_IORQ_CB(DEVWRITE8(ABC1600_MAC_TAG, abc1600_mac_device, dma1_iorq_w))
 
-	MCFG_DEVICE_ADD(Z8410AB1_2_TAG, Z80DMA, XTAL_64MHz/16)
+	MCFG_DEVICE_ADD(Z8410AB1_2_TAG, Z80DMA, XTAL(64'000'000)/16)
 	MCFG_Z80DMA_OUT_BUSREQ_CB(WRITELINE(abc1600_state, dbrq_w))
 	MCFG_Z80DMA_IN_MREQ_CB(DEVREAD8(ABC1600_MAC_TAG, abc1600_mac_device, dma2_mreq_r))
 	MCFG_Z80DMA_OUT_MREQ_CB(DEVWRITE8(ABC1600_MAC_TAG, abc1600_mac_device, dma2_mreq_w))
 	MCFG_Z80DMA_IN_IORQ_CB(DEVREAD8(ABC1600_MAC_TAG, abc1600_mac_device, dma2_iorq_r))
 	MCFG_Z80DMA_OUT_IORQ_CB(DEVWRITE8(ABC1600_MAC_TAG, abc1600_mac_device, dma2_iorq_w))
 
-	MCFG_DEVICE_ADD(Z8470AB1_TAG, Z80DART, XTAL_64MHz/16)
+	MCFG_DEVICE_ADD(Z8470AB1_TAG, Z80DART, XTAL(64'000'000)/16)
 	MCFG_Z80DART_OUT_TXDA_CB(DEVWRITELINE(RS232_B_TAG, rs232_port_device, write_txd))
 	MCFG_Z80DART_OUT_DTRA_CB(DEVWRITELINE(RS232_B_TAG, rs232_port_device, write_dtr))
 	MCFG_Z80DART_OUT_RTSA_CB(DEVWRITELINE(RS232_B_TAG, rs232_port_device, write_rts))
 	MCFG_Z80DART_OUT_TXDB_CB(DEVWRITELINE(ABC_KEYBOARD_PORT_TAG, abc_keyboard_port_device, txd_w))
 	MCFG_Z80DART_OUT_INT_CB(INPUTLINE(MC68008P8_TAG, M68K_IRQ_5))    // shared with SCC
 
-	MCFG_DEVICE_ADD(Z8530B1_TAG, SCC8530, XTAL_64MHz/16)
+	MCFG_DEVICE_ADD(Z8530B1_TAG, SCC8530, XTAL(64'000'000)/16)
 	MCFG_Z8530_INTRQ_CALLBACK(INPUTLINE(MC68008P8_TAG, M68K_IRQ_5))
 
-	MCFG_DEVICE_ADD(Z8536B1_TAG, Z8536, XTAL_64MHz/16)
+	MCFG_DEVICE_ADD(Z8536B1_TAG, Z8536, XTAL(64'000'000)/16)
 	MCFG_Z8536_IRQ_CALLBACK(INPUTLINE(MC68008P8_TAG, M68K_IRQ_2))
 	MCFG_Z8536_PA_IN_CALLBACK(READ8(abc1600_state, cio_pa_r))
 	MCFG_Z8536_PB_IN_CALLBACK(READ8(abc1600_state, cio_pb_r))
@@ -928,9 +930,9 @@ static MACHINE_CONFIG_START( abc1600 )
 
 	MCFG_NMC9306_ADD(NMC9306_TAG)
 
-	MCFG_E0516_ADD(E050_C16PC_TAG, XTAL_32_768kHz)
+	MCFG_E0516_ADD(E050_C16PC_TAG, XTAL(32'768))
 
-	MCFG_FD1797_ADD(SAB1797_02P_TAG, XTAL_64MHz/64)
+	MCFG_FD1797_ADD(SAB1797_02P_TAG, XTAL(64'000'000)/64)
 	MCFG_WD_FDC_INTRQ_CALLBACK(DEVWRITELINE(Z8536B1_TAG, z8536_device, pb7_w))
 	MCFG_WD_FDC_DRQ_CALLBACK(WRITELINE(abc1600_state, fdc_drq_w))
 

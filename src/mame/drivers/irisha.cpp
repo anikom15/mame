@@ -49,6 +49,9 @@ public:
 	uint32_t screen_update_irisha(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	required_shared_ptr<uint8_t> m_p_videoram;
 
+	void irisha(machine_config &config);
+	void irisha_io(address_map &map);
+	void irisha_mem(address_map &map);
 private:
 	bool m_sg1_line;
 	bool m_keypressed;
@@ -67,20 +70,22 @@ private:
 
 
 /* Address maps */
-static ADDRESS_MAP_START(irisha_mem, AS_PROGRAM, 8, irisha_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM  // ROM
-	AM_RANGE(0x4000, 0xdfff) AM_RAM  // RAM
-	AM_RANGE(0xe000, 0xffff) AM_RAM AM_SHARE("videoram")
-ADDRESS_MAP_END
+void irisha_state::irisha_mem(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();  // ROM
+	map(0x4000, 0xdfff).ram();  // RAM
+	map(0xe000, 0xffff).ram().share("videoram");
+}
 
-static ADDRESS_MAP_START( irisha_io , AS_IO, 8, irisha_state )
-	AM_RANGE(0x04, 0x05) AM_READ(irisha_keyboard_r)
-	AM_RANGE(0x06, 0x06) AM_DEVREADWRITE("uart",i8251_device, data_r, data_w)
-	AM_RANGE(0x07, 0x07) AM_DEVREADWRITE("uart", i8251_device, status_r, control_w)
-	AM_RANGE(0x08, 0x0B) AM_DEVREADWRITE("pit8253", pit8253_device, read, write )
-	AM_RANGE(0x0C, 0x0F) AM_DEVREADWRITE("pic8259", pic8259_device, read, write ) AM_MASK( 0x01 )
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE("ppi8255", i8255_device, read, write)
-ADDRESS_MAP_END
+void irisha_state::irisha_io(address_map &map)
+{
+	map(0x04, 0x05).r(this, FUNC(irisha_state::irisha_keyboard_r));
+	map(0x06, 0x06).rw("uart", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x07, 0x07).rw("uart", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x08, 0x0B).rw(m_pit, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0x0C, 0x0F).rw("pic8259", FUNC(pic8259_device::read), FUNC(pic8259_device::write)).mask(0x01);
+	map(0x10, 0x13).rw("ppi8255", FUNC(i8255_device::read), FUNC(i8255_device::write));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( irisha )
@@ -357,9 +362,9 @@ void irisha_state::machine_reset()
 }
 
 /* Machine driver */
-static MACHINE_CONFIG_START( irisha )
+MACHINE_CONFIG_START(irisha_state::irisha)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8080, XTAL_16MHz / 9)
+	MCFG_CPU_ADD("maincpu", I8080, XTAL(16'000'000) / 9)
 	MCFG_CPU_PROGRAM_MAP(irisha_mem)
 	MCFG_CPU_IO_MAP(irisha_io)
 
@@ -384,12 +389,12 @@ static MACHINE_CONFIG_START( irisha )
 	MCFG_DEVICE_ADD("uart", I8251, 0)
 
 	MCFG_DEVICE_ADD("pit8253", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_16MHz / 9)
+	MCFG_PIT8253_CLK0(XTAL(16'000'000) / 9)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("pic8259", pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_16MHz / 9 / 8 / 8)
+	MCFG_PIT8253_CLK1(XTAL(16'000'000) / 9 / 8 / 8)
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("uart", i8251_device, write_txc))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart", i8251_device, write_rxc))
-	MCFG_PIT8253_CLK2(XTAL_16MHz / 9)
+	MCFG_PIT8253_CLK2(XTAL(16'000'000) / 9)
 	MCFG_PIT8253_OUT2_HANDLER(WRITELINE(irisha_state, speaker_w))
 
 	MCFG_DEVICE_ADD("ppi8255", I8255, 0)

@@ -566,13 +566,23 @@ TIMER_CALLBACK_MEMBER(itech8_state::irq_off)
 }
 
 
-INTERRUPT_GEN_MEMBER(itech8_state::generate_nmi)
+WRITE_LINE_MEMBER(itech8_state::generate_nmi)
 {
-	/* signal the NMI */
-	update_interrupts(1, -1, -1);
-	m_irq_off_timer->adjust(attotime::from_usec(1));
+	if (state)
+	{
+		/* signal the NMI */
+		update_interrupts(1, -1, -1);
+		m_irq_off_timer->adjust(attotime::from_usec(1));
 
-	if (FULL_LOGGING) logerror("------------ VBLANK (%d) --------------\n", m_screen->vpos());
+		if (FULL_LOGGING) logerror("------------ VBLANK (%d) --------------\n", m_screen->vpos());
+	}
+}
+
+WRITE_LINE_MEMBER(itech8_state::ninclown_irq)
+{
+	// definitely doesn't like the generate_nmi code, so we just generate VBlank irq here instead
+	if (state)
+		m_maincpu->set_input_line(3, HOLD_LINE);
 }
 
 
@@ -857,67 +867,71 @@ WRITE8_MEMBER(itech8_state::ninclown_palette_w)
  *************************************/
 
 /*------ common layout with TMS34061 at 0000 ------*/
-static ADDRESS_MAP_START( tmslo_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x0000, 0x0fff) AM_READWRITE(tms34061_r, tms34061_w)
-	AM_RANGE(0x1100, 0x1100) AM_WRITENOP
-	AM_RANGE(0x1120, 0x1120) AM_WRITE(sound_data_w)
-	AM_RANGE(0x1140, 0x1140) AM_READ_PORT("40") AM_WRITE(grom_bank_w)
-	AM_RANGE(0x1160, 0x1160) AM_READ_PORT("60") AM_WRITE(page_w)
-	AM_RANGE(0x1180, 0x1180) AM_READ_PORT("80") AM_DEVWRITE("tms34061", tms34061_device, latch_w)
-	AM_RANGE(0x11a0, 0x11a0) AM_WRITE(nmi_ack_w)
-	AM_RANGE(0x11c0, 0x11df) AM_READ(blitter_r) AM_WRITE(blitter_bank_w)
-	AM_RANGE(0x11e0, 0x11ff) AM_WRITE(palette_w)
-	AM_RANGE(0x2000, 0x3fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x4000, 0xffff) AM_ROMBANK("bank1")
-ADDRESS_MAP_END
+void itech8_state::tmslo_map(address_map &map)
+{
+	map(0x0000, 0x0fff).rw(this, FUNC(itech8_state::tms34061_r), FUNC(itech8_state::tms34061_w));
+	map(0x1100, 0x1100).nopw();
+	map(0x1120, 0x1120).w(this, FUNC(itech8_state::sound_data_w));
+	map(0x1140, 0x1140).portr("40").w(this, FUNC(itech8_state::grom_bank_w));
+	map(0x1160, 0x1160).portr("60").w(this, FUNC(itech8_state::page_w));
+	map(0x1180, 0x1180).portr("80").w(m_tms34061, FUNC(tms34061_device::latch_w));
+	map(0x11a0, 0x11a0).w(this, FUNC(itech8_state::nmi_ack_w));
+	map(0x11c0, 0x11df).r(this, FUNC(itech8_state::blitter_r)).w(this, FUNC(itech8_state::blitter_bank_w));
+	map(0x11e0, 0x11ff).w(this, FUNC(itech8_state::palette_w));
+	map(0x2000, 0x3fff).ram().share("nvram");
+	map(0x4000, 0xffff).bankr("bank1");
+}
 
 
 /*------ common layout with TMS34061 at 1000 ------*/
-static ADDRESS_MAP_START( tmshi_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x1000, 0x1fff) AM_READWRITE(tms34061_r, tms34061_w)
-	AM_RANGE(0x0100, 0x0100) AM_WRITENOP
-	AM_RANGE(0x0120, 0x0120) AM_WRITE(sound_data_w)
-	AM_RANGE(0x0140, 0x0140) AM_READ_PORT("40") AM_WRITE(grom_bank_w)
-	AM_RANGE(0x0160, 0x0160) AM_READ_PORT("60") AM_WRITE(page_w)
-	AM_RANGE(0x0180, 0x0180) AM_READ_PORT("80") AM_DEVWRITE("tms34061", tms34061_device, latch_w)
-	AM_RANGE(0x01a0, 0x01a0) AM_WRITE(nmi_ack_w)
-	AM_RANGE(0x01c0, 0x01df) AM_READ(blitter_r) AM_WRITE(blitter_bank_w)
-	AM_RANGE(0x01e0, 0x01ff) AM_WRITE(palette_w)
-	AM_RANGE(0x2000, 0x3fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x4000, 0xffff) AM_ROMBANK("bank1")
-ADDRESS_MAP_END
+void itech8_state::tmshi_map(address_map &map)
+{
+	map(0x1000, 0x1fff).rw(this, FUNC(itech8_state::tms34061_r), FUNC(itech8_state::tms34061_w));
+	map(0x0100, 0x0100).nopw();
+	map(0x0120, 0x0120).w(this, FUNC(itech8_state::sound_data_w));
+	map(0x0140, 0x0140).portr("40").w(this, FUNC(itech8_state::grom_bank_w));
+	map(0x0160, 0x0160).portr("60").w(this, FUNC(itech8_state::page_w));
+	map(0x0180, 0x0180).portr("80").w(m_tms34061, FUNC(tms34061_device::latch_w));
+	map(0x01a0, 0x01a0).w(this, FUNC(itech8_state::nmi_ack_w));
+	map(0x01c0, 0x01df).r(this, FUNC(itech8_state::blitter_r)).w(this, FUNC(itech8_state::blitter_bank_w));
+	map(0x01e0, 0x01ff).w(this, FUNC(itech8_state::palette_w));
+	map(0x2000, 0x3fff).ram().share("nvram");
+	map(0x4000, 0xffff).bankr("bank1");
+}
 
 
 /*------ Golden Tee Golf II 1992 layout ------*/
-static ADDRESS_MAP_START( gtg2_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x0100, 0x0100) AM_READ_PORT("40") AM_WRITE(nmi_ack_w)
-	AM_RANGE(0x0120, 0x0120) AM_READ_PORT("60") AM_WRITE(page_w)
-	AM_RANGE(0x0140, 0x015f) AM_WRITE(palette_w)
-	AM_RANGE(0x0140, 0x0140) AM_READ_PORT("80")
-	AM_RANGE(0x0160, 0x0160) AM_WRITE(grom_bank_w)
-	AM_RANGE(0x0180, 0x019f) AM_READ(blitter_r) AM_WRITE(blitter_bank_w)
-	AM_RANGE(0x01c0, 0x01c0) AM_WRITE(gtg2_sound_data_w)
-	AM_RANGE(0x01e0, 0x01e0) AM_DEVWRITE("tms34061", tms34061_device, latch_w)
-	AM_RANGE(0x1000, 0x1fff) AM_READWRITE(tms34061_r, tms34061_w)
-	AM_RANGE(0x2000, 0x3fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x4000, 0xffff) AM_ROMBANK("bank1")
-ADDRESS_MAP_END
+void itech8_state::gtg2_map(address_map &map)
+{
+	map(0x0100, 0x0100).portr("40").w(this, FUNC(itech8_state::nmi_ack_w));
+	map(0x0120, 0x0120).portr("60").w(this, FUNC(itech8_state::page_w));
+	map(0x0140, 0x015f).w(this, FUNC(itech8_state::palette_w));
+	map(0x0140, 0x0140).portr("80");
+	map(0x0160, 0x0160).w(this, FUNC(itech8_state::grom_bank_w));
+	map(0x0180, 0x019f).r(this, FUNC(itech8_state::blitter_r)).w(this, FUNC(itech8_state::blitter_bank_w));
+	map(0x01c0, 0x01c0).w(this, FUNC(itech8_state::gtg2_sound_data_w));
+	map(0x01e0, 0x01e0).w(m_tms34061, FUNC(tms34061_device::latch_w));
+	map(0x1000, 0x1fff).rw(this, FUNC(itech8_state::tms34061_r), FUNC(itech8_state::tms34061_w));
+	map(0x2000, 0x3fff).ram().share("nvram");
+	map(0x4000, 0xffff).bankr("bank1");
+}
 
 /*------ Ninja Clowns layout ------*/
-static ADDRESS_MAP_START( ninclown_map, AS_PROGRAM, 16, itech8_state )
-	AM_RANGE(0x000000, 0x00007f) AM_RAM AM_REGION("maincpu", 0)
-	AM_RANGE(0x000080, 0x003fff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x004000, 0x03ffff) AM_ROM
-	AM_RANGE(0x040000, 0x07ffff) AM_READ(rom_constant_r)
-	AM_RANGE(0x100080, 0x100081) AM_WRITE8(sound_data_w, 0xff00)
-	AM_RANGE(0x100100, 0x100101) AM_READ_PORT("40") AM_WRITE(grom_bank16_w)
-	AM_RANGE(0x100180, 0x100181) AM_READ_PORT("60") AM_WRITE(display_page16_w)
-	AM_RANGE(0x100240, 0x100241) AM_DEVWRITE8("tms34061", tms34061_device, latch_w, 0xff00)
-	AM_RANGE(0x100280, 0x100281) AM_READ_PORT("80") AM_WRITENOP
-	AM_RANGE(0x100300, 0x10031f) AM_READWRITE8(blitter_r, blitter_w, 0xffff)
-	AM_RANGE(0x100380, 0x1003ff) AM_READWRITE8(ninclown_palette_r, ninclown_palette_w, 0xff00)
-	AM_RANGE(0x110000, 0x110fff) AM_READWRITE8(tms34061_r, tms34061_w, 0xffff)
-ADDRESS_MAP_END
+void itech8_state::ninclown_map(address_map &map)
+{
+	map(0x000000, 0x00007f).ram().region("maincpu", 0);
+	map(0x000080, 0x003fff).ram().share("nvram");
+	map(0x004000, 0x03ffff).rom();
+	map(0x040000, 0x07ffff).r(this, FUNC(itech8_state::rom_constant_r));
+	map(0x100080, 0x100080).w(this, FUNC(itech8_state::sound_data_w));
+	map(0x100100, 0x100101).portr("40").w(this, FUNC(itech8_state::grom_bank16_w));
+	map(0x100180, 0x100181).portr("60").w(this, FUNC(itech8_state::display_page16_w));
+	map(0x100240, 0x100240).w(m_tms34061, FUNC(tms34061_device::latch_w));
+	map(0x100280, 0x100281).portr("80").nopw();
+	map(0x100300, 0x10031f).rw(this, FUNC(itech8_state::blitter_r), FUNC(itech8_state::blitter_w));
+	map(0x100380, 0x1003ff).rw(this, FUNC(itech8_state::ninclown_palette_r), FUNC(itech8_state::ninclown_palette_w)).umask16(0xff00);
+	map(0x110000, 0x110fff).rw(this, FUNC(itech8_state::tms34061_r), FUNC(itech8_state::tms34061_w));
+}
 
 
 
@@ -928,48 +942,52 @@ ADDRESS_MAP_END
  *************************************/
 
 /*------ YM2203-based sound ------*/
-static ADDRESS_MAP_START( sound2203_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x0000, 0x0000) AM_WRITENOP
-	AM_RANGE(0x1000, 0x1000) AM_READ(sound_data_r)
-	AM_RANGE(0x2000, 0x2001) AM_MIRROR(0x0002) AM_DEVREADWRITE("ymsnd", ym2203_device, read, write)
-	AM_RANGE(0x3000, 0x37ff) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void itech8_state::sound2203_map(address_map &map)
+{
+	map(0x0000, 0x0000).nopw();
+	map(0x1000, 0x1000).r(this, FUNC(itech8_state::sound_data_r));
+	map(0x2000, 0x2001).mirror(0x0002).rw("ymsnd", FUNC(ym2203_device::read), FUNC(ym2203_device::write));
+	map(0x3000, 0x37ff).ram();
+	map(0x4000, 0x4000).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x8000, 0xffff).rom();
+}
 
 
 /*------ YM2608B-based sound ------*/
-static ADDRESS_MAP_START( sound2608b_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x1000, 0x1000) AM_WRITENOP
-	AM_RANGE(0x2000, 0x2000) AM_READ(sound_data_r)
-	AM_RANGE(0x4000, 0x4003) AM_DEVREADWRITE("ymsnd", ym2608_device, read, write)
-	AM_RANGE(0x6000, 0x67ff) AM_RAM
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void itech8_state::sound2608b_map(address_map &map)
+{
+	map(0x1000, 0x1000).nopw();
+	map(0x2000, 0x2000).r(this, FUNC(itech8_state::sound_data_r));
+	map(0x4000, 0x4003).rw("ymsnd", FUNC(ym2608_device::read), FUNC(ym2608_device::write));
+	map(0x6000, 0x67ff).ram();
+	map(0x8000, 0xffff).rom();
+}
 
 
 /*------ YM3812-based sound ------*/
-static ADDRESS_MAP_START( sound3812_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x0000, 0x0000) AM_WRITENOP
-	AM_RANGE(0x1000, 0x1000) AM_READ(sound_data_r)
-	AM_RANGE(0x2000, 0x2001) AM_DEVREADWRITE("ymsnd", ym3812_device, read, write)
-	AM_RANGE(0x3000, 0x37ff) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x5000, 0x5003) AM_DEVREADWRITE("pia", pia6821_device, read, write)
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void itech8_state::sound3812_map(address_map &map)
+{
+	map(0x0000, 0x0000).nopw();
+	map(0x1000, 0x1000).r(this, FUNC(itech8_state::sound_data_r));
+	map(0x2000, 0x2001).rw("ymsnd", FUNC(ym3812_device::read), FUNC(ym3812_device::write));
+	map(0x3000, 0x37ff).ram();
+	map(0x4000, 0x4000).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x5000, 0x5003).rw("pia", FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0x8000, 0xffff).rom();
+}
 
 
 /*------ external YM3812-based sound board ------*/
-static ADDRESS_MAP_START( sound3812_external_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x0000, 0x0000) AM_WRITENOP
-	AM_RANGE(0x1000, 0x1000) AM_READ(sound_data_r)
-	AM_RANGE(0x2000, 0x2001) AM_DEVREADWRITE("ymsnd", ym3812_device, read, write)
-	AM_RANGE(0x3000, 0x37ff) AM_RAM
-	AM_RANGE(0x4000, 0x4000) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0x5000, 0x500f) AM_DEVREADWRITE("via6522_0", via6522_device, read, write)
-	AM_RANGE(0x8000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void itech8_state::sound3812_external_map(address_map &map)
+{
+	map(0x0000, 0x0000).nopw();
+	map(0x1000, 0x1000).r(this, FUNC(itech8_state::sound_data_r));
+	map(0x2000, 0x2001).rw("ymsnd", FUNC(ym3812_device::read), FUNC(ym3812_device::write));
+	map(0x3000, 0x37ff).ram();
+	map(0x4000, 0x4000).rw("oki", FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0x5000, 0x500f).rw("via6522_0", FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0x8000, 0xffff).rom();
+}
 
 
 
@@ -979,15 +997,17 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( slikz80_mem_map, AS_PROGRAM, 8, itech8_state )
-	AM_RANGE(0x0000, 0x7ff) AM_ROM
-ADDRESS_MAP_END
+void itech8_state::slikz80_mem_map(address_map &map)
+{
+	map(0x0000, 0x7ff).rom();
+}
 
 
-static ADDRESS_MAP_START( slikz80_io_map, AS_IO, 8, itech8_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READWRITE(slikz80_port_r, slikz80_port_w)
-ADDRESS_MAP_END
+void itech8_state::slikz80_io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw(this, FUNC(itech8_state::slikz80_port_r), FUNC(itech8_state::slikz80_port_w));
+}
 
 
 
@@ -1665,12 +1685,11 @@ WRITE_LINE_MEMBER(itech8_state::generate_tms34061_interrupt)
 
 /************* core pieces ******************/
 
-static MACHINE_CONFIG_START( itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::itech8_core_lo)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", MC6809, CLOCK_8MHz)
 	MCFG_CPU_PROGRAM_MAP(tmslo_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", itech8_state,  generate_nmi)
 
 	MCFG_NVRAM_ADD_RANDOM_FILL("nvram")
 
@@ -1683,6 +1702,7 @@ static MACHINE_CONFIG_START( itech8_core_lo )
 	MCFG_SCREEN_VIDEO_ATTRIBUTES(VIDEO_UPDATE_BEFORE_VBLANK)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_SIZE(512, 263)
+	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(itech8_state, generate_nmi))
 
 	MCFG_DEVICE_ADD("tms34061", TMS34061, 0)
 	MCFG_TMS34061_ROWSHIFT(8)  /* VRAM address is (row << rowshift) | col */
@@ -1699,7 +1719,8 @@ static MACHINE_CONFIG_START( itech8_core_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( itech8_core_hi, itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::itech8_core_hi)
+	itech8_core_lo(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1707,7 +1728,7 @@ static MACHINE_CONFIG_DERIVED( itech8_core_hi, itech8_core_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( itech8_sound_ym2203 )
+MACHINE_CONFIG_START(itech8_state::itech8_sound_ym2203)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("soundcpu", MC6809, CLOCK_8MHz)
@@ -1727,7 +1748,7 @@ static MACHINE_CONFIG_START( itech8_sound_ym2203 )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( itech8_sound_ym2608b )
+MACHINE_CONFIG_START(itech8_state::itech8_sound_ym2608b)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("soundcpu", MC6809, CLOCK_8MHz)
@@ -1741,7 +1762,7 @@ static MACHINE_CONFIG_START( itech8_sound_ym2608b )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( itech8_sound_ym3812 )
+MACHINE_CONFIG_START(itech8_state::itech8_sound_ym3812)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("soundcpu", MC6809, CLOCK_8MHz)
@@ -1762,7 +1783,7 @@ static MACHINE_CONFIG_START( itech8_sound_ym3812 )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_START( itech8_sound_ym3812_external )
+MACHINE_CONFIG_START(itech8_state::itech8_sound_ym3812_external)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("soundcpu", MC6809, CLOCK_8MHz)
@@ -1780,10 +1801,11 @@ MACHINE_CONFIG_END
 
 /************* full drivers ******************/
 
-static MACHINE_CONFIG_DERIVED( wfortune, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::wfortune)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2203)
+	itech8_sound_ym2203(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1794,10 +1816,11 @@ static MACHINE_CONFIG_DERIVED( wfortune, itech8_core_hi )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( grmatch, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::grmatch)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2608b)
+	itech8_sound_ym2608b(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1810,10 +1833,11 @@ static MACHINE_CONFIG_DERIVED( grmatch, itech8_core_hi )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( stratab_hi, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::stratab_hi)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2203)
+	itech8_sound_ym2203(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1823,10 +1847,11 @@ static MACHINE_CONFIG_DERIVED( stratab_hi, itech8_core_hi )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( stratab_lo, itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::stratab_lo)
+	itech8_core_lo(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2203)
+	itech8_sound_ym2203(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1835,10 +1860,11 @@ static MACHINE_CONFIG_DERIVED( stratab_lo, itech8_core_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( slikshot_hi, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::slikshot_hi)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2203)
+	itech8_sound_ym2203(config);
 
 	MCFG_CPU_ADD("sub", Z80, CLOCK_8MHz/2)
 	MCFG_CPU_PROGRAM_MAP(slikz80_mem_map)
@@ -1852,10 +1878,11 @@ static MACHINE_CONFIG_DERIVED( slikshot_hi, itech8_core_hi )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( slikshot_lo, itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::slikshot_lo)
+	itech8_core_lo(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2203)
+	itech8_sound_ym2203(config);
 
 	MCFG_CPU_ADD("sub", Z80, CLOCK_8MHz/2)
 	MCFG_CPU_PROGRAM_MAP(slikz80_mem_map)
@@ -1869,10 +1896,11 @@ static MACHINE_CONFIG_DERIVED( slikshot_lo, itech8_core_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( slikshot_lo_noz80, itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::slikshot_lo_noz80)
+	itech8_core_lo(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym2203)
+	itech8_sound_ym2203(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1881,7 +1909,8 @@ static MACHINE_CONFIG_DERIVED( slikshot_lo_noz80, itech8_core_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( sstrike, slikshot_lo )
+MACHINE_CONFIG_START(itech8_state::sstrike)
+	slikshot_lo(config);
 
 	/* basic machine hardware */
 	MCFG_MACHINE_START_OVERRIDE(itech8_state,sstrike)
@@ -1889,10 +1918,11 @@ static MACHINE_CONFIG_DERIVED( sstrike, slikshot_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( hstennis_hi, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::hstennis_hi)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym3812)
+	itech8_sound_ym3812(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1901,10 +1931,11 @@ static MACHINE_CONFIG_DERIVED( hstennis_hi, itech8_core_hi )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( hstennis_lo, itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::hstennis_lo)
+	itech8_core_lo(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym3812)
+	itech8_sound_ym3812(config);
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1913,14 +1944,14 @@ static MACHINE_CONFIG_DERIVED( hstennis_lo, itech8_core_lo )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( rimrockn, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::rimrockn)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym3812_external)
+	itech8_sound_ym3812_external(config);
 
 	MCFG_CPU_REPLACE("maincpu", HD6309, CLOCK_12MHz)
 	MCFG_CPU_PROGRAM_MAP(tmshi_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", itech8_state,  generate_nmi)
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
@@ -1929,27 +1960,28 @@ static MACHINE_CONFIG_DERIVED( rimrockn, itech8_core_hi )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( ninclown, itech8_core_hi )
+MACHINE_CONFIG_START(itech8_state::ninclown)
+	itech8_core_hi(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym3812_external)
+	itech8_sound_ym3812_external(config);
 
 	MCFG_CPU_REPLACE("maincpu", M68000, CLOCK_12MHz)
 	MCFG_CPU_PROGRAM_MAP(ninclown_map)
-	// definitely doesn't like the generate_nmi code, so we just generate VBlank irq here instead
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", itech8_state,  irq3_line_hold)
 
 	/* video hardware */
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_VISIBLE_AREA(64, 423, 0, 239)
 	MCFG_SCREEN_UPDATE_DRIVER(itech8_state, screen_update_2page_large)
+	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(itech8_state, ninclown_irq))
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( gtg2, itech8_core_lo )
+MACHINE_CONFIG_START(itech8_state::gtg2)
+	itech8_core_lo(config);
 
 	/* basic machine hardware */
-	MCFG_FRAGMENT_ADD(itech8_sound_ym3812_external)
+	itech8_sound_ym3812_external(config);
 
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(gtg2_map)

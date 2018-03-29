@@ -45,8 +45,8 @@ DEFINE_DEVICE_TYPE(NUBUS_BOOTBUG, nubus_bootbug_device, "nb_btbug", "Brigent Boo
 //  device_add_mconfig - add device configuration
 //-------------------------------------------------
 
-MACHINE_CONFIG_MEMBER( nubus_bootbug_device::device_add_mconfig )
-	MCFG_DEVICE_ADD( "uart_0", NS16450, XTAL_1_8432MHz )
+MACHINE_CONFIG_START(nubus_bootbug_device::device_add_mconfig)
+	MCFG_DEVICE_ADD( "uart_0", NS16450, XTAL(1'843'200) )
 	MCFG_INS8250_OUT_TX_CB(DEVWRITELINE("serport0", rs232_port_device, write_txd))
 	MCFG_INS8250_OUT_DTR_CB(DEVWRITELINE("serport0", rs232_port_device, write_dtr))
 	MCFG_INS8250_OUT_RTS_CB(DEVWRITELINE("serport0", rs232_port_device, write_rts))
@@ -96,13 +96,11 @@ void nubus_bootbug_device::device_start()
 {
 	uint32_t slotspace;
 
-	// set_nubus_device makes m_slot valid
-	set_nubus_device();
 	install_declaration_rom(this, BOOTBUG_ROM_REGION);
 
 	slotspace = get_slotspace();
 
-	m_nubus->install_device(slotspace, slotspace+0xff, read32_delegate(FUNC(nubus_bootbug_device::dev_r), this), write32_delegate(FUNC(nubus_bootbug_device::dev_w), this));
+	nubus().install_device(slotspace, slotspace+0xff, read32_delegate(FUNC(nubus_bootbug_device::dev_r), this), write32_delegate(FUNC(nubus_bootbug_device::dev_w), this));
 }
 
 //-------------------------------------------------

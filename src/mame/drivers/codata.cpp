@@ -26,24 +26,27 @@ public:
 		, m_maincpu(*this, "maincpu")
 	{ }
 
+	void codata(machine_config &config);
+	void mem_map(address_map &map);
 private:
 	virtual void machine_reset() override;
 	required_shared_ptr<uint16_t> m_p_base;
 	required_device<cpu_device> m_maincpu;
 };
 
-static ADDRESS_MAP_START(mem_map, AS_PROGRAM, 16, codata_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x1fffff) AM_RAM AM_SHARE("rambase")
-	AM_RANGE(0x200000, 0x203fff) AM_ROM AM_REGION("user1", 0);
-	AM_RANGE(0x400000, 0x403fff) AM_ROM AM_REGION("user1", 0x4000);
-	AM_RANGE(0x600000, 0x600007) AM_MIRROR(0x1ffff8) AM_DEVREADWRITE8("uart", upd7201_new_device, ba_cd_r, ba_cd_w, 0xff00)
-	AM_RANGE(0x800000, 0x800003) AM_MIRROR(0x1ffffc) AM_DEVREADWRITE("timer", am9513_device, read16, write16)
-	AM_RANGE(0xe00000, 0xe00001) AM_MIRROR(0x1ffffe) AM_READ_PORT("INPUT")
+void codata_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x1fffff).ram().share("rambase");
+	map(0x200000, 0x203fff).rom().region("user1", 0);
+	map(0x400000, 0x403fff).rom().region("user1", 0x4000);
+	map(0x600000, 0x600007).mirror(0x1ffff8).rw("uart", FUNC(upd7201_new_device::ba_cd_r), FUNC(upd7201_new_device::ba_cd_w)).umask16(0xff00);
+	map(0x800000, 0x800003).mirror(0x1ffffc).rw("timer", FUNC(am9513_device::read16), FUNC(am9513_device::write16));
+	map(0xe00000, 0xe00001).mirror(0x1ffffe).portr("INPUT");
 	//AM_RANGE(0xa00000, 0xbfffff) page map (rw)
 	//AM_RANGE(0xc00000, 0xdfffff) segment map (rw), context register (r)
 	//AM_RANGE(0xe00000, 0xffffff) context register (w), 16-bit parallel input port (r)
-ADDRESS_MAP_END
+}
 
 /* Input ports */
 static INPUT_PORTS_START( codata )
@@ -59,19 +62,19 @@ void codata_state::machine_reset()
 	m_maincpu->reset();
 }
 
-static MACHINE_CONFIG_START( codata )
+MACHINE_CONFIG_START(codata_state::codata)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",M68000, XTAL_16MHz / 2)
+	MCFG_CPU_ADD("maincpu",M68000, XTAL(16'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(mem_map)
 
-	MCFG_DEVICE_ADD("uart", UPD7201_NEW, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("uart", UPD7201_NEW, XTAL(16'000'000) / 4)
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs423a", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRA_CB(DEVWRITELINE("rs423a", rs232_port_device, write_dtr))
 	MCFG_Z80SIO_OUT_RTSA_CB(DEVWRITELINE("rs423a", rs232_port_device, write_rts))
 	MCFG_Z80SIO_OUT_TXDB_CB(DEVWRITELINE("rs423b", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_INT_CB(INPUTLINE("maincpu", M68K_IRQ_5))
 
-	MCFG_DEVICE_ADD("timer", AM9513A, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("timer", AM9513A, XTAL(16'000'000) / 4)
 	MCFG_AM9513_OUT1_CALLBACK(NOOP) // Timer 1 = "Abort/Reset" (watchdog)
 	MCFG_AM9513_OUT2_CALLBACK(INPUTLINE("maincpu", M68K_IRQ_6)) // Timer 2
 	MCFG_AM9513_OUT3_CALLBACK(INPUTLINE("maincpu", M68K_IRQ_7)) // Refresh

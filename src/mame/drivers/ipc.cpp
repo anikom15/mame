@@ -54,27 +54,32 @@ public:
 		, m_maincpu(*this, "maincpu")
 	{ }
 
+	void ipc(machine_config &config);
+	void ipc_io(address_map &map);
+	void ipc_mem(address_map &map);
 private:
 	virtual void machine_reset() override;
 	required_device<cpu_device> m_maincpu;
 };
 
 
-static ADDRESS_MAP_START(ipc_mem, AS_PROGRAM, 8, ipc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xdfff) AM_RAM
-	AM_RANGE(0xe800, 0xffff) AM_ROM AM_REGION("roms", 0)
-ADDRESS_MAP_END
+void ipc_state::ipc_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xdfff).ram();
+	map(0xe800, 0xffff).rom().region("roms", 0);
+}
 
-static ADDRESS_MAP_START( ipc_io, AS_IO, 8, ipc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xf0, 0xf3) AM_DEVREADWRITE("pit", pit8253_device, read, write)
-	AM_RANGE(0xf4, 0xf4) AM_DEVREADWRITE("uart1", i8251_device, data_r, data_w)
-	AM_RANGE(0xf5, 0xf5) AM_DEVREADWRITE("uart1", i8251_device, status_r, control_w)
-	AM_RANGE(0xf6, 0xf6) AM_DEVREADWRITE("uart2", i8251_device, data_r, data_w)
-	AM_RANGE(0xf7, 0xf7) AM_DEVREADWRITE("uart2", i8251_device, status_r, control_w)
-ADDRESS_MAP_END
+void ipc_state::ipc_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0xf0, 0xf3).rw("pit", FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xf4, 0xf4).rw("uart1", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xf5, 0xf5).rw("uart1", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0xf6, 0xf6).rw("uart2", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xf7, 0xf7).rw("uart2", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( ipc )
@@ -87,16 +92,16 @@ void ipc_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( ipc )
+MACHINE_CONFIG_START(ipc_state::ipc)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",I8085A, XTAL_19_6608MHz / 4)
+	MCFG_CPU_ADD("maincpu",I8085A, XTAL(19'660'800) / 4)
 	MCFG_CPU_PROGRAM_MAP(ipc_mem)
 	MCFG_CPU_IO_MAP(ipc_io)
 
 	MCFG_DEVICE_ADD("pit", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_19_6608MHz / 16)
-	MCFG_PIT8253_CLK1(XTAL_19_6608MHz / 16)
-	MCFG_PIT8253_CLK2(XTAL_19_6608MHz / 16)
+	MCFG_PIT8253_CLK0(XTAL(19'660'800) / 16)
+	MCFG_PIT8253_CLK1(XTAL(19'660'800) / 16)
+	MCFG_PIT8253_CLK2(XTAL(19'660'800) / 16)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("uart1", i8251_device, write_txc))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart1", i8251_device, write_rxc))
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("uart2", i8251_device, write_txc))

@@ -8,8 +8,8 @@
  *
  ****************************************************************************/
 
-#ifndef MAC_H_
-#define MAC_H_
+#ifndef MAME_INCLUDES_MAC_H
+#define MAME_INCLUDES_MAC_H
 
 #include "machine/8530scc.h"
 #include "machine/6522via.h"
@@ -275,6 +275,9 @@ public:
 	// 60.15 Hz timer for RBV/V8/Sonora/Eagle/VASP/etc.
 	emu_timer *m_6015_timer;
 
+	// ADB refresh timer, independent of anything else going on
+	emu_timer *m_adbupdate_timer;
+
 	// RBV and friends (V8, etc)
 	uint8_t m_rbv_regs[256], m_rbv_ier, m_rbv_ifr, m_rbv_type, m_rbv_montype, m_rbv_vbltime;
 	uint32_t m_rbv_colors[3], m_rbv_count, m_rbv_clutoffs, m_rbv_immed10wr;
@@ -387,6 +390,52 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(mac_scsi_irq);
 	DECLARE_WRITE_LINE_MEMBER(mac_asc_irq);
 
+	void mac512ke(machine_config &config);
+	void macplus(machine_config &config);
+	void maclc(machine_config &config);
+	void macpb170(machine_config &config);
+	void macclasc(machine_config &config);
+	void maciisi(machine_config &config);
+	void maclc2(machine_config &config);
+	void macse(machine_config &config);
+	void maclc3(machine_config &config);
+	void macpd210(machine_config &config);
+	void maciici(machine_config &config);
+	void macprtb(machine_config &config);
+	void maciix(machine_config &config);
+	void maclc520(machine_config &config);
+	void pwrmac(machine_config &config);
+	void maciivx(machine_config &config);
+	void maccclas(machine_config &config);
+	void maciivi(machine_config &config);
+	void macpb160(machine_config &config);
+	void maciicx(machine_config &config);
+	void macqd700(machine_config &config);
+	void macse30(machine_config &config);
+	void macpb180(machine_config &config);
+	void macpb145(machine_config &config);
+	void macpb180c(machine_config &config);
+	void maciifx(machine_config &config);
+	void macpb140(machine_config &config);
+	void macclas2(machine_config &config);
+	void macii(machine_config &config);
+	void maciihmu(machine_config &config);
+	void mac512ke_map(address_map &map);
+	void macii_map(address_map &map);
+	void maciici_map(address_map &map);
+	void maciifx_map(address_map &map);
+	void maclc3_map(address_map &map);
+	void maclc_map(address_map &map);
+	void macpb140_map(address_map &map);
+	void macpb160_map(address_map &map);
+	void macpb165c_map(address_map &map);
+	void macpd210_map(address_map &map);
+	void macplus_map(address_map &map);
+	void macprtb_map(address_map &map);
+	void macse30_map(address_map &map);
+	void macse_map(address_map &map);
+	void pwrmac_map(address_map &map);
+	void quadra700_map(address_map &map);
 private:
 	int has_adb();
 	void adb_reset();
@@ -483,6 +532,7 @@ public:
 	TIMER_CALLBACK_MEMBER(inquiry_timeout_func);
 #endif
 	TIMER_CALLBACK_MEMBER(mac_6015_tick);
+	TIMER_CALLBACK_MEMBER(mac_adbrefresh_tick);
 	TIMER_CALLBACK_MEMBER(mac_scanline_tick);
 	TIMER_CALLBACK_MEMBER(dafb_vbl_tick);
 	TIMER_CALLBACK_MEMBER(dafb_cursor_tick);
@@ -492,6 +542,7 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(mac_adb_via_out_cb2);
 	DECLARE_READ8_MEMBER(mac_via_in_a);
 	DECLARE_READ8_MEMBER(mac_via_in_b);
+	DECLARE_READ8_MEMBER(mac_via_in_b_ii);
 	DECLARE_WRITE8_MEMBER(mac_via_out_a);
 	DECLARE_WRITE8_MEMBER(mac_via_out_b);
 	DECLARE_READ8_MEMBER(mac_via_in_a_pmu);
@@ -526,4 +577,4 @@ public:
 	offs_t mac_dasm_override(std::ostream &stream, offs_t pc, const util::disasm_interface::data_buffer &opcodes, const util::disasm_interface::data_buffer &params);
 };
 
-#endif /* MAC_H_ */
+#endif // MAME_INCLUDES_MAC_H

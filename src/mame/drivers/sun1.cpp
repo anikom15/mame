@@ -75,6 +75,8 @@ public:
 	{
 	}
 
+	void sun1(machine_config &config);
+	void sun1_mem(address_map &map);
 protected:
 	virtual void machine_reset() override;
 
@@ -84,16 +86,17 @@ protected:
 };
 
 
-static ADDRESS_MAP_START(sun1_mem, AS_PROGRAM, 16, sun1_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00000000, 0x001fffff) AM_RAM AM_SHARE("p_ram") // 512 KB RAM / ROM at boot
-	AM_RANGE(0x00200000, 0x00203fff) AM_ROM AM_REGION("user1",0)
-	AM_RANGE(0x00600000, 0x00600007) AM_MIRROR(0x1ffff8) AM_DEVREADWRITE8("iouart", upd7201_new_device, ba_cd_r, ba_cd_w, 0xff00)
-	AM_RANGE(0x00800000, 0x00800003) AM_MIRROR(0x1ffffc) AM_DEVREADWRITE("timer", am9513_device, read16, write16)
-	AM_RANGE(0x00a00000, 0x00bfffff) AM_UNMAP // page map
-	AM_RANGE(0x00c00000, 0x00dfffff) AM_UNMAP // segment map
-	AM_RANGE(0x00e00000, 0x00ffffff) AM_UNMAP // context register
-ADDRESS_MAP_END
+void sun1_state::sun1_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x00000000, 0x001fffff).ram().share("p_ram"); // 512 KB RAM / ROM at boot
+	map(0x00200000, 0x00203fff).rom().region("user1", 0);
+	map(0x00600000, 0x00600007).mirror(0x1ffff8).rw(m_iouart, FUNC(upd7201_new_device::ba_cd_r), FUNC(upd7201_new_device::ba_cd_w)).umask16(0xff00);
+	map(0x00800000, 0x00800003).mirror(0x1ffffc).rw("timer", FUNC(am9513_device::read16), FUNC(am9513_device::write16));
+	map(0x00a00000, 0x00bfffff).unmaprw(); // page map
+	map(0x00c00000, 0x00dfffff).unmaprw(); // segment map
+	map(0x00e00000, 0x00ffffff).unmaprw(); // context register
+}
 
 /* Input ports */
 static INPUT_PORTS_START( sun1 )
@@ -110,12 +113,12 @@ void sun1_state::machine_reset()
 }
 
 
-static MACHINE_CONFIG_START( sun1 )
+MACHINE_CONFIG_START(sun1_state::sun1)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_16MHz / 2)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(sun1_mem)
 
-	MCFG_DEVICE_ADD("timer", AM9513, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("timer", AM9513, XTAL(16'000'000) / 4)
 	MCFG_AM9513_FOUT_CALLBACK(DEVWRITELINE("timer", am9513_device, gate1_w))
 	MCFG_AM9513_OUT1_CALLBACK(NOOP) // Watchdog; generates BERR/Reset
 	MCFG_AM9513_OUT2_CALLBACK(INPUTLINE("maincpu", M68K_IRQ_6)) // User timer
@@ -125,7 +128,7 @@ static MACHINE_CONFIG_START( sun1 )
 	MCFG_AM9513_OUT5_CALLBACK(DEVWRITELINE("iouart", upd7201_new_device, rxcb_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("iouart", upd7201_new_device, txcb_w))
 
-	MCFG_DEVICE_ADD("iouart", UPD7201_NEW, XTAL_16MHz / 4)
+	MCFG_DEVICE_ADD("iouart", UPD7201_NEW, XTAL(16'000'000) / 4)
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_dtr))
 	MCFG_Z80SIO_OUT_RTSA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_rts))

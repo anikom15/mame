@@ -17,7 +17,7 @@ public:
 		m_vram_base(*this, "vram_base"),
 		m_nvram(*this, "nvram") { }
 
-	required_device<cpu_device> m_maincpu;
+	required_device<tms34010_device> m_maincpu;
 	required_device<cpu_device> m_dsp;
 	optional_device<tlc34076_device> m_tlc34076;
 
@@ -77,4 +77,14 @@ public:
 	TIMER_DEVICE_CALLBACK_MEMBER(amerdart_audio_int_gen);
 	void register_state_save();
 	int amerdart_trackball_direction(int num, int data);
+	void _9ballsht(machine_config &config);
+	void coolpool(machine_config &config);
+	void amerdart(machine_config &config);
+	void amerdart_dsp_io_map(address_map &map);
+	void amerdart_dsp_pgm_map(address_map &map);
+	void amerdart_map(address_map &map);
+	void coolpool_dsp_io_map(address_map &map);
+	void coolpool_dsp_pgm_map(address_map &map);
+	void coolpool_map(address_map &map);
+	void nballsht_map(address_map &map);
 };

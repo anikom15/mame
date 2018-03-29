@@ -10,6 +10,8 @@ public:
 	tceptor_state(const machine_config &mconfig, device_type type, const char *tag)
 		: driver_device(mconfig, type, tag),
 		m_maincpu(*this, "maincpu"),
+		m_subcpu(*this, "sub"),
+		m_mcu(*this, "mcu"),
 		m_cus30(*this, "namco"),
 		m_tile_ram(*this, "tile_ram"),
 		m_tile_attr(*this, "tile_attr"),
@@ -25,6 +27,8 @@ public:
 	uint8_t m_m68k_irq_enable;
 	uint8_t m_mcu_irq_enable;
 	required_device<cpu_device> m_maincpu;
+	required_device<cpu_device> m_subcpu;
+	required_device<cpu_device> m_mcu;
 	required_device<namco_cus30_device> m_cus30;
 	required_shared_ptr<uint8_t> m_tile_ram;
 	required_shared_ptr<uint8_t> m_tile_attr;
@@ -89,4 +93,11 @@ public:
 	void draw_sprites(bitmap_ind16 &bitmap, const rectangle &cliprect, int sprite_priority);
 	inline uint8_t fix_input0(uint8_t in1, uint8_t in2);
 	inline uint8_t fix_input1(uint8_t in1, uint8_t in2);
+	void tceptor(machine_config &config);
+	void m6502_a_map(address_map &map);
+	void m6502_b_map(address_map &map);
+	void m6809_map(address_map &map);
+	void m68k_map(address_map &map);
+	void mcu_io_map(address_map &map);
+	void mcu_map(address_map &map);
 };

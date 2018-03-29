@@ -184,10 +184,10 @@ Table 3-2.  TMS32025/26 Memory Blocks
 #define IND     m_AR[ARP]                       /* address used in indirect memory access operations */
 
 
-DEFINE_DEVICE_TYPE(TMS32025, tms32025_device, "tms32025", "TMS32025")
-DEFINE_DEVICE_TYPE(TMS32026, tms32026_device, "tms32026", "TMS32026")
+DEFINE_DEVICE_TYPE(TMS32025, tms32025_device, "tms32025", "Texas Instruments TMS32025")
+DEFINE_DEVICE_TYPE(TMS32026, tms32026_device, "tms32026", "Texas Instruments TMS32026")
 
-static ADDRESS_MAP_START( tms32025_data, AS_DATA, 16, tms32025_device )
+ADDRESS_MAP_START(tms32025_device::tms32025_data)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE(drr_r, drr_w)
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE(dxr_r, dxr_w)
 	AM_RANGE(0x0002, 0x0002) AM_READWRITE(tim_r, tim_w)
@@ -199,7 +199,7 @@ static ADDRESS_MAP_START( tms32025_data, AS_DATA, 16, tms32025_device )
 	AM_RANGE(0x0300, 0x03ff) AM_RAM AM_SHARE("b1")
 ADDRESS_MAP_END
 
-static ADDRESS_MAP_START( tms32026_data, AS_DATA, 16, tms32025_device )
+ADDRESS_MAP_START(tms32025_device::tms32026_data)
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE(drr_r, drr_w)
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE(dxr_r, dxr_w)
 	AM_RANGE(0x0002, 0x0002) AM_READWRITE(tim_r, tim_w)
@@ -214,7 +214,7 @@ ADDRESS_MAP_END
 
 
 tms32025_device::tms32025_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: tms32025_device(mconfig, TMS32025, tag, owner, clock, ADDRESS_MAP_NAME(tms32025_data))
+	: tms32025_device(mconfig, TMS32025, tag, owner, clock, address_map_constructor(FUNC(tms32025_device::tms32025_data), this))
 {
 	m_fixed_STR1 = 0x0180;
 }
@@ -240,7 +240,7 @@ tms32025_device::tms32025_device(const machine_config &mconfig, device_type type
 
 
 tms32026_device::tms32026_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: tms32025_device(mconfig, TMS32026, tag, owner, clock, ADDRESS_MAP_NAME(tms32026_data))
+	: tms32025_device(mconfig, TMS32026, tag, owner, clock, address_map_constructor(FUNC(tms32026_device::tms32026_data), this))
 {
 	m_fixed_STR1 = 0x0100;
 }
@@ -254,9 +254,9 @@ device_memory_interface::space_config_vector tms32025_device::memory_space_confi
 	};
 }
 
-util::disasm_interface *tms32025_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> tms32025_device::create_disassembler()
 {
-	return new tms32025_disassembler;
+	return std::make_unique<tms32025_disassembler>();
 }
 
 READ16_MEMBER( tms32025_device::drr_r)
@@ -1725,7 +1725,7 @@ void tms32025_device::device_start()
 	state_add(STATE_GENSP, "GENSP", m_STACK[7]).formatstr("%04X").noshow();
 	state_add(STATE_GENFLAGS, "GENFLAGS",  m_STR0).formatstr("%33s").noshow();
 
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 }
 
 
@@ -1952,7 +1952,7 @@ void tms32025_device::execute_run()
 	while (m_idle && m_icount > 0)
 		process_timer(m_icount);
 
-	if (m_icount <= 0) debugger_instruction_hook(this, m_PC);
+	if (m_icount <= 0) debugger_instruction_hook(m_PC);
 
 
 	while (m_icount > 0)
@@ -1965,7 +1965,7 @@ void tms32025_device::execute_run()
 
 		m_PREVPC = m_PC;
 
-		debugger_instruction_hook(this, m_PC);
+		debugger_instruction_hook(m_PC);
 
 		m_opcode.d = m_direct->read_word(m_PC);
 		m_PC++;
@@ -1999,7 +1999,7 @@ void tms32025_device::execute_run()
 			\****************************************************/
 			m_PREVPC = m_PC;
 
-			debugger_instruction_hook(this, m_PC);
+			debugger_instruction_hook(m_PC);
 
 			m_opcode.d = m_direct->read_word(m_PC);
 			m_PC++;

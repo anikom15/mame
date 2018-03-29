@@ -92,37 +92,39 @@ TODO:
 #include "includes/osborne1.h"
 
 #include "bus/rs232/rs232.h"
-#include "screen.h"
 #include "speaker.h"
 
 #include "softlist.h"
 
 
-#define MAIN_CLOCK  XTAL_15_9744MHz
+static constexpr XTAL MAIN_CLOCK = 15.9744_MHz_XTAL;
 
 
-static ADDRESS_MAP_START( osborne1_mem, AS_PROGRAM, 8, osborne1_state )
-	AM_RANGE( 0x0000, 0x0FFF ) AM_READ_BANK("bank_0xxx") AM_WRITE(bank_0xxx_w)
-	AM_RANGE( 0x1000, 0x1FFF ) AM_READ_BANK("bank_1xxx") AM_WRITE(bank_1xxx_w)
-	AM_RANGE( 0x2000, 0x3FFF ) AM_READWRITE(bank_2xxx_3xxx_r, bank_2xxx_3xxx_w)
-	AM_RANGE( 0x4000, 0xEFFF ) AM_RAM
-	AM_RANGE( 0xF000, 0xFFFF ) AM_READ_BANK("bank_fxxx") AM_WRITE(videoram_w)
-ADDRESS_MAP_END
+void osborne1_state::osborne1_mem(address_map &map)
+{
+	map(0x0000, 0x0FFF).bankr("bank_0xxx").w(this, FUNC(osborne1_state::bank_0xxx_w));
+	map(0x1000, 0x1FFF).bankr("bank_1xxx").w(this, FUNC(osborne1_state::bank_1xxx_w));
+	map(0x2000, 0x3FFF).rw(this, FUNC(osborne1_state::bank_2xxx_3xxx_r), FUNC(osborne1_state::bank_2xxx_3xxx_w));
+	map(0x4000, 0xEFFF).ram();
+	map(0xF000, 0xFFFF).bankr("bank_fxxx").w(this, FUNC(osborne1_state::videoram_w));
+}
 
 
-static ADDRESS_MAP_START( osborne1_op, AS_OPCODES, 8, osborne1_state )
-	AM_RANGE( 0x0000, 0xFFFF ) AM_READ(opcode_r)
-ADDRESS_MAP_END
+void osborne1_state::osborne1_op(address_map &map)
+{
+	map(0x0000, 0xFFFF).r(this, FUNC(osborne1_state::opcode_r));
+}
 
 
-static ADDRESS_MAP_START( osborne1_io, AS_IO, 8, osborne1_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void osborne1_state::osborne1_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
 
-	AM_RANGE( 0x00, 0x03 ) AM_MIRROR( 0xfc ) AM_WRITE(bankswitch_w)
-ADDRESS_MAP_END
+	map(0x00, 0x03).mirror(0xfc).w(this, FUNC(osborne1_state::bankswitch_w));
+}
 
-static ADDRESS_MAP_START( osborne1nv_io, AS_IO, 8, osborne1_state )
+ADDRESS_MAP_START(osborne1_state::osborne1nv_io)
 	ADDRESS_MAP_UNMAP_HIGH
 	ADDRESS_MAP_GLOBAL_MASK(0xff)
 
@@ -279,10 +281,10 @@ static GFXDECODE_START( osborne1 )
 GFXDECODE_END
 
 
-static MACHINE_CONFIG_START( osborne1 )
+MACHINE_CONFIG_START(osborne1_state::osborne1)
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK/4)
 	MCFG_CPU_PROGRAM_MAP(osborne1_mem)
-	MCFG_CPU_DECRYPTED_OPCODES_MAP(osborne1_op)
+	MCFG_CPU_OPCODES_MAP(osborne1_op)
 	MCFG_CPU_IO_MAP(osborne1_io)
 	MCFG_Z80_SET_IRQACK_CALLBACK(WRITELINE(osborne1_state, irqack_w))
 
@@ -338,7 +340,8 @@ static MACHINE_CONFIG_START( osborne1 )
 	MCFG_SOFTWARE_LIST_ADD("flop_list","osborne1")
 MACHINE_CONFIG_END
 
-MACHINE_CONFIG_DERIVED( osborne1nv, osborne1 )
+MACHINE_CONFIG_START(osborne1nv_state::osborne1nv)
+	osborne1(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_IO_MAP(osborne1nv_io)
 
@@ -346,7 +349,7 @@ MACHINE_CONFIG_DERIVED( osborne1nv, osborne1 )
 	MCFG_SCREEN_NO_PALETTE
 	MCFG_SCREEN_UPDATE_DEVICE("crtc", mc6845_device, screen_update)
 
-	MCFG_MC6845_ADD("crtc", SY6545_1, "screen", XTAL_12_288MHz/8)
+	MCFG_MC6845_ADD("crtc", SY6545_1, "screen", XTAL(12'288'000)/8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(osborne1nv_state, crtc_update_row)

@@ -239,7 +239,7 @@ TODO:
 
 #include "formats/spc1000_cas.h"
 
-#define VDP_CLOCK  XTAL_42_9545MHz
+#define VDP_CLOCK  XTAL(42'954'545)
 
 class spc1500_state : public driver_device
 {
@@ -291,6 +291,9 @@ public:
 	MC6845_UPDATE_ROW(crtc_update_row);
 	MC6845_RECONFIGURE(crtc_reconfig);
 	TIMER_DEVICE_CALLBACK_MEMBER(timer);
+	void spc1500(machine_config &config);
+	void spc1500_double_io(address_map &map);
+	void spc1500_mem(address_map &map);
 private:
 	uint8_t *m_p_ram;
 	uint8_t m_ipl;
@@ -676,12 +679,13 @@ READ8_MEMBER( spc1500_state::io_r)
 	return 0xff;
 }
 
-static ADDRESS_MAP_START( spc1500_double_io , AS_IO, 8, spc1500_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(io_r, double_w)
-	AM_RANGE(0x2000, 0xffff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x0000, 0x17ff) AM_RAM AM_SHARE("pcgram")
-ADDRESS_MAP_END
+void spc1500_state::spc1500_double_io(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x2000, 0xffff).ram().share("videoram");
+	map(0x0000, 0x17ff).ram().share("pcgram");
+	map(0x0000, 0xffff).rw(this, FUNC(spc1500_state::io_r), FUNC(spc1500_state::double_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( spc1500 )
@@ -811,11 +815,12 @@ static INPUT_PORTS_START( spc1500 )
 	PORT_BIT(0x80, IP_ACTIVE_HIGH,IPT_UNUSED) // DIP SW3 for 200/400 line
 INPUT_PORTS_END
 
-static ADDRESS_MAP_START(spc1500_mem, AS_PROGRAM, 8, spc1500_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_READ_BANK("bank1") AM_WRITE_BANK("bank2")
-	AM_RANGE(0x8000, 0xffff) AM_READWRITE_BANK("bank4")
-ADDRESS_MAP_END
+void spc1500_state::spc1500_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).bankr("bank1").bankw("bank2");
+	map(0x8000, 0xffff).bankrw("bank4");
+}
 
 void spc1500_state::machine_start()
 {
@@ -867,9 +872,9 @@ READ8_MEMBER( spc1500_state::porta_r )
 	return data;
 }
 
-static MACHINE_CONFIG_START( spc1500 )
+MACHINE_CONFIG_START(spc1500_state::spc1500)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(spc1500_mem)
 	//MCFG_CPU_IO_MAP(spc1500_io)
 	MCFG_CPU_IO_MAP(spc1500_double_io)
@@ -902,7 +907,7 @@ static MACHINE_CONFIG_START( spc1500 )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("ay8910", AY8910, XTAL_4MHz / 2)
+	MCFG_SOUND_ADD("ay8910", AY8910, XTAL(4'000'000) / 2)
 	MCFG_AY8910_PORT_A_READ_CB(READ8(spc1500_state, psga_r))
 	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(spc1500_state, psgb_w))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)

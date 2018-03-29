@@ -75,6 +75,9 @@ public:
 	DECLARE_READ8_MEMBER(dma_r);
 	I8275_DRAW_CHARACTER_MEMBER(display_pixels);
 
+	void unior(machine_config &config);
+	void unior_io(address_map &map);
+	void unior_mem(address_map &map);
 private:
 	uint8_t m_4c;
 	uint8_t m_4e;
@@ -87,24 +90,26 @@ private:
 	required_region_ptr<u8> m_p_vram;
 };
 
-static ADDRESS_MAP_START( unior_mem, AS_PROGRAM, 8, unior_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xf7ff) AM_RAM
-	AM_RANGE(0xf800, 0xffff) AM_ROM AM_WRITE(vram_w) // main video
-ADDRESS_MAP_END
+void unior_state::unior_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xf7ff).ram();
+	map(0xf800, 0xffff).rom().w(this, FUNC(unior_state::vram_w)); // main video
+}
 
-static ADDRESS_MAP_START( unior_io, AS_IO, 8, unior_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x30, 0x38) AM_DEVREADWRITE("dma", i8257_device, read, write) // dma data
-	AM_RANGE(0x3c, 0x3f) AM_DEVREADWRITE("ppi0", i8255_device, read, write) // cassette player control
-	AM_RANGE(0x4c, 0x4f) AM_DEVREADWRITE("ppi1", i8255_device, read, write)
-	AM_RANGE(0x50, 0x50) AM_WRITE(scroll_w)
-	AM_RANGE(0x60, 0x61) AM_DEVREADWRITE("crtc", i8275_device, read, write)
-	AM_RANGE(0xdc, 0xdf) AM_DEVREADWRITE("pit", pit8253_device, read, write )
-	AM_RANGE(0xec, 0xec) AM_DEVREADWRITE("uart",i8251_device, data_r, data_w)
-	AM_RANGE(0xed, 0xed) AM_DEVREADWRITE("uart", i8251_device, status_r, control_w)
-ADDRESS_MAP_END
+void unior_state::unior_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0x30, 0x38).rw(m_dma, FUNC(i8257_device::read), FUNC(i8257_device::write)); // dma data
+	map(0x3c, 0x3f).rw("ppi0", FUNC(i8255_device::read), FUNC(i8255_device::write)); // cassette player control
+	map(0x4c, 0x4f).rw("ppi1", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x50, 0x50).w(this, FUNC(unior_state::scroll_w));
+	map(0x60, 0x61).rw("crtc", FUNC(i8275_device::read), FUNC(i8275_device::write));
+	map(0xdc, 0xdf).rw(m_pit, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xec, 0xec).rw("uart", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xed, 0xed).rw("uart", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( unior )
@@ -373,9 +378,9 @@ void unior_state::machine_reset()
 	m_maincpu->set_state_int(i8080_cpu_device::I8085_PC, 0xF800);
 }
 
-static MACHINE_CONFIG_START( unior )
+MACHINE_CONFIG_START(unior_state::unior)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",I8080, XTAL_20MHz / 9)
+	MCFG_CPU_ADD("maincpu",I8080, XTAL(20'000'000) / 9)
 	MCFG_CPU_PROGRAM_MAP(unior_mem)
 	MCFG_CPU_IO_MAP(unior_io)
 
@@ -398,11 +403,11 @@ static MACHINE_CONFIG_START( unior )
 	MCFG_DEVICE_ADD("uart", I8251, 0)
 
 	MCFG_DEVICE_ADD("pit", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_20MHz / 12)
-	MCFG_PIT8253_CLK1(XTAL_20MHz / 9)
+	MCFG_PIT8253_CLK0(XTAL(20'000'000) / 12)
+	MCFG_PIT8253_CLK1(XTAL(20'000'000) / 9)
 	MCFG_PIT8253_OUT1_HANDLER(DEVWRITELINE("uart", i8251_device, write_txc))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart", i8251_device, write_rxc))
-	MCFG_PIT8253_CLK2(XTAL_16MHz / 9 / 64) // unknown frequency
+	MCFG_PIT8253_CLK2(XTAL(16'000'000) / 9 / 64) // unknown frequency
 	MCFG_PIT8253_OUT2_HANDLER(DEVWRITELINE("speaker", speaker_sound_device, level_w))
 
 	MCFG_DEVICE_ADD("ppi0", I8255, 0)
@@ -419,12 +424,12 @@ static MACHINE_CONFIG_START( unior )
 	MCFG_I8255_IN_PORTC_CB(READ8(unior_state, ppi1_c_r))
 	MCFG_I8255_OUT_PORTC_CB(WRITE8(unior_state, ppi1_c_w))
 
-	MCFG_DEVICE_ADD("dma", I8257, XTAL_20MHz / 9)
+	MCFG_DEVICE_ADD("dma", I8257, XTAL(20'000'000) / 9)
 	MCFG_I8257_OUT_HRQ_CB(WRITELINE(unior_state, hrq_w))
 	MCFG_I8257_IN_MEMR_CB(READ8(unior_state, dma_r))
 	MCFG_I8257_OUT_IOW_2_CB(DEVWRITE8("crtc", i8275_device, dack_w))
 
-	MCFG_DEVICE_ADD("crtc", I8275, XTAL_20MHz / 12)
+	MCFG_DEVICE_ADD("crtc", I8275, XTAL(20'000'000) / 12)
 	MCFG_I8275_CHARACTER_WIDTH(6)
 	MCFG_I8275_DRAW_CHARACTER_CALLBACK_OWNER(unior_state, display_pixels)
 	MCFG_I8275_DRQ_CALLBACK(DEVWRITELINE("dma",i8257_device, dreq2_w))

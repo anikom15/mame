@@ -38,6 +38,9 @@ public:
 
 	MC6845_UPDATE_ROW(crtc_update_row);
 
+	void sys9002(machine_config &config);
+	void sys9002_io(address_map &map);
+	void sys9002_mem(address_map &map);
 private:
 	required_device<cpu_device> m_maincpu;
 	required_shared_ptr<uint8_t> m_p_videoram;
@@ -45,25 +48,27 @@ private:
 };
 
 
-static ADDRESS_MAP_START(sys9002_mem, AS_PROGRAM, 8, sys9002_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x7fff) AM_ROM // 4 * 4K ROM
-	AM_RANGE(0x8000, 0x9fff) AM_RAM // 4 * 2k RAM
-	AM_RANGE(0xa000, 0xa7ff) AM_RAM AM_SHARE("videoram") // 2k RAM
-	AM_RANGE(0xc000, 0xc07f) AM_RAM // ??
-ADDRESS_MAP_END
+void sys9002_state::sys9002_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x7fff).rom(); // 4 * 4K ROM
+	map(0x8000, 0x9fff).ram(); // 4 * 2k RAM
+	map(0xa000, 0xa7ff).ram().share("videoram"); // 2k RAM
+	map(0xc000, 0xc07f).ram(); // ??
+}
 
-static ADDRESS_MAP_START(sys9002_io, AS_IO, 8, sys9002_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
+void sys9002_state::sys9002_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
 	//AM_RANGE(0x04, 0x04) AM_DEVREADWRITE("crtc", mc6845_device, status_r, address_w)  // left commented out as mame freezes after about 2 seconds
 	//AM_RANGE(0x05, 0x05) AM_DEVREADWRITE("crtc", mc6845_device, register_r, register_w)
-	AM_RANGE(0x08, 0x08) AM_DEVREADWRITE("uart1", i8251_device, data_r, data_w)
-	AM_RANGE(0x09, 0x09) AM_DEVREADWRITE("uart1", i8251_device, status_r, control_w) // 7 bits even parity, x64
-	AM_RANGE(0x11, 0x11) AM_READNOP  // continuous read
-	AM_RANGE(0x1c, 0x1c) AM_DEVREADWRITE("uart2", i8251_device, data_r, data_w)
-	AM_RANGE(0x1d, 0x1d) AM_DEVREADWRITE("uart2", i8251_device, status_r, control_w) // enabled for transmit only, 8 bits odd parity, x64
-ADDRESS_MAP_END
+	map(0x08, 0x08).rw("uart1", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x09, 0x09).rw("uart1", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w)); // 7 bits even parity, x64
+	map(0x11, 0x11).nopr();  // continuous read
+	map(0x1c, 0x1c).rw("uart2", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x1d, 0x1d).rw("uart2", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w)); // enabled for transmit only, 8 bits odd parity, x64
+}
 
 /* Input ports */
 static INPUT_PORTS_START( sys9002 )
@@ -115,9 +120,9 @@ static DEVICE_INPUT_DEFAULTS_START( uart2 )
 	DEVICE_INPUT_DEFAULTS( "RS232_STOPBITS", 0xff, RS232_STOPBITS_1 )
 DEVICE_INPUT_DEFAULTS_END
 
-static MACHINE_CONFIG_START( sys9002 )
+MACHINE_CONFIG_START(sys9002_state::sys9002)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",I8085A, XTAL_2MHz) // XTAL not visible on images
+	MCFG_CPU_ADD("maincpu",I8085A, XTAL(2'000'000)) // XTAL not visible on images
 	MCFG_CPU_PROGRAM_MAP(sys9002_mem)
 	MCFG_CPU_IO_MAP(sys9002_io)
 
@@ -132,7 +137,7 @@ static MACHINE_CONFIG_START( sys9002 )
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
 	/* Devices */
-	MCFG_MC6845_ADD("crtc", MC6845, "screen", XTAL_2MHz) // clk unknown
+	MCFG_MC6845_ADD("crtc", MC6845, "screen", XTAL(2'000'000)) // clk unknown
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8)
 	MCFG_MC6845_UPDATE_ROW_CB(sys9002_state, crtc_update_row)

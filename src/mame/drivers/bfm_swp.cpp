@@ -127,6 +127,8 @@ public:
 		return 0;
 	}
 
+	void bfm_swp(machine_config &config);
+	void bfm_swp_map(address_map &map);
 protected:
 
 	// devices
@@ -180,10 +182,11 @@ WRITE32_MEMBER(bfm_swp_state::bfm_swp_mem_w)
 
 
 
-static ADDRESS_MAP_START( bfm_swp_map, AS_PROGRAM, 32, bfm_swp_state )
-	AM_RANGE(0x00000000, 0x000fffff) AM_ROM
-	AM_RANGE(0x00000000, 0xffffffff) AM_READWRITE(bfm_swp_mem_r, bfm_swp_mem_w)
-ADDRESS_MAP_END
+void bfm_swp_state::bfm_swp_map(address_map &map)
+{
+	map(0x00000000, 0xffffffff).rw(this, FUNC(bfm_swp_state::bfm_swp_mem_r), FUNC(bfm_swp_state::bfm_swp_mem_w));
+	map(0x00000000, 0x000fffff).rom();
+}
 
 
 static INPUT_PORTS_START( bfm_swp )
@@ -198,7 +201,7 @@ void bfm_swp_state::machine_start()
 }
 
 
-static MACHINE_CONFIG_START( bfm_swp )
+MACHINE_CONFIG_START(bfm_swp_state::bfm_swp)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68340, 16000000)

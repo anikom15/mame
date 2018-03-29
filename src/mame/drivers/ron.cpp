@@ -26,9 +26,9 @@ Debug cheats:
 #include "debugger.h"
 
 // TBD
-#define MAIN_CLOCK (XTAL_15_468MHz / 4)
-#define VIDEO_CLOCK (XTAL_15_468MHz / 3)
-#define SOUND_CLOCK XTAL_3_579545MHz
+#define MAIN_CLOCK (XTAL(15'468'480) / 4)
+#define VIDEO_CLOCK (XTAL(15'468'480) / 3)
+#define SOUND_CLOCK XTAL(3'579'545)
 
 class ron_state : public driver_device
 {
@@ -53,7 +53,7 @@ public:
 	// screen updates
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_PALETTE_INIT(ron);
-	INTERRUPT_GEN_MEMBER(vblank_irq);
+	DECLARE_WRITE_LINE_MEMBER(vblank_irq);
 
 	DECLARE_WRITE8_MEMBER(output_w);
 	DECLARE_READ8_MEMBER(p1_mux_r);
@@ -66,6 +66,11 @@ public:
 	DECLARE_READ_LINE_MEMBER(audio_T1_r);
 	DECLARE_WRITE8_MEMBER(ay_pa_w);
 
+	void ron(machine_config &config);
+	void ron_audio_io(address_map &map);
+	void ron_audio_map(address_map &map);
+	void ron_io(address_map &map);
+	void ron_map(address_map &map);
 protected:
 	// driver_device overrides
 	virtual void machine_start() override;
@@ -138,6 +143,8 @@ uint32_t ron_state::screen_update( screen_device &screen, bitmap_ind16 &bitmap, 
 WRITE8_MEMBER(ron_state::output_w)
 {
 	m_nmi_enable = (data & 0x10) == 0x10;
+	if (!m_nmi_enable)
+		m_maincpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
 
 	if(data & 0xef)
 		printf("%02x\n",data);
@@ -190,31 +197,35 @@ WRITE8_MEMBER(ron_state::sound_cmd_w)
 	m_audiocpu->set_input_line(INPUT_LINE_RESET, BIT(data, 7) ? CLEAR_LINE : ASSERT_LINE);
 }
 
-static ADDRESS_MAP_START( ron_map, AS_PROGRAM, 8, ron_state )
-	AM_RANGE(0x0000, 0x4fff) AM_ROM
-	AM_RANGE(0x8000, 0x83ff) AM_RAM AM_SHARE("vram")
-	AM_RANGE(0x8400, 0x87ff) AM_RAM
-	AM_RANGE(0x8800, 0x8bff) AM_RAM AM_SHARE("cram")
-	AM_RANGE(0x8c00, 0x8fff) AM_RAM
-ADDRESS_MAP_END
+void ron_state::ron_map(address_map &map)
+{
+	map(0x0000, 0x4fff).rom();
+	map(0x8000, 0x83ff).ram().share("vram");
+	map(0x8400, 0x87ff).ram();
+	map(0x8800, 0x8bff).ram().share("cram");
+	map(0x8c00, 0x8fff).ram();
+}
 
-static ADDRESS_MAP_START( ron_io, AS_IO, 8, ron_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00, 0x01) AM_READ(p1_mux_r)
-	AM_RANGE(0x02, 0x03) AM_READ(p2_mux_r)
-	AM_RANGE(0x03, 0x03) AM_WRITE(mux_w)
-	AM_RANGE(0x07, 0x07) AM_WRITE(sound_cmd_w)
-	AM_RANGE(0x0a, 0x0a) AM_WRITE(output_w)
-ADDRESS_MAP_END
+void ron_state::ron_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
+	map(0x00, 0x01).r(this, FUNC(ron_state::p1_mux_r));
+	map(0x02, 0x03).r(this, FUNC(ron_state::p2_mux_r));
+	map(0x03, 0x03).w(this, FUNC(ron_state::mux_w));
+	map(0x07, 0x07).w(this, FUNC(ron_state::sound_cmd_w));
+	map(0x0a, 0x0a).w(this, FUNC(ron_state::output_w));
+}
 
-static ADDRESS_MAP_START( ron_audio_map, AS_PROGRAM, 8, ron_state)
-	AM_RANGE(0x0000,0x0fff) AM_ROM
-ADDRESS_MAP_END
+void ron_state::ron_audio_map(address_map &map)
+{
+	map(0x0000, 0x0fff).rom();
+}
 
-static ADDRESS_MAP_START( ron_audio_io, AS_IO, 8, ron_state)
+void ron_state::ron_audio_io(address_map &map)
+{
 
-ADDRESS_MAP_END
+}
 
 static INPUT_PORTS_START( ron )
 	PORT_START("IN0")
@@ -418,10 +429,10 @@ PALETTE_INIT_MEMBER(ron_state, ron)
 }
 
 
-INTERRUPT_GEN_MEMBER( ron_state::vblank_irq )
+WRITE_LINE_MEMBER(ron_state::vblank_irq)
 {
-	if (m_nmi_enable)
-		device.execute().set_input_line(INPUT_LINE_NMI, PULSE_LINE);
+	if (state && m_nmi_enable)
+		m_maincpu->set_input_line(INPUT_LINE_NMI, ASSERT_LINE);
 }
 
 READ8_MEMBER(ron_state::audio_cmd_r)
@@ -472,13 +483,12 @@ WRITE8_MEMBER(ron_state::ay_pa_w)
 {
 }
 
-static MACHINE_CONFIG_START( ron )
+MACHINE_CONFIG_START(ron_state::ron)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(ron_map)
 	MCFG_CPU_IO_MAP(ron_io)
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", ron_state, vblank_irq)
 
 	MCFG_CPU_ADD("audiocpu", I8035, SOUND_CLOCK)
 	MCFG_CPU_PROGRAM_MAP(ron_audio_map)
@@ -494,6 +504,7 @@ static MACHINE_CONFIG_START( ron )
 	MCFG_SCREEN_UPDATE_DRIVER(ron_state, screen_update)
 	MCFG_SCREEN_RAW_PARAMS(VIDEO_CLOCK, 320, 0, 256, 264, 0, 240)
 	MCFG_SCREEN_PALETTE("palette")
+	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(ron_state, vblank_irq))
 
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", ron)
 

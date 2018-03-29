@@ -57,6 +57,9 @@ public:
 		, m_rs232(*this, RS232_TAG)
 	{ }
 
+	void isbc8030(machine_config &config);
+	void isbc8030_io(address_map &map);
+	void isbc8030_mem(address_map &map);
 private:
 	required_device<cpu_device> m_maincpu;
 	required_device<i8251_device> m_usart;
@@ -66,28 +69,30 @@ private:
 	required_device<rs232_port_device> m_rs232;
 };
 
-static ADDRESS_MAP_START(isbc8030_mem, AS_PROGRAM, 8, isbc8030_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x2000, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void isbc8030_state::isbc8030_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x1fff).rom();
+	map(0x2000, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START(isbc8030_io, AS_IO, 8, isbc8030_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0xd8, 0xd9) AM_DEVREADWRITE(I8259A_TAG, pic8259_device, read, write)
-	AM_RANGE(0xdc, 0xdf) AM_DEVREADWRITE(I8253_TAG, pit8253_device, read, write)
-	AM_RANGE(0xe8, 0xeb) AM_DEVREADWRITE(I8255A_TAG, i8255_device, read, write)
-	AM_RANGE(0xec, 0xec) AM_MIRROR(0x02) AM_DEVREADWRITE(I8251A_TAG, i8251_device, data_r, data_w)
-	AM_RANGE(0xed, 0xed) AM_MIRROR(0x02) AM_DEVREADWRITE(I8251A_TAG, i8251_device, status_r, control_w)
-ADDRESS_MAP_END
+void isbc8030_state::isbc8030_io(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0xff);
+	map(0xd8, 0xd9).rw(m_pic, FUNC(pic8259_device::read), FUNC(pic8259_device::write));
+	map(0xdc, 0xdf).rw(m_pit, FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xe8, 0xeb).rw(m_ppi, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0xec, 0xec).mirror(0x02).rw(m_usart, FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0xed, 0xed).mirror(0x02).rw(m_usart, FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+}
 
 static INPUT_PORTS_START( isbc8030 )
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( isbc8030 )
+MACHINE_CONFIG_START(isbc8030_state::isbc8030)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", I8085A, XTAL_22_1184MHz / 4)
+	MCFG_CPU_ADD("maincpu", I8085A, XTAL(22'118'400) / 4)
 	MCFG_CPU_PROGRAM_MAP(isbc8030_mem)
 	MCFG_CPU_IO_MAP(isbc8030_io)
 
@@ -95,10 +100,10 @@ static MACHINE_CONFIG_START( isbc8030 )
 	MCFG_PIC8259_OUT_INT_CB(INPUTLINE("maincpu", 0))
 
 	MCFG_DEVICE_ADD(I8253_TAG, PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_22_1184MHz / 18)
+	MCFG_PIT8253_CLK0(XTAL(22'118'400) / 18)
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE(I8259A_TAG, pic8259_device, ir0_w))
-	MCFG_PIT8253_CLK1(XTAL_22_1184MHz / 18)
-	MCFG_PIT8253_CLK2(XTAL_22_1184MHz / 18)
+	MCFG_PIT8253_CLK1(XTAL(22'118'400) / 18)
+	MCFG_PIT8253_CLK2(XTAL(22'118'400) / 18)
 	MCFG_PIT8253_OUT2_HANDLER(DEVWRITELINE(I8251A_TAG, i8251_device, write_rxc))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE(I8251A_TAG, i8251_device, write_txc))
 

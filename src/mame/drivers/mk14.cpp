@@ -54,6 +54,7 @@ public:
 		, m_keyboard(*this, "X.%u", 0)
 		, m_cass(*this, "cassette")
 		, m_dac(*this, "dac")
+		, m_digits(*this, "digit%u", 0U)
 	{ }
 
 	DECLARE_READ8_MEMBER(keyboard_r);
@@ -61,12 +62,16 @@ public:
 	DECLARE_WRITE8_MEMBER(port_a_w);
 	DECLARE_WRITE_LINE_MEMBER(cass_w);
 	DECLARE_READ_LINE_MEMBER(cass_r);
+	void mk14(machine_config &config);
+	void mem_map(address_map &map);
 private:
 	virtual void machine_reset() override;
+	virtual void machine_start() override;
 	required_device<cpu_device> m_maincpu;
 	required_ioport_array<8> m_keyboard;
 	required_device<cassette_image_device> m_cass;
 	required_device<dac_bit_interface> m_dac;
+	output_finder<8> m_digits;
 };
 
 /*
@@ -98,23 +103,24 @@ READ8_MEMBER( mk14_state::keyboard_r )
 WRITE8_MEMBER( mk14_state::display_w )
 {
 	if (offset < 8 )
-		output().set_digit_value(offset, data);
+		m_digits[offset] = data;
 	else
 	{
 		//logerror("write %02x to %02x\n",data,offset);
 	}
 }
 
-static ADDRESS_MAP_START(mem_map, AS_PROGRAM, 8, mk14_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0x0fff)
-	AM_RANGE(0x000, 0x1ff) AM_MIRROR(0x600) AM_ROM // ROM
-	AM_RANGE(0x800, 0x87f) AM_MIRROR(0x600) AM_DEVREADWRITE("ic8", ins8154_device, ins8154_r, ins8154_w) // I/O
-	AM_RANGE(0x880, 0x8ff) AM_MIRROR(0x600) AM_RAM // 128 I/O chip RAM
-	AM_RANGE(0x900, 0x9ff) AM_MIRROR(0x400) AM_READWRITE(keyboard_r, display_w)
-	AM_RANGE(0xb00, 0xbff) AM_RAM // VDU RAM
-	AM_RANGE(0xf00, 0xfff) AM_RAM // Standard RAM
-ADDRESS_MAP_END
+void mk14_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map.global_mask(0x0fff);
+	map(0x000, 0x1ff).mirror(0x600).rom(); // ROM
+	map(0x800, 0x87f).mirror(0x600).rw("ic8", FUNC(ins8154_device::ins8154_r), FUNC(ins8154_device::ins8154_w)); // I/O
+	map(0x880, 0x8ff).mirror(0x600).ram(); // 128 I/O chip RAM
+	map(0x900, 0x9ff).mirror(0x400).rw(this, FUNC(mk14_state::keyboard_r), FUNC(mk14_state::display_w));
+	map(0xb00, 0xbff).ram(); // VDU RAM
+	map(0xf00, 0xfff).ram(); // Standard RAM
+}
 
 
 /* Input ports */
@@ -188,10 +194,15 @@ void mk14_state::machine_reset()
 {
 }
 
-static MACHINE_CONFIG_START( mk14 )
+void mk14_state::machine_start()
+{
+	m_digits.resolve();
+}
+
+MACHINE_CONFIG_START(mk14_state::mk14)
 	/* basic machine hardware */
 	// IC1 1SP-8A/600 (8060) SC/MP Microprocessor
-	MCFG_CPU_ADD("maincpu", INS8060, XTAL_4_433619MHz)
+	MCFG_CPU_ADD("maincpu", INS8060, XTAL(4'433'619))
 	MCFG_SCMP_CONFIG(WRITELINE(mk14_state, cass_w), NOOP, READLINE(mk14_state, cass_r), NOOP, READLINE(mk14_state, cass_r), NOOP)
 	MCFG_CPU_PROGRAM_MAP(mem_map)
 

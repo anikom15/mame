@@ -33,6 +33,9 @@ public:
 
 	uint32_t screen_update_m79152pc(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void m79152pc(machine_config &config);
+	void io_map(address_map &map);
+	void mem_map(address_map &map);
 private:
 	virtual void machine_reset() override;
 	required_shared_ptr<uint8_t> m_p_videoram;
@@ -42,20 +45,22 @@ private:
 	required_device<z80sio_device> m_uart;
 };
 
-static ADDRESS_MAP_START( mem_map, AS_PROGRAM, 8, m79152pc_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x47ff) AM_RAM
-	AM_RANGE(0x8000, 0x8fff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x9000, 0x9fff) AM_RAM AM_SHARE("attributes")
-ADDRESS_MAP_END
+void m79152pc_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x47ff).ram();
+	map(0x8000, 0x8fff).ram().share("videoram");
+	map(0x9000, 0x9fff).ram().share("attributes");
+}
 
-static ADDRESS_MAP_START( io_map, AS_IO, 8, m79152pc_state )
+void m79152pc_state::io_map(address_map &map)
+{
 	//ADDRESS_MAP_UNMAP_HIGH
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x40, 0x43) AM_DEVREADWRITE("uart", z80sio_device, cd_ba_r, cd_ba_w)
-	AM_RANGE(0x44, 0x47) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-ADDRESS_MAP_END
+	map.global_mask(0xff);
+	map(0x40, 0x43).rw(m_uart, FUNC(z80sio_device::cd_ba_r), FUNC(z80sio_device::cd_ba_w));
+	map(0x44, 0x47).rw("ctc", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( m79152pc )
@@ -119,9 +124,9 @@ static GFXDECODE_START( m79152pc )
 	GFXDECODE_ENTRY( "chargen", 0x0000, m79152pc_charlayout, 0, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( m79152pc )
+MACHINE_CONFIG_START(m79152pc_state::m79152pc)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",Z80, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu",Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(mem_map)
 	MCFG_CPU_IO_MAP(io_map)
 
@@ -140,10 +145,10 @@ static MACHINE_CONFIG_START( m79152pc )
 	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("uart", z80sio_device, txca_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart", z80sio_device, rxca_w))
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_4MHz)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(4'000'000))
 	//MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("uart", Z80SIO, XTAL_4MHz)
+	MCFG_DEVICE_ADD("uart", Z80SIO, XTAL(4'000'000))
 	//MCFG_Z80SIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs232", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRA_CB(DEVWRITELINE("rs232", rs232_port_device, write_dtr))

@@ -241,17 +241,15 @@ public:
 //      , m_maincpu(*this, "maincpu")
 	{ }
 
+void hp2100(machine_config &config);
 private:
 //  required_device<cpu_device> m_maincpu;
 };
 
-//static ADDRESS_MAP_START( mem_map, AS_PROGRAM, 16, hp2100_state )
-//ADDRESS_MAP_END
-
 static INPUT_PORTS_START( hp2100 )
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( hp2100 )
+MACHINE_CONFIG_START(hp2100_state::hp2100)
 MACHINE_CONFIG_END
 
 ROM_START( hp2100 )

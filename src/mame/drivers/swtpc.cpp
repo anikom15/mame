@@ -58,25 +58,29 @@ public:
 
 	virtual void machine_start() override;
 
+	void swtpcm(machine_config &config);
+	void swtpc(machine_config &config);
+	void mem_map(address_map &map);
 private:
 	required_device<cpu_device> m_maincpu;
 	required_device<ram_device> m_ram;
 	required_device<mc14411_device> m_brg;
 };
 
-static ADDRESS_MAP_START(mem_map, AS_PROGRAM, 8, swtpc_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x8000, 0x8003) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io0", ss50_interface_port_device, read, write)
-	AM_RANGE(0x8004, 0x8007) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io1", ss50_interface_port_device, read, write)
-	AM_RANGE(0x8008, 0x800b) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io2", ss50_interface_port_device, read, write)
-	AM_RANGE(0x800c, 0x800f) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io3", ss50_interface_port_device, read, write)
-	AM_RANGE(0x8010, 0x8013) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io4", ss50_interface_port_device, read, write)
-	AM_RANGE(0x8014, 0x8017) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io5", ss50_interface_port_device, read, write)
-	AM_RANGE(0x8018, 0x801b) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io6", ss50_interface_port_device, read, write)
-	AM_RANGE(0x801c, 0x801f) AM_MIRROR(0x1fc0) AM_DEVREADWRITE("io7", ss50_interface_port_device, read, write)
-	AM_RANGE(0xa000, 0xa07f) AM_RAM // MCM6810
-	AM_RANGE(0xe000, 0xe3ff) AM_MIRROR(0x1c00) AM_ROM AM_REGION("mcm6830", 0)
-ADDRESS_MAP_END
+void swtpc_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x8000, 0x8003).mirror(0x1fc0).rw("io0", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x8004, 0x8007).mirror(0x1fc0).rw("io1", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x8008, 0x800b).mirror(0x1fc0).rw("io2", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x800c, 0x800f).mirror(0x1fc0).rw("io3", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x8010, 0x8013).mirror(0x1fc0).rw("io4", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x8014, 0x8017).mirror(0x1fc0).rw("io5", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x8018, 0x801b).mirror(0x1fc0).rw("io6", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0x801c, 0x801f).mirror(0x1fc0).rw("io7", FUNC(ss50_interface_port_device::read), FUNC(ss50_interface_port_device::write));
+	map(0xa000, 0xa07f).ram(); // MCM6810
+	map(0xe000, 0xe3ff).mirror(0x1c00).rom().region("mcm6830", 0);
+}
 
 /* Input ports */
 static INPUT_PORTS_START( swtpc )
@@ -91,12 +95,12 @@ void swtpc_state::machine_start()
 	m_maincpu->space(AS_PROGRAM).install_ram(0, m_ram->size() - 1, m_ram->pointer());
 }
 
-static MACHINE_CONFIG_START( swtpc )
+MACHINE_CONFIG_START(swtpc_state::swtpc)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M6800, XTAL_1_8432MHz / 2)
+	MCFG_CPU_ADD("maincpu", M6800, XTAL(1'843'200) / 2)
 	MCFG_CPU_PROGRAM_MAP(mem_map)
 
-	MCFG_DEVICE_ADD("brg", MC14411, XTAL_1_8432MHz)
+	MCFG_DEVICE_ADD("brg", MC14411, XTAL(1'843'200))
 	MCFG_MC14411_F7_CB(DEVWRITELINE("io0", ss50_interface_port_device, f600_1200_w)) // 1200b
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("io1", ss50_interface_port_device, f600_1200_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("io2", ss50_interface_port_device, f600_1200_w))
@@ -173,12 +177,13 @@ static MACHINE_CONFIG_START( swtpc )
 	MCFG_RAM_EXTRA_OPTIONS("4K,8K,12K,16K,20K,24K,28K,32K")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( swtpcm, swtpc )
+MACHINE_CONFIG_START(swtpc_state::swtpcm)
+	swtpc(config);
 	MCFG_CPU_MODIFY("maincpu")
-	MCFG_CPU_CLOCK(XTAL_1_7971MHz / 2)
+	MCFG_CPU_CLOCK(XTAL(1'797'100) / 2)
 
 	MCFG_DEVICE_MODIFY("brg")
-	MCFG_DEVICE_CLOCK(XTAL_1_7971MHz)
+	MCFG_DEVICE_CLOCK(XTAL(1'797'100))
 
 	MCFG_DEVICE_MODIFY("io1")
 	MCFG_SLOT_DEFAULT_OPTION("mpc")

@@ -19,6 +19,7 @@ naomi.h -> NAOMI includes
 #include "machine/naomim2.h"
 #include "machine/naomim4.h"
 #include "machine/awboard.h"
+#include "machine/nvram.h"
 #include "cpu/sh/sh4.h"
 #include "cpu/arm7/arm7core.h"
 #include "sound/aica.h"
@@ -59,8 +60,7 @@ class naomi_state : public dc_state
 	DECLARE_DRIVER_INIT(hotd2);
 	DECLARE_DRIVER_INIT(naomi_mp);
 
-	DECLARE_READ64_MEMBER( naomi_unknown1_r );
-	DECLARE_WRITE64_MEMBER( naomi_unknown1_w );
+	DECLARE_READ16_MEMBER( naomi_g2bus_r );
 	DECLARE_READ64_MEMBER( eeprom_93c46a_r );
 	DECLARE_WRITE64_MEMBER( eeprom_93c46a_w );
 
@@ -79,6 +79,16 @@ class naomi_state : public dc_state
 	DECLARE_READ64_MEMBER( naomigd_ggxxrl_idle_skip_r );
 	DECLARE_READ64_MEMBER( naomigd_sfz3ugd_idle_skip_r );
 	DECLARE_READ64_MEMBER( hotd2_idle_skip_r );
+	void naomi_base(machine_config &config);
+	void naomim2(machine_config &config);
+	void naomi(machine_config &config);
+	void naomim1(machine_config &config);
+	void naomigd(machine_config &config);
+	void naomim4(machine_config &config);
+	void naomi_map(address_map &map);
+	void naomi_port(address_map &map);
+protected:
+	void set_drc_options();
 };
 
 class naomi2_state : public naomi_state
@@ -98,6 +108,11 @@ public:
 
 	DECLARE_DRIVER_INIT(naomi2);
 	DECLARE_WRITE32_MEMBER(both_pvr2_ta_w);
+	void naomi2_base(machine_config &config);
+	void naomi2m2(machine_config &config);
+	void naomi2gd(machine_config &config);
+	void naomi2m1(machine_config &config);
+	void naomi2_map(address_map &map);
 };
 
 class atomiswave_state : public dc_state
@@ -114,18 +129,20 @@ public:
 	DECLARE_WRITE64_MEMBER( aw_flash_w );
 	DECLARE_READ64_MEMBER( aw_modem_r );
 	DECLARE_WRITE64_MEMBER( aw_modem_w );
-	DECLARE_READ64_MEMBER( aw_unknown1_r );
-	DECLARE_WRITE64_MEMBER( aw_unknown1_w );
 
 	DECLARE_DRIVER_INIT(atomiswave);
 	DECLARE_DRIVER_INIT(xtrmhnt2);
 
 	DECLARE_READ64_MEMBER( xtrmhnt2_hack_r );
 
+	void aw_base(machine_config &config);
+	void aw1c(machine_config &config);
+	void aw2c(machine_config &config);
+	void aw_map(address_map &map);
+	void aw_port(address_map &map);
 protected:
 	uint8_t aw_ctrl_type;
 	inline int decode_reg32_64(uint32_t offset, uint64_t mem_mask, uint64_t *shift);
 };
 
-MACHINE_CONFIG_EXTERN( naomi_aw_base );
 INPUT_PORTS_EXTERN( naomi_debug );

@@ -198,6 +198,10 @@ public:
 	uint32_t screen_update_doraemon(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 	DECLARE_WRITE_LINE_MEMBER(screen_vblank_champbwl);
 	DECLARE_WRITE_LINE_MEMBER(screen_vblank_doraemon);
+	void champbwl(machine_config &config);
+	void doraemon(machine_config &config);
+	void champbwl_map(address_map &map);
+	void doraemon(address_map &map);
 };
 
 PALETTE_INIT_MEMBER(champbwl_state,champbwl)
@@ -226,7 +230,7 @@ READ8_MEMBER(champbwl_state::trackball_r)
 
 READ8_MEMBER(champbwl_state::trackball_reset_r)
 {
-	if (!machine().side_effect_disabled())
+	if (!machine().side_effects_disabled())
 	{
 		m_last_trackball_val[0] = m_fakex->read();
 		m_last_trackball_val[1] = m_fakey->read();
@@ -245,29 +249,30 @@ WRITE8_MEMBER(champbwl_state::champbwl_misc_w)
 	membank("bank1")->set_entry((data & 0x30) >> 4);
 }
 
-static ADDRESS_MAP_START( champbwl_map, AS_PROGRAM, 8, champbwl_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM AM_REGION("maincpu", 0x10000)
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xa000, 0xafff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodelow_r8, spritecodelow_w8)
-	AM_RANGE(0xb000, 0xbfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodehigh_r8, spritecodehigh_w8)
-	AM_RANGE(0xc000, 0xdfff) AM_DEVREADWRITE("x1snd", x1_010_device, read, write)
-	AM_RANGE(0xe000, 0xe2ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r8, spriteylow_w8)
-	AM_RANGE(0xe300, 0xe303) AM_MIRROR(0xfc) AM_DEVWRITE("spritegen", seta001_device, spritectrl_w8) /* control registers (0x80 mirror used by Arkanoid 2) */
-	AM_RANGE(0xe800, 0xe800) AM_DEVWRITE("spritegen", seta001_device, spritebgflag_w8)   /* enable / disable background transparency */
+void champbwl_state::champbwl_map(address_map &map)
+{
+	map(0x0000, 0x3fff).rom().region("maincpu", 0x10000);
+	map(0x4000, 0x7fff).bankr("bank1");
+	map(0x8000, 0x87ff).ram().share("nvram");
+	map(0xa000, 0xafff).ram().rw(m_seta001, FUNC(seta001_device::spritecodelow_r8), FUNC(seta001_device::spritecodelow_w8));
+	map(0xb000, 0xbfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodehigh_r8), FUNC(seta001_device::spritecodehigh_w8));
+	map(0xc000, 0xdfff).rw(m_x1, FUNC(x1_010_device::read), FUNC(x1_010_device::write));
+	map(0xe000, 0xe2ff).ram().rw(m_seta001, FUNC(seta001_device::spriteylow_r8), FUNC(seta001_device::spriteylow_w8));
+	map(0xe300, 0xe303).mirror(0xfc).w(m_seta001, FUNC(seta001_device::spritectrl_w8)); /* control registers (0x80 mirror used by Arkanoid 2) */
+	map(0xe800, 0xe800).w(m_seta001, FUNC(seta001_device::spritebgflag_w8));   /* enable / disable background transparency */
 
-	AM_RANGE(0xf000, 0xf000) AM_READ(trackball_r)
-	AM_RANGE(0xf002, 0xf002) AM_READ_PORT("IN0")
-	AM_RANGE(0xf004, 0xf004) AM_READ(trackball_reset_r)
-	AM_RANGE(0xf006, 0xf006) AM_READ_PORT("IN2")
-	AM_RANGE(0xf007, 0xf007) AM_READ_PORT("IN3")
+	map(0xf000, 0xf000).r(this, FUNC(champbwl_state::trackball_r));
+	map(0xf002, 0xf002).portr("IN0");
+	map(0xf004, 0xf004).r(this, FUNC(champbwl_state::trackball_reset_r));
+	map(0xf006, 0xf006).portr("IN2");
+	map(0xf007, 0xf007).portr("IN3");
 
-	AM_RANGE(0xf000, 0xf000) AM_WRITE(champbwl_misc_w)
-	AM_RANGE(0xf002, 0xf002) AM_WRITENOP //buttons light?
-	AM_RANGE(0xf004, 0xf004) AM_WRITENOP //buttons light?
-	AM_RANGE(0xf006, 0xf006) AM_WRITENOP //buttons light?
-	AM_RANGE(0xf800, 0xf800) AM_WRITENOP
-ADDRESS_MAP_END
+	map(0xf000, 0xf000).w(this, FUNC(champbwl_state::champbwl_misc_w));
+	map(0xf002, 0xf002).nopw(); //buttons light?
+	map(0xf004, 0xf004).nopw(); //buttons light?
+	map(0xf006, 0xf006).nopw(); //buttons light?
+	map(0xf800, 0xf800).nopw();
+}
 
 
 
@@ -284,22 +289,23 @@ WRITE8_MEMBER(champbwl_state::doraemon_outputs_w)
 //  popmessage("%02x", data);
 }
 
-static ADDRESS_MAP_START( doraemon, AS_PROGRAM, 8, champbwl_state )
-	AM_RANGE(0x0000, 0x3fff) AM_ROM
-	AM_RANGE(0x4000, 0x7fff) AM_ROMBANK("bank1")
-	AM_RANGE(0x8000, 0x87ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0xa000, 0xafff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodelow_r8, spritecodelow_w8)
-	AM_RANGE(0xb000, 0xbfff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spritecodehigh_r8, spritecodehigh_w8)
-	AM_RANGE(0xc000, 0xc07f) AM_DEVREADWRITE("x1snd", x1_010_device, read, write) // Sound
-	AM_RANGE(0xe000, 0xe2ff) AM_RAM AM_DEVREADWRITE("spritegen", seta001_device, spriteylow_r8, spriteylow_w8)
-	AM_RANGE(0xe300, 0xe303) AM_DEVWRITE("spritegen", seta001_device, spritectrl_w8)
-	AM_RANGE(0xe800, 0xe800) AM_DEVWRITE("spritegen", seta001_device, spritebgflag_w8)   /* enable / disable background transparency */
-	AM_RANGE(0xf000, 0xf000) AM_READ_PORT("IN0") AM_WRITE(doraemon_outputs_w)
-	AM_RANGE(0xf002, 0xf002) AM_READ_PORT("IN1") AM_WRITENOP    // Ack?
-	AM_RANGE(0xf004, 0xf004) AM_WRITENOP                        // Ack?
-	AM_RANGE(0xf006, 0xf006) AM_READ_PORT("DSW") AM_WRITENOP    // Ack?
-	AM_RANGE(0xf800, 0xf800) AM_WRITENOP                        // 0
-ADDRESS_MAP_END
+void champbwl_state::doraemon(address_map &map)
+{
+	map(0x0000, 0x3fff).rom();
+	map(0x4000, 0x7fff).bankr("bank1");
+	map(0x8000, 0x87ff).ram().share("nvram");
+	map(0xa000, 0xafff).ram().rw(m_seta001, FUNC(seta001_device::spritecodelow_r8), FUNC(seta001_device::spritecodelow_w8));
+	map(0xb000, 0xbfff).ram().rw(m_seta001, FUNC(seta001_device::spritecodehigh_r8), FUNC(seta001_device::spritecodehigh_w8));
+	map(0xc000, 0xc07f).rw(m_x1, FUNC(x1_010_device::read), FUNC(x1_010_device::write)); // Sound
+	map(0xe000, 0xe2ff).ram().rw(m_seta001, FUNC(seta001_device::spriteylow_r8), FUNC(seta001_device::spriteylow_w8));
+	map(0xe300, 0xe303).w(m_seta001, FUNC(seta001_device::spritectrl_w8));
+	map(0xe800, 0xe800).w(m_seta001, FUNC(seta001_device::spritebgflag_w8));   /* enable / disable background transparency */
+	map(0xf000, 0xf000).portr("IN0").w(this, FUNC(champbwl_state::doraemon_outputs_w));
+	map(0xf002, 0xf002).portr("IN1").nopw();    // Ack?
+	map(0xf004, 0xf004).nopw();                        // Ack?
+	map(0xf006, 0xf006).portr("DSW").nopw();    // Ack?
+	map(0xf800, 0xf800).nopw();                        // 0
+}
 
 
 
@@ -481,7 +487,7 @@ WRITE_LINE_MEMBER(champbwl_state::screen_vblank_champbwl)
 }
 
 
-static MACHINE_CONFIG_START( champbwl )
+MACHINE_CONFIG_START(champbwl_state::champbwl)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, 16000000/4) /* 4MHz */
@@ -546,10 +552,10 @@ MACHINE_START_MEMBER(champbwl_state,doraemon)
 	membank("bank1")->configure_entries(0, 4, &ROM[0x10000], 0x4000);
 }
 
-static MACHINE_CONFIG_START( doraemon )
+MACHINE_CONFIG_START(champbwl_state::doraemon)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_14_31818MHz/4)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(14'318'181)/4)
 	MCFG_CPU_PROGRAM_MAP(doraemon)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", champbwl_state,  irq0_line_hold)
 
@@ -577,7 +583,7 @@ static MACHINE_CONFIG_START( doraemon )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("x1snd", X1_010, XTAL_14_31818MHz)
+	MCFG_SOUND_ADD("x1snd", X1_010, XTAL(14'318'181))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 

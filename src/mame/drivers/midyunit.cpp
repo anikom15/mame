@@ -123,13 +123,13 @@ Notes:
 
 
 /* master clocks vary based on game */
-#define SLOW_MASTER_CLOCK       XTAL_40MHz      /* "slow" == smashtv, trog, hiimpact */
-#define FAST_MASTER_CLOCK       XTAL_48MHz      /* "fast" == narc, mk, totcarn, strkforc */
-#define FASTER_MASTER_CLOCK     XTAL_50MHz      /* "faster" == term2 */
+#define SLOW_MASTER_CLOCK       XTAL(40'000'000)      /* "slow" == smashtv, trog, hiimpact */
+#define FAST_MASTER_CLOCK       XTAL(48'000'000)      /* "fast" == narc, mk, totcarn, strkforc */
+#define FASTER_MASTER_CLOCK     XTAL(50'000'000)      /* "faster" == term2 */
 
 /* pixel clocks are 48MHz (narc) or 24MHz (all others) regardless */
-#define MEDRES_PIXEL_CLOCK      (XTAL_48MHz / 6)
-#define STDRES_PIXEL_CLOCK      (XTAL_24MHz / 6)
+#define MEDRES_PIXEL_CLOCK      (XTAL(48'000'000) / 6)
+#define STDRES_PIXEL_CLOCK      (XTAL(24'000'000) / 6)
 
 
 
@@ -178,29 +178,31 @@ CUSTOM_INPUT_MEMBER(midyunit_state::adpcm_irq_state_r)
  *
  *************************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 16, midyunit_state )
-	AM_RANGE(0x00000000, 0x001fffff) AM_READWRITE(midyunit_vram_r, midyunit_vram_w)
-	AM_RANGE(0x01000000, 0x010fffff) AM_RAM AM_SHARE("mainram")
-	AM_RANGE(0x01400000, 0x0140ffff) AM_READWRITE(midyunit_cmos_r, midyunit_cmos_w)
-	AM_RANGE(0x01800000, 0x0181ffff) AM_RAM_WRITE(midyunit_paletteram_w) AM_SHARE("paletteram")
-	AM_RANGE(0x01a00000, 0x01a0009f) AM_MIRROR(0x00080000) AM_READWRITE(midyunit_dma_r, midyunit_dma_w)
-	AM_RANGE(0x01c00000, 0x01c0005f) AM_READ(midyunit_input_r)
-	AM_RANGE(0x01c00060, 0x01c0007f) AM_READWRITE(midyunit_protection_r, midyunit_cmos_enable_w)
-	AM_RANGE(0x01e00000, 0x01e0001f) AM_WRITE(midyunit_sound_w)
-	AM_RANGE(0x01f00000, 0x01f0001f) AM_WRITE(midyunit_control_w)
-	AM_RANGE(0x02000000, 0x05ffffff) AM_READ(midyunit_gfxrom_r) AM_SHARE("gfx_rom")
-	AM_RANGE(0xc0000000, 0xc00001ff) AM_DEVREADWRITE("maincpu", tms34010_device, io_register_r, io_register_w)
-	AM_RANGE(0xff800000, 0xffffffff) AM_ROM AM_REGION("user1", 0)
-ADDRESS_MAP_END
+void midyunit_state::main_map(address_map &map)
+{
+	map(0x00000000, 0x001fffff).rw(this, FUNC(midyunit_state::midyunit_vram_r), FUNC(midyunit_state::midyunit_vram_w));
+	map(0x01000000, 0x010fffff).ram().share("mainram");
+	map(0x01400000, 0x0140ffff).rw(this, FUNC(midyunit_state::midyunit_cmos_r), FUNC(midyunit_state::midyunit_cmos_w));
+	map(0x01800000, 0x0181ffff).ram().w(this, FUNC(midyunit_state::midyunit_paletteram_w)).share("paletteram");
+	map(0x01a00000, 0x01a0009f).mirror(0x00080000).rw(this, FUNC(midyunit_state::midyunit_dma_r), FUNC(midyunit_state::midyunit_dma_w));
+	map(0x01c00000, 0x01c0005f).r(this, FUNC(midyunit_state::midyunit_input_r));
+	map(0x01c00060, 0x01c0007f).rw(this, FUNC(midyunit_state::midyunit_protection_r), FUNC(midyunit_state::midyunit_cmos_enable_w));
+	map(0x01e00000, 0x01e0001f).w(this, FUNC(midyunit_state::midyunit_sound_w));
+	map(0x01f00000, 0x01f0001f).w(this, FUNC(midyunit_state::midyunit_control_w));
+	map(0x02000000, 0x05ffffff).r(this, FUNC(midyunit_state::midyunit_gfxrom_r)).share("gfx_rom");
+	map(0xc0000000, 0xc00001ff).rw("maincpu", FUNC(tms34010_device::io_register_r), FUNC(tms34010_device::io_register_w));
+	map(0xff800000, 0xffffffff).rom().region("user1", 0);
+}
 
 
-static ADDRESS_MAP_START( yawdim_sound_map, AS_PROGRAM, 8, midyunit_state )
-	AM_RANGE(0x0000, 0x7fff) AM_ROM
-	AM_RANGE(0x8000, 0x87ff) AM_RAM
-	AM_RANGE(0x9000, 0x97ff) AM_WRITE(yawdim_oki_bank_w)
-	AM_RANGE(0x9800, 0x9fff) AM_DEVREADWRITE("oki", okim6295_device, read, write)
-	AM_RANGE(0xa000, 0xa7ff) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-ADDRESS_MAP_END
+void midyunit_state::yawdim_sound_map(address_map &map)
+{
+	map(0x0000, 0x7fff).rom();
+	map(0x8000, 0x87ff).ram();
+	map(0x9000, 0x97ff).w(this, FUNC(midyunit_state::yawdim_oki_bank_w));
+	map(0x9800, 0x9fff).rw(m_oki, FUNC(okim6295_device::read), FUNC(okim6295_device::write));
+	map(0xa000, 0xa7ff).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+}
 
 
 
@@ -1097,7 +1099,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( zunit )
+MACHINE_CONFIG_START(midyunit_state::zunit)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", TMS34010, FAST_MASTER_CLOCK)
@@ -1139,7 +1141,7 @@ MACHINE_CONFIG_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( yunit_core )
+MACHINE_CONFIG_START(midyunit_state::yunit_core)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", TMS34010, SLOW_MASTER_CLOCK)
@@ -1170,7 +1172,8 @@ static MACHINE_CONFIG_START( yunit_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( yunit_cvsd_4bit_slow, yunit_core )
+MACHINE_CONFIG_START(midyunit_state::yunit_cvsd_4bit_slow)
+	yunit_core(config);
 
 	/* basic machine hardware */
 	MCFG_SOUND_ADD("cvsd", WILLIAMS_CVSD_SOUND, 0)
@@ -1183,7 +1186,8 @@ static MACHINE_CONFIG_DERIVED( yunit_cvsd_4bit_slow, yunit_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( yunit_cvsd_4bit_fast, yunit_core )
+MACHINE_CONFIG_START(midyunit_state::yunit_cvsd_4bit_fast)
+	yunit_core(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1199,7 +1203,8 @@ static MACHINE_CONFIG_DERIVED( yunit_cvsd_4bit_fast, yunit_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( yunit_cvsd_6bit_slow, yunit_core )
+MACHINE_CONFIG_START(midyunit_state::yunit_cvsd_6bit_slow)
+	yunit_core(config);
 
 	/* basic machine hardware */
 	MCFG_SOUND_ADD("cvsd", WILLIAMS_CVSD_SOUND, 0)
@@ -1212,7 +1217,8 @@ static MACHINE_CONFIG_DERIVED( yunit_cvsd_6bit_slow, yunit_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( yunit_adpcm_6bit_fast, yunit_core )
+MACHINE_CONFIG_START(midyunit_state::yunit_adpcm_6bit_fast)
+	yunit_core(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1228,7 +1234,8 @@ static MACHINE_CONFIG_DERIVED( yunit_adpcm_6bit_fast, yunit_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( yunit_adpcm_6bit_faster, yunit_core )
+MACHINE_CONFIG_START(midyunit_state::yunit_adpcm_6bit_faster)
+	yunit_core(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -1244,7 +1251,8 @@ static MACHINE_CONFIG_DERIVED( yunit_adpcm_6bit_faster, yunit_core )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( term2, yunit_adpcm_6bit_faster )
+MACHINE_CONFIG_START(midyunit_state::term2)
+	yunit_adpcm_6bit_faster(config);
 	MCFG_ADC0844_ADD("adc") // U2 on Coil Lamp Driver Board (A-14915)
 	MCFG_ADC0844_CH1_CB(IOPORT("STICK0_X"))
 	MCFG_ADC0844_CH2_CB(IOPORT("STICK0_Y"))
@@ -1253,11 +1261,12 @@ static MACHINE_CONFIG_DERIVED( term2, yunit_adpcm_6bit_faster )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( mkyawdim, yunit_core )
+MACHINE_CONFIG_START(midyunit_state::mkyawdim)
+	yunit_core(config);
 
 	/* basic machine hardware */
 
-	MCFG_CPU_ADD("audiocpu", Z80, XTAL_8MHz / 2)
+	MCFG_CPU_ADD("audiocpu", Z80, XTAL(8'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(yawdim_sound_map)
 
 	/* video hardware */
@@ -1269,7 +1278,7 @@ static MACHINE_CONFIG_DERIVED( mkyawdim, yunit_core )
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
 
-	MCFG_OKIM6295_ADD("oki", XTAL_8MHz / 8, PIN7_HIGH)
+	MCFG_OKIM6295_ADD("oki", XTAL(8'000'000) / 8, PIN7_HIGH)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END
 

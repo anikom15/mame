@@ -56,7 +56,7 @@ opcode spaces.  It's accessed via a 4008/4009 pair, or a 4289.  With a
 support requires a 4040 with a 4289.  Accesses are 4 bits wide.  The
 address consists of the 8-bit value latched with the SRC instruction and
 a first/last bit that toggles on each program memory operation.  There's
-no way for the CPU to get the sate of the first/last bit (even using
+no way for the CPU to get the state of the first/last bit (even using
 additional I/O to read it is difficult because it's only output during
 program memory reads and writes), so the developer has to be very
 careful to always do program memory operations in pairs or track the
@@ -134,7 +134,7 @@ mcs40_cpu_device_base::mcs40_cpu_device_base(
 
 void mcs40_cpu_device_base::device_start()
 {
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 
 	m_spaces[AS_ROM]            = &space(AS_ROM);
 	m_spaces[AS_RAM_MEMORY]     = &space(AS_RAM_MEMORY);
@@ -594,7 +594,7 @@ inline void mcs40_cpu_device_base::do_a1()
 	{
 		m_pcbase = rom_bank() | m_rom_addr;
 		if (machine().debug_flags & DEBUG_FLAG_ENABLED)
-			debugger_instruction_hook(this, pc());
+			debugger_instruction_hook(pc());
 		if (m_stop_latch)
 		{
 			m_stp = (ASSERT_LINE == m_stp) ? ASSERT_LINE : CLEAR_LINE;
@@ -860,9 +860,9 @@ void i4004_cpu_device::execute_set_input(int inputnum, int state)
     device_disasm_interface implementation
 ***********************************************************************/
 
-util::disasm_interface *i4004_cpu_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> i4004_cpu_device::create_disassembler()
 {
-	return new i4004_disassembler;
+	return std::make_unique<i4004_disassembler>();
 }
 
 
@@ -1170,9 +1170,9 @@ void i4040_cpu_device::execute_set_input(int inputnum, int state)
     device_disasm_interface implementation
 ***********************************************************************/
 
-util::disasm_interface *i4040_cpu_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> i4040_cpu_device::create_disassembler()
 {
-	return new i4040_disassembler;
+	return std::make_unique<i4040_disassembler>();
 }
 
 

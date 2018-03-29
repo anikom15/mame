@@ -72,6 +72,9 @@ public:
 	DECLARE_READ8_MEMBER(keyboard_r);
 	DECLARE_DRIVER_INIT(init);
 
+	void cortex(machine_config &config);
+	void io_map(address_map &map);
+	void mem_map(address_map &map);
 private:
 	bool m_kbd_ack;
 	bool m_vdp_int;
@@ -82,20 +85,22 @@ private:
 	required_ioport m_io_dsw;
 };
 
-static ADDRESS_MAP_START( mem_map, AS_PROGRAM, 8, cortex_state )
-	AM_RANGE(0x0000, 0x7fff) AM_READ_BANK("bankr0") AM_WRITE_BANK("bankw0")
-	AM_RANGE(0x8000, 0xefff) AM_RAM
-	AM_RANGE(0xf100, 0xf11f) AM_RAM // memory mapping unit
-	AM_RANGE(0xf120, 0xf120) AM_DEVREADWRITE("crtc", tms9928a_device, vram_read, vram_write)
-	AM_RANGE(0xf121, 0xf121) AM_DEVREADWRITE("crtc", tms9928a_device, register_read, register_write)
+void cortex_state::mem_map(address_map &map)
+{
+	map(0x0000, 0x7fff).bankr("bankr0").bankw("bankw0");
+	map(0x8000, 0xefff).ram();
+	map(0xf100, 0xf11f).ram(); // memory mapping unit
+	map(0xf120, 0xf120).rw("crtc", FUNC(tms9928a_device::vram_read), FUNC(tms9928a_device::vram_write));
+	map(0xf121, 0xf121).rw("crtc", FUNC(tms9928a_device::register_read), FUNC(tms9928a_device::register_write));
 	//AM_RANGE(0xf140, 0xf147) // fdc tms9909
-ADDRESS_MAP_END
+}
 
-static ADDRESS_MAP_START( io_map, AS_IO, 8, cortex_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0007) AM_MIRROR(0x18) AM_DEVWRITE("control", ls259_device, write_d0)
-	AM_RANGE(0x0000, 0x0000) AM_READ(pio_r)
-	AM_RANGE(0x0001, 0x0001) AM_READ(keyboard_r)
+void cortex_state::io_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0007).mirror(0x18).w("control", FUNC(ls259_device::write_d0));
+	map(0x0000, 0x0000).r(this, FUNC(cortex_state::pio_r));
+	map(0x0001, 0x0001).r(this, FUNC(cortex_state::keyboard_r));
 	//AM_RANGE(0x0040, 0x005f) AM_DEVWRITE("uart1", tms9902_device, cruwrite) // RS232 (r12 = 80-bf)
 	//AM_RANGE(0x0008, 0x000b) AM_DEVREAD("uart1", tms9902_device, cruread) // RS232
 	//AM_RANGE(0x00c0, 0x00df) AM_DEVWRITE("uart2", tms9902_device, cruwrite) // Cassette (r12 = 180-1bf)
@@ -105,7 +110,7 @@ static ADDRESS_MAP_START( io_map, AS_IO, 8, cortex_state )
 	//AM_RANGE(0x0400, 0x0407) AM_WRITE(cent_data_w) // r12 = 800-80e
 	//AM_RANGE(0x0408, 0x0408) AM_WRITE(cent_strobe_w) // r12 = 810
 	//AM_RANGE(0x0081, 0x0081) AM_READ(cent_stat_r) // CRU 409 (r12 = 812)
-ADDRESS_MAP_END
+}
 
 /* Input ports */
 static INPUT_PORTS_START( cortex )
@@ -174,12 +179,12 @@ DRIVER_INIT_MEMBER( cortex_state, init )
 	membank("bankw0")->configure_entry(0, &main[0x00000]);
 }
 
-static MACHINE_CONFIG_START( cortex )
+MACHINE_CONFIG_START(cortex_state::cortex)
 	/* basic machine hardware */
 	/* TMS9995 CPU @ 12.0 MHz */
 	// Standard variant, no overflow int
 	// No lines connected yet
-	MCFG_TMS99xx_ADD("maincpu", TMS9995, XTAL_12MHz, mem_map, io_map)
+	MCFG_TMS99xx_ADD("maincpu", TMS9995, XTAL(12'000'000), mem_map, io_map)
 
 	MCFG_DEVICE_ADD("control", LS259, 0) // IC64
 	//MCFG_ADDRESSABLE_LATCH_Q0_OUT_CB(WRITELINE(cortex_state, basic_led_w))
@@ -191,7 +196,7 @@ static MACHINE_CONFIG_START( cortex )
 	MCFG_ADDRESSABLE_LATCH_Q6_OUT_CB(DEVWRITELINE("beeper", beep_device, set_state))
 
 	/* video hardware */
-	MCFG_DEVICE_ADD( "crtc", TMS9929A, XTAL_10_738635MHz / 2 )
+	MCFG_DEVICE_ADD( "crtc", TMS9929A, XTAL(10'738'635) / 2 )
 	MCFG_TMS9928A_OUT_INT_LINE_CB(INPUTLINE("maincpu", INT_9995_INT1))
 	MCFG_DEVCB_CHAIN_OUTPUT(WRITELINE(cortex_state, vdp_int_w))
 	MCFG_TMS9928A_VRAM_SIZE(0x4000)
@@ -201,8 +206,8 @@ static MACHINE_CONFIG_START( cortex )
 	MCFG_DEVICE_ADD("keyboard", GENERIC_KEYBOARD, 0)
 	MCFG_GENERIC_KEYBOARD_CB(PUT(cortex_state, kbd_put))
 
-	//MCFG_DEVICE_ADD("uart1", TMS9902, XTAL_12MHz / 4)
-	//MCFG_DEVICE_ADD("uart2", TMS9902, XTAL_12MHz / 4)
+	//MCFG_DEVICE_ADD("uart1", TMS9902, XTAL(12'000'000) / 4)
+	//MCFG_DEVICE_ADD("uart2", TMS9902, XTAL(12'000'000) / 4)
 
 	/* Sound */
 	MCFG_SPEAKER_STANDARD_MONO("mono")

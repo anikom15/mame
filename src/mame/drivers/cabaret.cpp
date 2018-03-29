@@ -70,6 +70,9 @@ public:
 	required_device<cpu_device> m_maincpu;
 	required_device<gfxdecode_device> m_gfxdecode;
 	required_device<palette_device> m_palette;
+	void cabaret(machine_config &config);
+	void cabaret_map(address_map &map);
+	void cabaret_portmap(address_map &map);
 };
 
 
@@ -186,33 +189,35 @@ WRITE8_MEMBER(cabaret_state::ppi2_c_w)
 
 
 
-static ADDRESS_MAP_START( cabaret_map, AS_PROGRAM, 8, cabaret_state )
-	AM_RANGE( 0x00000, 0x0efff ) AM_ROM
-	AM_RANGE( 0x0f000, 0x0ffff ) AM_RAM AM_REGION("maincpu", 0xf000)
-ADDRESS_MAP_END
+void cabaret_state::cabaret_map(address_map &map)
+{
+	map(0x00000, 0x0efff).rom();
+	map(0x0f000, 0x0ffff).ram().region("maincpu", 0xf000);
+}
 
-static ADDRESS_MAP_START( cabaret_portmap, AS_IO, 8, cabaret_state )
-	AM_RANGE( 0x0000, 0x003f ) AM_RAM // Z180 internal regs
+void cabaret_state::cabaret_portmap(address_map &map)
+{
+	map(0x0000, 0x003f).ram(); // Z180 internal regs
 
-	AM_RANGE( 0x0080, 0x0083 ) AM_DEVREADWRITE("ppi1", i8255_device, read, write)
-	AM_RANGE( 0x0090, 0x0093 ) AM_DEVREADWRITE("ppi2", i8255_device, read, write)
-	AM_RANGE( 0x00a0, 0x00a3 ) AM_DEVREADWRITE("ppi3", i8255_device, read, write)
+	map(0x0080, 0x0083).rw("ppi1", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x0090, 0x0093).rw("ppi2", FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x00a0, 0x00a3).rw("ppi3", FUNC(i8255_device::read), FUNC(i8255_device::write));
 
-	AM_RANGE( 0x00b0, 0x00b0 ) AM_READ_PORT("DSW3")         /* DSW3 */
+	map(0x00b0, 0x00b0).portr("DSW3");         /* DSW3 */
 
-	AM_RANGE( 0x00e0, 0x00e1 ) AM_DEVWRITE("ymsnd", ym2413_device, write)
+	map(0x00e0, 0x00e1).w("ymsnd", FUNC(ym2413_device::write));
 
-	AM_RANGE( 0x2000, 0x27ff ) AM_RAM_WRITE(fg_tile_w )  AM_SHARE("fg_tile_ram")
-	AM_RANGE( 0x2800, 0x2fff ) AM_RAM_WRITE(fg_color_w ) AM_SHARE("fg_color_ram")
+	map(0x2000, 0x27ff).ram().w(this, FUNC(cabaret_state::fg_tile_w)).share("fg_tile_ram");
+	map(0x2800, 0x2fff).ram().w(this, FUNC(cabaret_state::fg_color_w)).share("fg_color_ram");
 
-	AM_RANGE( 0x3000, 0x37ff ) AM_RAM_DEVWRITE("palette", palette_device, write) AM_SHARE("palette")
-	AM_RANGE( 0x3800, 0x3fff ) AM_RAM_DEVWRITE("palette", palette_device, write_ext) AM_SHARE("palette_ext")
+	map(0x3000, 0x37ff).ram().w(m_palette, FUNC(palette_device::write8)).share("palette");
+	map(0x3800, 0x3fff).ram().w(m_palette, FUNC(palette_device::write8_ext)).share("palette_ext");
 
-	AM_RANGE( 0x1000, 0x103f ) AM_RAM_WRITE(bg_scroll_w ) AM_SHARE("bg_scroll")
+	map(0x1000, 0x103f).ram().w(this, FUNC(cabaret_state::bg_scroll_w)).share("bg_scroll");
 
-	AM_RANGE( 0x1800, 0x19ff ) AM_RAM_WRITE(bg_tile_w )  AM_SHARE("bg_tile_ram")
-	AM_RANGE( 0x8000, 0xffff ) AM_ROM AM_REGION("gfx3", 0)
-ADDRESS_MAP_END
+	map(0x1800, 0x19ff).ram().w(this, FUNC(cabaret_state::bg_tile_w)).share("bg_tile_ram");
+	map(0x8000, 0xffff).rom().region("gfx3", 0);
+}
 
 
 /***************************************************************************
@@ -352,9 +357,9 @@ INTERRUPT_GEN_MEMBER(cabaret_state::cabaret_interrupt)
 		device.execute().set_input_line(INPUT_LINE_NMI, PULSE_LINE);
 }
 
-static MACHINE_CONFIG_START( cabaret )
+MACHINE_CONFIG_START(cabaret_state::cabaret)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z180, XTAL_12MHz / 2)
+	MCFG_CPU_ADD("maincpu", Z180, XTAL(12'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(cabaret_map)
 	MCFG_CPU_IO_MAP(cabaret_portmap)
 	MCFG_CPU_VBLANK_INT_DRIVER("screen", cabaret_state, cabaret_interrupt)
@@ -390,7 +395,7 @@ static MACHINE_CONFIG_START( cabaret )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL_3_579545MHz)
+	MCFG_SOUND_ADD("ymsnd", YM2413, XTAL(3'579'545))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.0)
 MACHINE_CONFIG_END
 

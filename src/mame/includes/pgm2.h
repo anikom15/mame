@@ -18,6 +18,14 @@
 #include "machine/atmel_arm_aic.h"
 #include "machine/pgm2_memcard.h"
 
+struct kov3_module_key
+{
+	uint8_t key[8];
+	uint8_t sum[8];
+	uint32_t addr_xor; // 22bit
+	uint16_t data_xor;
+};
+
 class pgm2_state : public driver_device
 {
 public:
@@ -62,7 +70,8 @@ public:
 	DECLARE_WRITE32_MEMBER(pio_sodr_w);
 	DECLARE_WRITE32_MEMBER(pio_codr_w);
 	DECLARE_READ32_MEMBER(pio_pdsr_r);
-	DECLARE_WRITE32_MEMBER(module_scramble_w);
+	DECLARE_WRITE16_MEMBER(module_rom_w);
+	DECLARE_READ16_MEMBER(module_rom_r);
 	DECLARE_READ_LINE_MEMBER(module_data_r);
 	DECLARE_WRITE_LINE_MEMBER(module_data_w);
 	DECLARE_WRITE_LINE_MEMBER(module_clk_w);
@@ -85,6 +94,7 @@ public:
 	DECLARE_DRIVER_INIT(kov3);
 	DECLARE_DRIVER_INIT(kov3_104);
 	DECLARE_DRIVER_INIT(kov3_102);
+	DECLARE_DRIVER_INIT(kov3_101);
 	DECLARE_DRIVER_INIT(kov3_100);
 	DECLARE_DRIVER_INIT(kof98umh);
 
@@ -95,6 +105,14 @@ public:
 	INTERRUPT_GEN_MEMBER(igs_interrupt);
 	TIMER_DEVICE_CALLBACK_MEMBER(igs_interrupt2);
 
+	void pgm2_ramrom(machine_config &config);
+	void pgm2_lores(machine_config &config);
+	void pgm2(machine_config &config);
+	void pgm2_hires(machine_config &config);
+	void pgm2_map(address_map &map);
+	void pgm2_module_rom_map(address_map &map);
+	void pgm2_ram_rom_map(address_map &map);
+	void pgm2_rom_map(address_map &map);
 private:
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
@@ -141,8 +159,8 @@ private:
 	std::vector<uint8_t> m_encrypted_copy;
 
 	uint32_t pio_out_data;
-	uint32_t module_addr_xor, module_data_xor;
-	const uint8_t *module_key;
+	const kov3_module_key *module_key;
+	bool module_sum_read;
 	uint32_t module_in_latch;
 	uint32_t module_out_latch;
 	int module_prev_state;

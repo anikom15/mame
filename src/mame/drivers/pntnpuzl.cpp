@@ -172,6 +172,9 @@ public:
 	DECLARE_INPUT_CHANGED_MEMBER(coin_inserted);
 	DECLARE_DRIVER_INIT(pip);
 	required_device<via6522_device> m_via;
+	void pntnpuzl(machine_config &config);
+	void mcu_map(address_map &map);
+	void pntnpuzl_map(address_map &map);
 };
 
 
@@ -278,29 +281,31 @@ READ16_MEMBER(pntnpuzl_state::irq4_ack_r)
 }
 
 
-static ADDRESS_MAP_START( pntnpuzl_map, AS_PROGRAM, 16, pntnpuzl_state )
-	AM_RANGE(0x000000, 0x07ffff) AM_ROM
-	AM_RANGE(0x080000, 0x080001) AM_READ(irq1_ack_r)
-	AM_RANGE(0x100000, 0x100001) AM_READ(irq2_ack_r)
-	AM_RANGE(0x180000, 0x180001) AM_READ(irq4_ack_r)
-	AM_RANGE(0x200000, 0x200001) AM_WRITE(pntnpuzl_200000_w)
-	AM_RANGE(0x280014, 0x280015) AM_READ(pntnpuzl_280014_r)
-	AM_RANGE(0x280018, 0x280019) AM_WRITE(pntnpuzl_280018_w)
-	AM_RANGE(0x28001a, 0x28001b) AM_READ(pntnpuzl_28001a_r)
-	AM_RANGE(0x280000, 0x28001f) AM_DEVREADWRITE8("via", via6522_device, read, write, 0xff00)
+void pntnpuzl_state::pntnpuzl_map(address_map &map)
+{
+	map(0x000000, 0x07ffff).rom();
+	map(0x080000, 0x080001).r(this, FUNC(pntnpuzl_state::irq1_ack_r));
+	map(0x100000, 0x100001).r(this, FUNC(pntnpuzl_state::irq2_ack_r));
+	map(0x180000, 0x180001).r(this, FUNC(pntnpuzl_state::irq4_ack_r));
+	map(0x200000, 0x200001).w(this, FUNC(pntnpuzl_state::pntnpuzl_200000_w));
+	map(0x280000, 0x28001f).rw(m_via, FUNC(via6522_device::read), FUNC(via6522_device::write)).umask16(0xff00);
+	map(0x280014, 0x280015).r(this, FUNC(pntnpuzl_state::pntnpuzl_280014_r));
+	map(0x280018, 0x280019).w(this, FUNC(pntnpuzl_state::pntnpuzl_280018_w));
+	map(0x28001a, 0x28001b).r(this, FUNC(pntnpuzl_state::pntnpuzl_28001a_r));
 
 	/* standard VGA */
-	AM_RANGE(0x3a0000, 0x3bffff) AM_DEVREADWRITE8("vga", vga_device, mem_r, mem_w, 0xffff)
-	AM_RANGE(0x3c03b0, 0x3c03bf) AM_DEVREADWRITE8("vga", vga_device, port_03b0_r, port_03b0_w, 0xffff)
-	AM_RANGE(0x3c03c0, 0x3c03cf) AM_DEVREADWRITE8("vga", vga_device, port_03c0_r, port_03c0_w, 0xffff)
-	AM_RANGE(0x3c03d0, 0x3c03df) AM_DEVREADWRITE8("vga", vga_device, port_03d0_r, port_03d0_w, 0xffff)
+	map(0x3a0000, 0x3bffff).rw("vga", FUNC(vga_device::mem_r), FUNC(vga_device::mem_w));
+	map(0x3c03b0, 0x3c03bf).rw("vga", FUNC(vga_device::port_03b0_r), FUNC(vga_device::port_03b0_w));
+	map(0x3c03c0, 0x3c03cf).rw("vga", FUNC(vga_device::port_03c0_r), FUNC(vga_device::port_03c0_w));
+	map(0x3c03d0, 0x3c03df).rw("vga", FUNC(vga_device::port_03d0_r), FUNC(vga_device::port_03d0_w));
 
-	AM_RANGE(0x400000, 0x407fff) AM_RAM
-ADDRESS_MAP_END
+	map(0x400000, 0x407fff).ram();
+}
 
-static ADDRESS_MAP_START( mcu_map, AS_PROGRAM, 8, pntnpuzl_state )
-	AM_RANGE(0x2000, 0x3fff) AM_ROM AM_REGION("mcu", 0)
-ADDRESS_MAP_END
+void pntnpuzl_state::mcu_map(address_map &map)
+{
+	map(0x2000, 0x3fff).rom().region("mcu", 0);
+}
 
 
 INPUT_CHANGED_MEMBER(pntnpuzl_state::coin_inserted)
@@ -344,13 +349,13 @@ static INPUT_PORTS_START( pntnpuzl )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_OTHER ) PORT_CODE(KEYCODE_D)
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( pntnpuzl )
-	MCFG_CPU_ADD("maincpu", M68000, XTAL_12MHz)
+MACHINE_CONFIG_START(pntnpuzl_state::pntnpuzl)
+	MCFG_CPU_ADD("maincpu", M68000, XTAL(12'000'000))
 	MCFG_CPU_PROGRAM_MAP(pntnpuzl_map)
 
 	MCFG_EEPROM_SERIAL_93C46_ADD("eeprom")
 
-	MCFG_DEVICE_ADD("via", VIA6522, XTAL_12MHz / 10)
+	MCFG_DEVICE_ADD("via", VIA6522, XTAL(12'000'000) / 10)
 	MCFG_VIA6522_READPA_HANDLER(IOPORT("IN2"))
 	MCFG_VIA6522_READPB_HANDLER(IOPORT("IN1"))
 	MCFG_VIA6522_WRITEPB_HANDLER(DEVWRITELINE("eeprom", eeprom_serial_93cxx_device, di_write)) MCFG_DEVCB_BIT(4)
@@ -358,11 +363,16 @@ static MACHINE_CONFIG_START( pntnpuzl )
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("eeprom", eeprom_serial_93cxx_device, clk_write)) MCFG_DEVCB_BIT(5)
 	// CB2 used for serial communication with 8798
 
-	MCFG_CPU_ADD("mcu", P8098, XTAL_12MHz)
+	MCFG_CPU_ADD("mcu", P8098, XTAL(12'000'000))
 	MCFG_CPU_PROGRAM_MAP(mcu_map) // FIXME: this is all internal
 
 	/* video hardware */
-	MCFG_FRAGMENT_ADD( pcvideo_vga )
+	MCFG_SCREEN_ADD("screen", RASTER)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(25'174'800),900,0,640,526,0,480)
+	MCFG_SCREEN_UPDATE_DEVICE("vga", vga_device, screen_update)
+
+	MCFG_DEVICE_ADD("vga", VGA, 0)
+	MCFG_VIDEO_SET_SCREEN("screen")
 MACHINE_CONFIG_END
 
 ROM_START( pntnpuzl )

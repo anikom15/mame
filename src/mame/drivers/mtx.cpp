@@ -46,28 +46,30 @@
     ADDRESS_MAP( mtx_mem )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( mtx_mem, AS_PROGRAM, 8, mtx_state )
-ADDRESS_MAP_END
+void mtx_state::mtx_mem(address_map &map)
+{
+}
 
 /*-------------------------------------------------
     ADDRESS_MAP( mtx_io )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( mtx_io, AS_IO, 8, mtx_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READWRITE(mtx_strobe_r, mtx_bankswitch_w)
-	AM_RANGE(0x01, 0x01) AM_DEVREADWRITE("tms9929a", tms9929a_device, vram_read, vram_write)
-	AM_RANGE(0x02, 0x02) AM_DEVREADWRITE("tms9929a", tms9929a_device, register_read, register_write)
-	AM_RANGE(0x03, 0x03) AM_READWRITE(mtx_sound_strobe_r, mtx_cst_w)
-	AM_RANGE(0x04, 0x04) AM_READ(mtx_prt_r) AM_DEVWRITE("cent_data_out", output_latch_device, write)
-	AM_RANGE(0x05, 0x05) AM_READWRITE(mtx_key_lo_r, mtx_sense_w)
-	AM_RANGE(0x06, 0x06) AM_READWRITE(mtx_key_hi_r, mtx_sound_latch_w)
+void mtx_state::mtx_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).rw(this, FUNC(mtx_state::mtx_strobe_r), FUNC(mtx_state::mtx_bankswitch_w));
+	map(0x01, 0x01).rw("tms9929a", FUNC(tms9929a_device::vram_read), FUNC(tms9929a_device::vram_write));
+	map(0x02, 0x02).rw("tms9929a", FUNC(tms9929a_device::register_read), FUNC(tms9929a_device::register_write));
+	map(0x03, 0x03).rw(this, FUNC(mtx_state::mtx_sound_strobe_r), FUNC(mtx_state::mtx_cst_w));
+	map(0x04, 0x04).r(this, FUNC(mtx_state::mtx_prt_r)).w("cent_data_out", FUNC(output_latch_device::write));
+	map(0x05, 0x05).rw(this, FUNC(mtx_state::mtx_key_lo_r), FUNC(mtx_state::mtx_sense_w));
+	map(0x06, 0x06).rw(this, FUNC(mtx_state::mtx_key_hi_r), FUNC(mtx_state::mtx_sound_latch_w));
 //  AM_RANGE(0x07, 0x07) PIO
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE(Z80CTC_TAG, z80ctc_device, read, write)
-	AM_RANGE(0x1f, 0x1f) AM_WRITE(mtx_cst_motor_w)
-	AM_RANGE(0x30, 0x31) AM_WRITE(hrx_address_w)
-	AM_RANGE(0x32, 0x32) AM_READWRITE(hrx_data_r, hrx_data_w)
-	AM_RANGE(0x33, 0x33) AM_READWRITE(hrx_attr_r, hrx_attr_w)
+	map(0x08, 0x0b).rw(m_z80ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x1f, 0x1f).w(this, FUNC(mtx_state::mtx_cst_motor_w));
+	map(0x30, 0x31).w(this, FUNC(mtx_state::hrx_address_w));
+	map(0x32, 0x32).rw(this, FUNC(mtx_state::hrx_data_r), FUNC(mtx_state::hrx_data_w));
+	map(0x33, 0x33).rw(this, FUNC(mtx_state::hrx_attr_r), FUNC(mtx_state::hrx_attr_w));
 //  AM_RANGE(0x38, 0x38) AM_DEVWRITE(MC6845_TAG, mc6845_device, address_w)
 //  AM_RANGE(0x39, 0x39) AM_DEVWRITE(MC6845_TAG, mc6845_device, register_r, register_w)
 /*  AM_RANGE(0x40, 0x43) AM_DEVREADWRITE_LEGACY(FD1791_TAG, wd17xx_r, wd17xx_w)
@@ -75,16 +77,17 @@ static ADDRESS_MAP_START( mtx_io, AS_IO, 8, mtx_state )
     AM_RANGE(0x45, 0x45) AM_WRITE(fdx_drv_sel_w)
     AM_RANGE(0x46, 0x46) AM_WRITE(fdx_dma_lo_w)
     AM_RANGE(0x47, 0x47) AM_WRITE(fdx_dma_hi_w)*/
-ADDRESS_MAP_END
+}
 
 /*-------------------------------------------------
     ADDRESS_MAP( rs128_io )
 -------------------------------------------------*/
 
-static ADDRESS_MAP_START( rs128_io, AS_IO, 8, mtx_state )
-	AM_IMPORT_FROM(mtx_io)
-	AM_RANGE(0x0c, 0x0f) AM_DEVREADWRITE(Z80DART_TAG, z80dart_device, cd_ba_r, cd_ba_w)
-ADDRESS_MAP_END
+void mtx_state::rs128_io(address_map &map)
+{
+	mtx_io(map);
+	map(0x0c, 0x0f).rw(m_z80dart, FUNC(z80dart_device::cd_ba_r), FUNC(z80dart_device::cd_ba_w));
+}
 
 /***************************************************************************
     INPUT PORTS
@@ -280,10 +283,10 @@ WRITE_LINE_MEMBER(mtx_state::mtx_tms9929a_interrupt)
     MACHINE_CONFIG_START( mtx512 )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_START( mtx512 )
+MACHINE_CONFIG_START(mtx_state::mtx512)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL_4MHz)
+	MCFG_CPU_ADD(Z80_TAG, Z80, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(mtx_mem)
 	MCFG_CPU_IO_MAP(mtx_io)
 	MCFG_Z80_DAISY_CHAIN(mtx_daisy_chain)
@@ -292,7 +295,7 @@ static MACHINE_CONFIG_START( mtx512 )
 	MCFG_MACHINE_RESET_OVERRIDE(mtx_state,mtx512)
 
 	/* video hardware */
-	MCFG_DEVICE_ADD( "tms9929a", TMS9929A, XTAL_10_738635MHz / 2 )
+	MCFG_DEVICE_ADD( "tms9929a", TMS9929A, XTAL(10'738'635) / 2 )
 	MCFG_TMS9928A_VRAM_SIZE(0x4000)
 	MCFG_TMS9928A_OUT_INT_LINE_CB(WRITELINE(mtx_state, mtx_tms9929a_interrupt))
 	MCFG_TMS9928A_SCREEN_ADD_PAL( "screen" )
@@ -300,16 +303,16 @@ static MACHINE_CONFIG_START( mtx512 )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD(SN76489A_TAG, SN76489A, XTAL_4MHz)
+	MCFG_SOUND_ADD(SN76489A_TAG, SN76489A, XTAL(4'000'000))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 1.00)
 
 	/* devices */
-	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL_4MHz)
+	MCFG_DEVICE_ADD(Z80CTC_TAG, Z80CTC, XTAL(4'000'000))
 	MCFG_Z80CTC_INTR_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 	MCFG_Z80CTC_ZC1_CB(WRITELINE(mtx_state, ctc_trg1_w))
 	MCFG_Z80CTC_ZC2_CB(WRITELINE(mtx_state, ctc_trg2_w))
 
-	MCFG_TIMER_DRIVER_ADD_PERIODIC("z80ctc_timer", mtx_state, ctc_tick, attotime::from_hz(XTAL_4MHz/13))
+	MCFG_TIMER_DRIVER_ADD_PERIODIC("z80ctc_timer", mtx_state, ctc_tick, attotime::from_hz(XTAL(4'000'000)/13))
 
 	MCFG_CENTRONICS_ADD(CENTRONICS_TAG, centronics_devices, "printer")
 	MCFG_CENTRONICS_BUSY_HANDLER(WRITELINE(mtx_state, write_centronics_busy))
@@ -348,10 +351,11 @@ static MACHINE_CONFIG_START( mtx512 )
 MACHINE_CONFIG_END
 
 /*-------------------------------------------------
-    MACHINE_CONFIG_DERIVED( mtx500, mtx512 )
+    MACHINE_CONFIG_START( mtx500 )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_DERIVED( mtx500, mtx512 )
+MACHINE_CONFIG_START(mtx_state::mtx500)
+	mtx512(config);
 
 	/* internal ram */
 	MCFG_RAM_MODIFY(RAM_TAG)
@@ -360,10 +364,11 @@ static MACHINE_CONFIG_DERIVED( mtx500, mtx512 )
 MACHINE_CONFIG_END
 
 /*-------------------------------------------------
-    MACHINE_CONFIG_DERIVED( rs128, mtx512 )
+    MACHINE_CONFIG_START( rs128 )
 -------------------------------------------------*/
 
-static MACHINE_CONFIG_DERIVED( rs128, mtx512 )
+MACHINE_CONFIG_START(mtx_state::rs128)
+	mtx512(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY(Z80_TAG)
@@ -371,7 +376,7 @@ static MACHINE_CONFIG_DERIVED( rs128, mtx512 )
 	MCFG_Z80_DAISY_CHAIN(rs128_daisy_chain)
 
 	/* devices */
-	MCFG_DEVICE_ADD(Z80DART_TAG, Z80DART, XTAL_4MHz)
+	MCFG_DEVICE_ADD(Z80DART_TAG, Z80DART, XTAL(4'000'000))
 	MCFG_Z80DART_OUT_INT_CB(INPUTLINE(Z80_TAG, INPUT_LINE_IRQ0))
 
 	/* internal ram */

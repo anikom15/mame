@@ -100,6 +100,9 @@ public:
 	DECLARE_WRITE_LINE_MEMBER(write_uart_clock);
 	IRQ_CALLBACK_MEMBER(irq_ack);
 
+	void votrpss(machine_config &config);
+	void votrpss_io(address_map &map);
+	void votrpss_mem(address_map &map);
 private:
 	uint8_t m_term_data;
 	uint8_t m_porta;
@@ -116,25 +119,27 @@ private:
  Address Maps
 ******************************************************************************/
 
-static ADDRESS_MAP_START(votrpss_mem, AS_PROGRAM, 8, votrpss_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x3fff) AM_ROM /* main roms (in potted module) */
-	AM_RANGE(0x4000, 0x7fff) AM_NOP /* open bus/space for expansion rom (reads as 0xFF) */
-	AM_RANGE(0x8000, 0x8fff) AM_RAM /* onboard memory (2x 6116) */
-	AM_RANGE(0x9000, 0xbfff) AM_NOP /* open bus (space for memory expansion, checked by main roms, will be used if found)*/
-	AM_RANGE(0xc000, 0xdfff) AM_ROM /* 'personality rom', containing self-test code and optional user code */
-	AM_RANGE(0xe000, 0xffff) AM_NOP /* open bus (space for more personality rom, not normally used) */
-ADDRESS_MAP_END
+void votrpss_state::votrpss_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x3fff).rom(); /* main roms (in potted module) */
+	map(0x4000, 0x7fff).noprw(); /* open bus/space for expansion rom (reads as 0xFF) */
+	map(0x8000, 0x8fff).ram(); /* onboard memory (2x 6116) */
+	map(0x9000, 0xbfff).noprw(); /* open bus (space for memory expansion, checked by main roms, will be used if found)*/
+	map(0xc000, 0xdfff).rom(); /* 'personality rom', containing self-test code and optional user code */
+	map(0xe000, 0xffff).noprw(); /* open bus (space for more personality rom, not normally used) */
+}
 
-static ADDRESS_MAP_START(votrpss_io, AS_IO, 8, votrpss_state)
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x03) AM_MIRROR(0x3c) AM_DEVREADWRITE("ppi", i8255_device, read, write)
-	AM_RANGE(0x40, 0x40) AM_MIRROR(0x3e) AM_DEVREADWRITE("uart", i8251_device, data_r, data_w)
-	AM_RANGE(0x41, 0x41) AM_MIRROR(0x3e) AM_DEVREADWRITE("uart", i8251_device, status_r, control_w)
-	AM_RANGE(0x80, 0x83) AM_MIRROR(0x3c) AM_DEVREADWRITE("pit", pit8253_device, read, write)
-	AM_RANGE(0xc0, 0xc0) AM_MIRROR(0x3e) AM_DEVREADWRITE("ay", ay8910_device, data_r, address_w)
-	AM_RANGE(0xc1, 0xc1) AM_MIRROR(0x3e) AM_DEVREADWRITE("ay", ay8910_device, data_r, data_w)
-ADDRESS_MAP_END
+void votrpss_state::votrpss_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x03).mirror(0x3c).rw(m_ppi, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x40, 0x40).mirror(0x3e).rw("uart", FUNC(i8251_device::data_r), FUNC(i8251_device::data_w));
+	map(0x41, 0x41).mirror(0x3e).rw("uart", FUNC(i8251_device::status_r), FUNC(i8251_device::control_w));
+	map(0x80, 0x83).mirror(0x3c).rw("pit", FUNC(pit8253_device::read), FUNC(pit8253_device::write));
+	map(0xc0, 0xc0).mirror(0x3e).rw("ay", FUNC(ay8910_device::data_r), FUNC(ay8910_device::address_w));
+	map(0xc1, 0xc1).mirror(0x3e).rw("ay", FUNC(ay8910_device::data_r), FUNC(ay8910_device::data_w));
+}
 
 
 /******************************************************************************
@@ -236,9 +241,9 @@ void votrpss_state::kbd_put(u8 data)
  Machine Drivers
 ******************************************************************************/
 
-static MACHINE_CONFIG_START( votrpss )
+MACHINE_CONFIG_START(votrpss_state::votrpss)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_8MHz/2)  /* 4.000 MHz, verified */
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(8'000'000)/2)  /* 4.000 MHz, verified */
 	MCFG_CPU_PROGRAM_MAP(votrpss_mem)
 	MCFG_CPU_IO_MAP(votrpss_io)
 	MCFG_CPU_IRQ_ACKNOWLEDGE_DRIVER(votrpss_state,irq_ack)
@@ -248,7 +253,7 @@ static MACHINE_CONFIG_START( votrpss )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("ay", AY8910, XTAL_8MHz/4) /* 2.000 MHz, verified */
+	MCFG_SOUND_ADD("ay", AY8910, XTAL(8'000'000)/4) /* 2.000 MHz, verified */
 	MCFG_AY8910_PORT_B_READ_CB(IOPORT("DSW1"))        // port B read
 	MCFG_AY8910_PORT_A_WRITE_CB(DEVWRITE8("votrax", votrax_sc01_device, write))     // port A write
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
@@ -271,11 +276,11 @@ static MACHINE_CONFIG_START( votrpss )
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("uart", i8251_device, write_cts))
 
 	MCFG_DEVICE_ADD("pit", PIT8253, 0)
-	MCFG_PIT8253_CLK0(XTAL_8MHz) /* Timer 0: baud rate gen for 8251 */
+	MCFG_PIT8253_CLK0(XTAL(8'000'000)) /* Timer 0: baud rate gen for 8251 */
 	MCFG_PIT8253_OUT0_HANDLER(DEVWRITELINE("uart", i8251_device, write_txc))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("uart", i8251_device, write_rxc))
-	MCFG_PIT8253_CLK1(XTAL_8MHz / 256) /* Timer 1: Pitch */
-	MCFG_PIT8253_CLK2(XTAL_8MHz / 4096) /* Timer 2: Volume */
+	MCFG_PIT8253_CLK1(XTAL(8'000'000) / 256) /* Timer 1: Pitch */
+	MCFG_PIT8253_CLK2(XTAL(8'000'000) / 4096) /* Timer 2: Volume */
 
 	MCFG_DEVICE_ADD("ppi", I8255, 0)
 	MCFG_I8255_IN_PORTA_CB(READ8(votrpss_state, ppi_pa_r))

@@ -159,6 +159,17 @@ public:
 	void scsi_dma_read( uint32_t *p_n_psxram, uint32_t n_address, int32_t n_size );
 	void scsi_dma_write( uint32_t *p_n_psxram, uint32_t n_address, int32_t n_size );
 
+	static void cdrom_config(device_t *device);
+	void tmosh(machine_config &config);
+	void simpbowl(machine_config &config);
+	void kdeadeye(machine_config &config);
+	void btchamp(machine_config &config);
+	void konamigv(machine_config &config);
+	void btchamp_map(address_map &map);
+	void kdeadeye_map(address_map &map);
+	void konamigv_map(address_map &map);
+	void simpbowl_map(address_map &map);
+	void tmosh_map(address_map &map);
 protected:
 	virtual void driver_start() override;
 
@@ -174,52 +185,57 @@ private:
 	required_device<cpu_device> m_maincpu;
 };
 
-static ADDRESS_MAP_START( konamigv_map, AS_PROGRAM, 32, konamigv_state )
-	AM_RANGE(0x1f000000, 0x1f00001f) AM_DEVREADWRITE8("am53cf96", am53cf96_device, read, write, 0x00ff00ff)
-	AM_RANGE(0x1f100000, 0x1f100003) AM_READ_PORT("P1")
-	AM_RANGE(0x1f100004, 0x1f100007) AM_READ_PORT("P2")
-	AM_RANGE(0x1f100008, 0x1f10000b) AM_READ_PORT("P3_P4")
-	AM_RANGE(0x1f180000, 0x1f180003) AM_WRITE_PORT("EEPROMOUT")
-	AM_RANGE(0x1f680000, 0x1f68001f) AM_DEVREADWRITE8("mb89371", mb89371_device, read, write, 0x00ff00ff)
-	AM_RANGE(0x1f780000, 0x1f780003) AM_WRITENOP /* watchdog? */
-ADDRESS_MAP_END
+void konamigv_state::konamigv_map(address_map &map)
+{
+	map(0x1f000000, 0x1f00001f).rw(m_am53cf96, FUNC(am53cf96_device::read), FUNC(am53cf96_device::write)).umask32(0x00ff00ff);
+	map(0x1f100000, 0x1f100003).portr("P1");
+	map(0x1f100004, 0x1f100007).portr("P2");
+	map(0x1f100008, 0x1f10000b).portr("P3_P4");
+	map(0x1f180000, 0x1f180003).portw("EEPROMOUT");
+	map(0x1f680000, 0x1f68001f).rw("mb89371", FUNC(mb89371_device::read), FUNC(mb89371_device::write)).umask32(0x00ff00ff);
+	map(0x1f780000, 0x1f780003).nopw(); /* watchdog? */
+}
 
-static ADDRESS_MAP_START( simpbowl_map, AS_PROGRAM, 32, konamigv_state )
-	AM_IMPORT_FROM( konamigv_map )
+void konamigv_state::simpbowl_map(address_map &map)
+{
+	konamigv_map(map);
 
-	AM_RANGE(0x1f680080, 0x1f68008f) AM_READWRITE16(flash_r, flash_w, 0xffffffff)
-	AM_RANGE(0x1f6800c0, 0x1f6800c7) AM_DEVREAD8("upd", upd4701_device, read_xy, 0xff00ff00)
-	AM_RANGE(0x1f6800c8, 0x1f6800cb) AM_DEVREAD8("upd", upd4701_device, reset_xy, 0x0000ff00)
-ADDRESS_MAP_END
+	map(0x1f680080, 0x1f68008f).rw(this, FUNC(konamigv_state::flash_r), FUNC(konamigv_state::flash_w));
+	map(0x1f6800c0, 0x1f6800c7).r("upd", FUNC(upd4701_device::read_xy)).umask32(0xff00ff00);
+	map(0x1f6800c9, 0x1f6800c9).r("upd", FUNC(upd4701_device::reset_xy));
+}
 
-static ADDRESS_MAP_START( btchamp_map, AS_PROGRAM, 32, konamigv_state )
-	AM_IMPORT_FROM( konamigv_map )
+void konamigv_state::btchamp_map(address_map &map)
+{
+	konamigv_map(map);
 
-	AM_RANGE(0x1f380000, 0x1f3fffff) AM_DEVREADWRITE16("flash", intelfsh16_device, read, write, 0xffffffff)
-	AM_RANGE(0x1f680080, 0x1f680087) AM_DEVREAD8("upd1", upd4701_device, read_xy, 0xff00ff00)
-	AM_RANGE(0x1f680080, 0x1f680087) AM_DEVREAD8("upd2", upd4701_device, read_xy, 0x00ff00ff)
-	AM_RANGE(0x1f680088, 0x1f68008b) AM_WRITE16(btc_trackball_w, 0x0000ffff)
-	AM_RANGE(0x1f6800e0, 0x1f6800e3) AM_WRITENOP
-ADDRESS_MAP_END
+	map(0x1f380000, 0x1f3fffff).rw("flash", FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x1f680080, 0x1f680087).r("upd1", FUNC(upd4701_device::read_xy)).umask32(0xff00ff00);
+	map(0x1f680080, 0x1f680087).r("upd2", FUNC(upd4701_device::read_xy)).umask32(0x00ff00ff);
+	map(0x1f680088, 0x1f680089).w(this, FUNC(konamigv_state::btc_trackball_w));
+	map(0x1f6800e0, 0x1f6800e3).nopw();
+}
 
-static ADDRESS_MAP_START( kdeadeye_map, AS_PROGRAM, 32, konamigv_state )
-	AM_IMPORT_FROM( konamigv_map )
+void konamigv_state::kdeadeye_map(address_map &map)
+{
+	konamigv_map(map);
 
-	AM_RANGE(0x1f380000, 0x1f3fffff) AM_DEVREADWRITE16("flash", intelfsh16_device, read, write, 0xffffffff)
-	AM_RANGE(0x1f680080, 0x1f680083) AM_READ_PORT("GUNX1")
-	AM_RANGE(0x1f680090, 0x1f680093) AM_READ_PORT("GUNY1")
-	AM_RANGE(0x1f6800a0, 0x1f6800a3) AM_READ_PORT("GUNX2")
-	AM_RANGE(0x1f6800b0, 0x1f6800b3) AM_READ_PORT("GUNY2")
-	AM_RANGE(0x1f6800c0, 0x1f6800c3) AM_READ_PORT("BUTTONS")
-	AM_RANGE(0x1f6800e0, 0x1f6800e3) AM_WRITENOP
-ADDRESS_MAP_END
+	map(0x1f380000, 0x1f3fffff).rw("flash", FUNC(intelfsh16_device::read), FUNC(intelfsh16_device::write));
+	map(0x1f680080, 0x1f680083).portr("GUNX1");
+	map(0x1f680090, 0x1f680093).portr("GUNY1");
+	map(0x1f6800a0, 0x1f6800a3).portr("GUNX2");
+	map(0x1f6800b0, 0x1f6800b3).portr("GUNY2");
+	map(0x1f6800c0, 0x1f6800c3).portr("BUTTONS");
+	map(0x1f6800e0, 0x1f6800e3).nopw();
+}
 
-static ADDRESS_MAP_START( tmosh_map, AS_PROGRAM, 32, konamigv_state )
-	AM_IMPORT_FROM( konamigv_map )
+void konamigv_state::tmosh_map(address_map &map)
+{
+	konamigv_map(map);
 
-	AM_RANGE(0x1f680080, 0x1f680083) AM_READ16(tokimeki_serial_r, 0x0000ffff)
-	AM_RANGE(0x1f680090, 0x1f680093) AM_WRITE16(tokimeki_serial_w, 0x0000ffff)
-ADDRESS_MAP_END
+	map(0x1f680080, 0x1f680081).r(this, FUNC(konamigv_state::tokimeki_serial_r));
+	map(0x1f680090, 0x1f680091).w(this, FUNC(konamigv_state::tokimeki_serial_w));
+}
 
 /* SCSI */
 
@@ -307,22 +323,23 @@ void konamigv_state::driver_start()
 	save_item(NAME(m_flash_address));
 }
 
-static MACHINE_CONFIG_START( cdrom_config )
-	MCFG_DEVICE_MODIFY( "cdda" )
-	MCFG_SOUND_ROUTE( 0, "^^^^lspeaker", 1.0 )
-	MCFG_SOUND_ROUTE( 1, "^^^^rspeaker", 1.0 )
-MACHINE_CONFIG_END
+void konamigv_state::cdrom_config(device_t *device)
+{
+	device = device->subdevice("cdda");
+	MCFG_SOUND_ROUTE(0, "^^^^lspeaker", 1.0)
+	MCFG_SOUND_ROUTE(1, "^^^^rspeaker", 1.0)
+}
 
-static MACHINE_CONFIG_START( konamigv )
+MACHINE_CONFIG_START(konamigv_state::konamigv)
 	/* basic machine hardware */
-	MCFG_CPU_ADD( "maincpu", CXD8530BQ, XTAL_67_7376MHz )
+	MCFG_CPU_ADD( "maincpu", CXD8530BQ, XTAL(67'737'600) )
 	MCFG_CPU_PROGRAM_MAP( konamigv_map )
 
 	MCFG_RAM_MODIFY("maincpu:ram")
 	MCFG_RAM_DEFAULT_SIZE("2M")
 
-	MCFG_PSX_DMA_CHANNEL_READ( "maincpu", 5, psxdma_device::read_delegate(&konamigv_state::scsi_dma_read, (konamigv_state *) owner ) )
-	MCFG_PSX_DMA_CHANNEL_WRITE( "maincpu", 5, psxdma_device::write_delegate(&konamigv_state::scsi_dma_write, (konamigv_state *) owner ) )
+	MCFG_PSX_DMA_CHANNEL_READ( "maincpu", 5, psxdma_device::read_delegate(&konamigv_state::scsi_dma_read, this ) )
+	MCFG_PSX_DMA_CHANNEL_WRITE( "maincpu", 5, psxdma_device::write_delegate(&konamigv_state::scsi_dma_write, this ) )
 
 	MCFG_DEVICE_ADD("mb89371", MB89371, 0)
 	MCFG_EEPROM_SERIAL_93C46_ADD("eeprom")
@@ -336,12 +353,12 @@ static MACHINE_CONFIG_START( konamigv )
 	MCFG_AM53CF96_IRQ_HANDLER(DEVWRITELINE("maincpu:irq", psxirq_device, intin10))
 
 	/* video hardware */
-	MCFG_PSXGPU_ADD( "maincpu", "gpu", CXD8514Q, 0x100000, XTAL_53_693175MHz )
+	MCFG_PSXGPU_ADD( "maincpu", "gpu", CXD8514Q, 0x100000, XTAL(53'693'175) )
 
 	/* sound hardware */
 	MCFG_SPEAKER_STANDARD_STEREO("lspeaker", "rspeaker")
 
-	MCFG_SPU_ADD( "spu", XTAL_67_7376MHz/2 )
+	MCFG_SPU_ADD( "spu", XTAL(67'737'600)/2 )
 	MCFG_SOUND_ROUTE( 0, "lspeaker", 0.75 )
 	MCFG_SOUND_ROUTE( 1, "rspeaker", 0.75 )
 MACHINE_CONFIG_END
@@ -472,7 +489,8 @@ DRIVER_INIT_MEMBER(konamigv_state,simpbowl)
 	m_flash8[3] = machine().device<fujitsu_29f016a_device>("flash3");
 }
 
-static MACHINE_CONFIG_DERIVED( simpbowl, konamigv )
+MACHINE_CONFIG_START(konamigv_state::simpbowl)
+	konamigv(config);
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP( simpbowl_map )
 
@@ -511,7 +529,8 @@ WRITE16_MEMBER(konamigv_state::btc_trackball_w)
 	}
 }
 
-static MACHINE_CONFIG_DERIVED( btchamp, konamigv )
+MACHINE_CONFIG_START(konamigv_state::btchamp)
+	konamigv(config);
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP( btchamp_map )
 
@@ -568,7 +587,8 @@ WRITE16_MEMBER(konamigv_state::tokimeki_serial_w)
 
 }
 
-static MACHINE_CONFIG_DERIVED( tmosh, konamigv )
+MACHINE_CONFIG_START(konamigv_state::tmosh)
+	konamigv(config);
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP( tmosh_map )
 MACHINE_CONFIG_END
@@ -583,7 +603,8 @@ CD:
     A01
 */
 
-static MACHINE_CONFIG_DERIVED( kdeadeye, konamigv )
+MACHINE_CONFIG_START(konamigv_state::kdeadeye)
+	konamigv(config);
 	MCFG_CPU_MODIFY( "maincpu" )
 	MCFG_CPU_PROGRAM_MAP( kdeadeye_map )
 

@@ -171,19 +171,20 @@ WRITE8_MEMBER(dcheese_state::bsmt_data_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( main_cpu_map, AS_PROGRAM, 16, dcheese_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x000000, 0x03ffff) AM_ROM
-	AM_RANGE(0x100000, 0x10ffff) AM_RAM
-	AM_RANGE(0x200000, 0x200001) AM_READ_PORT("200000") AM_DEVWRITE("watchdog", watchdog_timer_device, reset16_w)
-	AM_RANGE(0x220000, 0x220001) AM_READ_PORT("220000") AM_WRITE(madmax_blitter_color_w)
-	AM_RANGE(0x240000, 0x240001) AM_READ_PORT("240000") AM_WRITE(eeprom_control_w)
-	AM_RANGE(0x260000, 0x26001f) AM_WRITE(madmax_blitter_xparam_w)
-	AM_RANGE(0x280000, 0x28001f) AM_WRITE(madmax_blitter_yparam_w)
-	AM_RANGE(0x2a0000, 0x2a003f) AM_READWRITE(madmax_blitter_vidparam_r, madmax_blitter_vidparam_w)
-	AM_RANGE(0x2e0000, 0x2e0001) AM_DEVWRITE8("soundlatch", generic_latch_8_device, write, 0x00ff)
-	AM_RANGE(0x300000, 0x300001) AM_WRITE(madmax_blitter_unknown_w)
-ADDRESS_MAP_END
+void dcheese_state::main_cpu_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x000000, 0x03ffff).rom();
+	map(0x100000, 0x10ffff).ram();
+	map(0x200000, 0x200001).portr("200000").w("watchdog", FUNC(watchdog_timer_device::reset16_w));
+	map(0x220000, 0x220001).portr("220000").w(this, FUNC(dcheese_state::madmax_blitter_color_w));
+	map(0x240000, 0x240001).portr("240000").w(this, FUNC(dcheese_state::eeprom_control_w));
+	map(0x260000, 0x26001f).w(this, FUNC(dcheese_state::madmax_blitter_xparam_w));
+	map(0x280000, 0x28001f).w(this, FUNC(dcheese_state::madmax_blitter_yparam_w));
+	map(0x2a0000, 0x2a003f).rw(this, FUNC(dcheese_state::madmax_blitter_vidparam_r), FUNC(dcheese_state::madmax_blitter_vidparam_w));
+	map(0x2e0001, 0x2e0001).w(m_soundlatch, FUNC(generic_latch_8_device::write));
+	map(0x300000, 0x300001).w(this, FUNC(dcheese_state::madmax_blitter_unknown_w));
+}
 
 
 
@@ -193,14 +194,15 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( sound_cpu_map, AS_PROGRAM, 8, dcheese_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x07ff) AM_READWRITE(sound_status_r, sound_control_w)
-	AM_RANGE(0x0800, 0x0fff) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0x1000, 0x10ff) AM_MIRROR(0x0700) AM_WRITE(bsmt_data_w)
-	AM_RANGE(0x1800, 0x1fff) AM_RAM
-	AM_RANGE(0x2000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void dcheese_state::sound_cpu_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x07ff).rw(this, FUNC(dcheese_state::sound_status_r), FUNC(dcheese_state::sound_control_w));
+	map(0x0800, 0x0fff).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0x1000, 0x10ff).mirror(0x0700).w(this, FUNC(dcheese_state::bsmt_data_w));
+	map(0x1800, 0x1fff).ram();
+	map(0x2000, 0xffff).rom();
+}
 
 
 
@@ -370,7 +372,7 @@ INPUT_PORTS_END
  *
  *************************************/
 
-static MACHINE_CONFIG_START( dcheese )
+MACHINE_CONFIG_START(dcheese_state::dcheese)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", M68000, MAIN_OSC)
@@ -411,7 +413,8 @@ static MACHINE_CONFIG_START( dcheese )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( fredmem, dcheese )
+MACHINE_CONFIG_START(dcheese_state::fredmem)
+	dcheese(config);
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_VISIBLE_AREA(0, 359, 0, 239)
 MACHINE_CONFIG_END

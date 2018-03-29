@@ -73,9 +73,9 @@
 
 
 
-DEFINE_DEVICE_TYPE(TMP87PH40AN, tmp87ph40an_device, "tmp87ph40an", "TMP87PH40AN")
+DEFINE_DEVICE_TYPE(TMP87PH40AN, tmp87ph40an_device, "tmp87ph40an", "Toshiba TMP87PH40AN")
 
-static ADDRESS_MAP_START(tmp87ph40an_mem, AS_PROGRAM, 8, tlcs870_device)
+ADDRESS_MAP_START(tlcs870_device::tmp87ph40an_mem)
 #if 0
 	AM_RANGE(0x0000, 0x0000) AM_READWRITE(port0_r,port0_w)
 	AM_RANGE(0x0001, 0x0001) AM_READWRITE(port1_r,port1_w)
@@ -166,7 +166,7 @@ tlcs870_device::tlcs870_device(const machine_config &mconfig, device_type type, 
 
 
 tmp87ph40an_device::tmp87ph40an_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: tlcs870_device(mconfig, TMP87PH40AN, tag, owner, clock, ADDRESS_MAP_NAME(tmp87ph40an_mem))
+	: tlcs870_device(mconfig, TMP87PH40AN, tag, owner, clock, address_map_constructor(FUNC(tmp87ph40an_device::tmp87ph40an_mem), this))
 {
 }
 
@@ -2518,7 +2518,7 @@ void tlcs870_device::execute_run()
 	do
 	{
 		m_prvpc.d = m_pc.d;
-		debugger_instruction_hook(this, m_pc.d);
+		debugger_instruction_hook(m_pc.d);
 
 		//check_interrupts();
 		m_temppc = m_pc.d;
@@ -3141,7 +3141,7 @@ void tlcs870_device::device_start()
 	state_add(STATE_GENSP, "GENSP", m_sp.w.l).formatstr("%04X");
 	state_add(STATE_GENFLAGS, "GENFLAGS", m_F ).formatstr("%8s").noshow();
 
-	m_icountptr = &m_icount;
+	set_icountptr(m_icount);
 }
 
 
@@ -3164,7 +3164,7 @@ void tlcs870_device::state_string_export(const device_state_entry &entry, std::s
 
 }
 
-util::disasm_interface *tlcs870_device::create_disassembler()
+std::unique_ptr<util::disasm_interface> tlcs870_device::create_disassembler()
 {
-	return new tlcs870_disassembler;
+	return std::make_unique<tlcs870_disassembler>();
 }

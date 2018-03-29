@@ -32,6 +32,9 @@ public:
 	DECLARE_DRIVER_INIT(k8915);
 	uint32_t screen_update(screen_device &screen, bitmap_ind16 &bitmap, const rectangle &cliprect);
 
+	void k8915(machine_config &config);
+	void io_map(address_map &map);
+	void mem_map(address_map &map);
 private:
 	uint8_t m_framecnt;
 	virtual void machine_reset() override;
@@ -50,19 +53,21 @@ WRITE8_MEMBER( k8915_state::k8915_a8_w )
 		membank("boot")->set_entry(1); // rom at 0000
 }
 
-static ADDRESS_MAP_START(mem_map, AS_PROGRAM, 8, k8915_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x0fff) AM_RAMBANK("boot")
-	AM_RANGE(0x1000, 0x17ff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0x1800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void k8915_state::mem_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x0fff).bankrw("boot");
+	map(0x1000, 0x17ff).ram().share("videoram");
+	map(0x1800, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START(io_map, AS_IO, 8, k8915_state)
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x50, 0x53) AM_DEVREADWRITE("sio", z80sio_device, ba_cd_r, ba_cd_w)
-	AM_RANGE(0x58, 0x5b) AM_DEVREADWRITE("ctc", z80ctc_device, read, write)
-	AM_RANGE(0xa8, 0xa8) AM_WRITE(k8915_a8_w)
-ADDRESS_MAP_END
+void k8915_state::io_map(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x50, 0x53).rw("sio", FUNC(z80sio_device::ba_cd_r), FUNC(z80sio_device::ba_cd_w));
+	map(0x58, 0x5b).rw("ctc", FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0xa8, 0xa8).w(this, FUNC(k8915_state::k8915_a8_w));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( k8915 )
@@ -126,9 +131,9 @@ uint32_t k8915_state::screen_update(screen_device &screen, bitmap_ind16 &bitmap,
 }
 
 
-static MACHINE_CONFIG_START( k8915 )
+MACHINE_CONFIG_START(k8915_state::k8915)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_4_9152MHz / 2)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(4'915'200) / 2)
 	MCFG_CPU_PROGRAM_MAP(mem_map)
 	MCFG_CPU_IO_MAP(io_map)
 
@@ -143,13 +148,13 @@ static MACHINE_CONFIG_START( k8915 )
 
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_DEVICE_ADD("ctc_clock", CLOCK, XTAL_4_9152MHz / 2)
+	MCFG_DEVICE_ADD("ctc_clock", CLOCK, XTAL(4'915'200) / 2)
 	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("ctc", z80ctc_device, trg2))
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_4_9152MHz / 2)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(4'915'200) / 2)
 	MCFG_Z80CTC_ZC2_CB(DEVWRITELINE("sio", z80sio_device, rxtxcb_w))
 
-	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL_4_9152MHz / 2)
+	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL(4'915'200) / 2)
 	MCFG_Z80SIO_OUT_TXDB_CB(DEVWRITELINE("rs232", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_DTRB_CB(DEVWRITELINE("rs232", rs232_port_device, write_dtr))
 	MCFG_Z80SIO_OUT_RTSB_CB(DEVWRITELINE("rs232", rs232_port_device, write_rts))

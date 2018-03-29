@@ -48,8 +48,8 @@
     properly implement RTC (integrated into the CPU)
     Verify Sprite Zoom (check exactly which pixels are doubled / missed on hardware for flipped , non-flipped cases etc.)
     Fix Save States (is this a driver problem or an ARM core problem, they don't work unless you get through the startup tests)
-	Determine motherboard card reader MCU internal ROM size and add as NO_DUMP to the sets
-	See if kov2nl needs another idle skip, after Game Over there is a period where the current one is ineffective
+    Determine motherboard card reader MCU internal ROM size and add as NO_DUMP to the sets
+    See if kov2nl needs another idle skip, after Game Over there is a period where the current one is ineffective
 
     Debug features (require DIP SW1:8 On and SW1:1 Off):
     - QC TEST mode: hold P1 A+B during boot
@@ -133,7 +133,7 @@ void pgm2_state::postload()
 
 	if (m_has_decrypted_kov3_module)
 	{
-		decrypt_kov3_module(module_addr_xor, module_data_xor);
+		decrypt_kov3_module(module_key->addr_xor, module_key->data_xor);
 	}
 
 	if (m_has_decrypted)
@@ -142,7 +142,7 @@ void pgm2_state::postload()
 
 		if (m_romboard_ram)
 		{
-			decrypter.decrypter_rom((uint16_t*)memregion("user1")->base(), memregion("user1")->bytes(), 0x0200000); 
+			decrypter.decrypter_rom((uint16_t*)memregion("user1")->base(), memregion("user1")->bytes(), 0x0200000);
 		}
 		else
 		{
@@ -381,7 +381,7 @@ WRITE16_MEMBER(pgm2_state::unk30120014_w)
 
  In case of KOV3 unlock sequence is:
   1) send via serial 0x0d and 64bit xor_value, result must be A3A3A3A36D6D6D6D
-  2) send via serial 0x25 and 64bit xor_value, store result as 64bit key (after xor with xor_value)
+  2) send via serial 0x25 and 64bit xor_value, result is 64bit key^xor_value
   3) read first 10h bytes from ROM area (at this point ROM area read as scrambled or random data)
   4) write "key" to ROM area, using 2x 16bit writes, offsets and data is bitfields of 64bit key:
       u32 key0, key1;
@@ -390,19 +390,14 @@ WRITE16_MEMBER(pgm2_state::unk30120014_w)
       rom[key0 >> 22] = (key0 >> 6) & 0xffff;
      it is possible, 22bit address xor value derived from 1st write offset.
      meaning of other 10bit offset and 2x data words is not clear - each of them can be either "key bits" or "magic word" expected by security device.
-  5) write static sequence of 4x words to ROM area
-  6) read "expected sum" from ROM area 10000002-10000009
+  5) write static sequence of 4x words to ROM area, which switch module to special mode - next 4x reads will return checksum^key parts instead of rom data.
+  6) read checksum from ROM area 10000002-10000009
   7) read first 10h bytes from ROM area and check they are not same as was at step 3)
-  8) perform whole ROM summing, result must match 64bit key xor "expected sum" read at step 6)
+  8) perform whole ROM summing, result must match key^checksum read at step 6)
 
  It is not clear if/how real address/data xor values derived from written "key",
  or security chip just waiting to be be written magic value at specific address in ROM area, and if this happen enable descrambling using hardcoded values.
-
- Current implementation assume "expected sum" read at step 6) is regular data from ROM (descrambled),
- our keys calculated assuming this, so further ROM sum check passes OK.
- But, there is chances in hardware its not like that, but these bytes comes from security IC (some indication of this is the fact 5) and 6) is actually single routine).
- In this case we have 2 unknowns (key and summ), but know only their xor result, so can not guess each. Will be needed serial comm logs or IGS036 internal SRAM dump from real hardware.
-*/
+ */
 
 READ_LINE_MEMBER(pgm2_state::module_data_r)
 {
@@ -434,7 +429,7 @@ WRITE_LINE_MEMBER(pgm2_state::module_clk_w)
 					break;
 				case 0x25: // get key
 					for (int i = 0; i < 8; i++)
-						module_send_buf[i] = module_key[i] ^ module_rcv_buf[i + 1];
+						module_send_buf[i] = module_key->key[i ^ 3] ^ module_rcv_buf[i + 1];
 					break;
 				default:
 					logerror("unknown FPGA command %02X!\n", module_rcv_buf[0]);
@@ -459,9 +454,45 @@ WRITE_LINE_MEMBER(pgm2_state::module_clk_w)
 	module_prev_state = state;
 }
 
-WRITE32_MEMBER(pgm2_state::module_scramble_w)
+READ16_MEMBER(pgm2_state::module_rom_r)
 {
-	decrypt_kov3_module(module_addr_xor, module_data_xor);
+	if (module_sum_read && offset > 0 && offset < 5) // checksum read mode
+	{
+		if (offset == 4)
+			module_sum_read = false;
+		uint32_t offs = ((offset - 1) * 2) ^ 2;
+		return (module_key->sum[offs] ^ module_key->key[offs]) | ((module_key->sum[offs + 1] ^ module_key->key[offs + 1]) << 8);
+	}
+
+	return ((uint16_t *)memregion("user1")->base())[offset];
+}
+
+WRITE16_MEMBER(pgm2_state::module_rom_w)
+{
+	//printf("module write %04X at %08X\n", data, offset);
+	uint32_t dec_val = ((module_key->key[0] | (module_key->key[1] << 8) | (module_key->key[2] << 16)) >> 6) & 0xffff;
+	if (data == dec_val)
+	{
+		// might be wrong and normal data access enabled only after whole sequence complete
+		decrypt_kov3_module(module_key->addr_xor, module_key->data_xor);
+	}
+	else
+		switch (data)
+		{
+			// following might be wrong, and trigger is address or both
+		case 0x00c2: // checksum read mode enable, step 1 and 4
+			module_sum_read = true;
+			if (offset != 0xe5a7 && offset != 0xa521)
+				popmessage("module write %04X at %08X\n", data, offset);
+			break;
+		case 0x0084: // checksum read mode enable, step 2 and 3
+			if (offset != 0x5e7a && offset != 0x5a12)
+				popmessage("module write %04X at %08X\n", data, offset);
+			break;
+		default:
+			logerror("module write %04X at %08X\n", data, offset);
+			break;
+		}
 }
 
 // very primitive Atmel ARM PIO simulation, should be improved and devicified
@@ -482,87 +513,92 @@ READ32_MEMBER(pgm2_state::pio_pdsr_r)
 	return (module_data_r() == ASSERT_LINE ? 1 : 0) << 8; // fpga data read and status (bit 7, must be 0)
 }
 
-static ADDRESS_MAP_START( pgm2_map, AS_PROGRAM, 32, pgm2_state )
-	AM_RANGE(0x00000000, 0x00003fff) AM_ROM //AM_REGION("user1", 0x00000) // internal ROM
+void pgm2_state::pgm2_map(address_map &map)
+{
+	map(0x00000000, 0x00003fff).rom(); //AM_REGION("user1", 0x00000) // internal ROM
 
-	AM_RANGE(0x02000000, 0x0200ffff) AM_RAM AM_SHARE("sram") // 'battery ram' (in CPU?)
+	map(0x02000000, 0x0200ffff).ram().share("sram"); // 'battery ram' (in CPU?)
 
-	AM_RANGE(0x03600000, 0x036bffff) AM_READWRITE(mcu_r, mcu_w)
+	map(0x03600000, 0x036bffff).rw(this, FUNC(pgm2_state::mcu_r), FUNC(pgm2_state::mcu_w));
 
-	AM_RANGE(0x03900000, 0x03900003) AM_READ_PORT("INPUTS0")
-	AM_RANGE(0x03a00000, 0x03a00003) AM_READ_PORT("INPUTS1")
+	map(0x03900000, 0x03900003).portr("INPUTS0");
+	map(0x03a00000, 0x03a00003).portr("INPUTS1");
 
-	AM_RANGE(0x20000000, 0x2007ffff) AM_RAM AM_SHARE("mainram")
+	map(0x20000000, 0x2007ffff).ram().share("mainram");
 
-	AM_RANGE(0x30000000, 0x30001fff) AM_RAM AM_SHARE("sp_videoram") // spriteram ('move' ram in test mode)
+	map(0x30000000, 0x30001fff).ram().share("sp_videoram"); // spriteram ('move' ram in test mode)
 
-	AM_RANGE(0x30020000, 0x30021fff) AM_RAM_WRITE(bg_videoram_w) AM_SHARE("bg_videoram")
-	AM_RANGE(0x30040000, 0x30045fff) AM_RAM_WRITE(fg_videoram_w) AM_SHARE("fg_videoram")
+	map(0x30020000, 0x30021fff).ram().w(this, FUNC(pgm2_state::bg_videoram_w)).share("bg_videoram");
+	map(0x30040000, 0x30045fff).ram().w(this, FUNC(pgm2_state::fg_videoram_w)).share("fg_videoram");
 
-	AM_RANGE(0x30060000, 0x30063fff) AM_RAM_DEVWRITE("sp_palette", palette_device, write) AM_SHARE("sp_palette")
+	map(0x30060000, 0x30063fff).ram().w(m_sp_palette, FUNC(palette_device::write32)).share("sp_palette");
 
-	AM_RANGE(0x30080000, 0x30081fff) AM_RAM_DEVWRITE("bg_palette", palette_device, write) AM_SHARE("bg_palette")
+	map(0x30080000, 0x30081fff).ram().w(m_bg_palette, FUNC(palette_device::write32)).share("bg_palette");
 
-	AM_RANGE(0x300a0000, 0x300a07ff) AM_RAM_DEVWRITE("tx_palette", palette_device, write) AM_SHARE("tx_palette")
+	map(0x300a0000, 0x300a07ff).ram().w(m_tx_palette, FUNC(palette_device::write32)).share("tx_palette");
 
-	AM_RANGE(0x300c0000, 0x300c01ff) AM_RAM AM_SHARE("sp_zoom") // sprite zoom table - it uploads the same data 4x, maybe xshrink,xgrow,yshrink,ygrow or just redundant mirrors
+	map(0x300c0000, 0x300c01ff).ram().share("sp_zoom"); // sprite zoom table - it uploads the same data 4x, maybe xshrink,xgrow,yshrink,ygrow or just redundant mirrors
 
 	/* linescroll ram - it clears to 0x3bf on startup which is enough bytes for 240 lines if each rowscroll value was 8 bytes, but each row is 4,
 	so only half of this is used? or tx can do it too (unlikely, as orl2 writes 256 lines of data) maybe just bad mem check bounds on orleg2.
 	It reports pass even if it fails the first byte but if the first byte passes it attempts to test 0x10000 bytes, which is far too big so
 	what is the real size? */
-	AM_RANGE(0x300e0000, 0x300e03ff) AM_RAM AM_SHARE("lineram") AM_MIRROR(0x000fc00)
+	map(0x300e0000, 0x300e03ff).ram().share("lineram").mirror(0x000fc00);
 
-	AM_RANGE(0x30100000, 0x301000ff) AM_READWRITE8(shareram_r, shareram_w, 0x00ff00ff)
+	map(0x30100000, 0x301000ff).rw(this, FUNC(pgm2_state::shareram_r), FUNC(pgm2_state::shareram_w)).umask32(0x00ff00ff);
 
-	AM_RANGE(0x30120000, 0x30120003) AM_RAM AM_SHARE("bgscroll") // scroll
-	AM_RANGE(0x30120008, 0x3012000b) AM_RAM AM_SHARE("fgscroll")
-	AM_RANGE(0x3012000c, 0x3012000f) AM_RAM AM_SHARE("vidmode")
-	AM_RANGE(0x30120014, 0x30120017) AM_WRITE16(unk30120014_w, 0xffffffff)
-	AM_RANGE(0x30120018, 0x3012001b) AM_WRITE16(vbl_ack_w, 0x0000ffff)
-	AM_RANGE(0x30120030, 0x30120033) AM_WRITE16(share_bank_w, 0xffff0000)
-	AM_RANGE(0x30120038, 0x3012003b) AM_WRITE(sprite_encryption_w)
+	map(0x30120000, 0x30120003).ram().share("bgscroll"); // scroll
+	map(0x30120008, 0x3012000b).ram().share("fgscroll");
+	map(0x3012000c, 0x3012000f).ram().share("vidmode");
+	map(0x30120014, 0x30120017).w(this, FUNC(pgm2_state::unk30120014_w));
+	map(0x30120018, 0x30120019).w(this, FUNC(pgm2_state::vbl_ack_w));
+	map(0x30120032, 0x30120033).w(this, FUNC(pgm2_state::share_bank_w));
+	map(0x30120038, 0x3012003b).w(this, FUNC(pgm2_state::sprite_encryption_w));
 	// there are other 0x301200xx regs
 
-	AM_RANGE(0x40000000, 0x40000003) AM_DEVREADWRITE8("ymz774", ymz774_device, read, write, 0xffffffff)
+	map(0x40000000, 0x40000003).r("ymz774", FUNC(ymz774_device::read)).w("ymz774", FUNC(ymz774_device::write));
 
 	// internal IGS036 - most of them is standard ATMEL peripherals followed by custom bits
 	// AM_RANGE(0xfffa0000, 0xfffa00ff) TC (Timer Counter) not used, mentioned in disabled / unused code
 	// AM_RANGE(0xffffec00, 0xffffec7f) SMC (Static Memory Controller)
 	// AM_RANGE(0xffffee00, 0xffffee57) MATRIX (Bus Matrix)
-	AM_RANGE(0xfffff000, 0xfffff14b) AM_DEVICE("arm_aic", arm_aic_device, regs_map)
+	map(0xfffff000, 0xfffff14b).m(m_arm_aic, FUNC(arm_aic_device::regs_map));
 	// AM_RANGE(0xfffff200, 0xfffff247) DBGU (Debug Unit)
 	// AM_RANGE(0xfffff400, 0xfffff4af) PIO (Parallel Input Output Controller)
-	AM_RANGE(0xfffff430, 0xfffff437) AM_WRITENOP // often
+	map(0xfffff430, 0xfffff437).nopw(); // often
 	// AM_RANGE(0xfffffd00, 0xfffffd0b) RSTC (Reset Controller)
 	// AM_RANGE(0xfffffd20, 0xfffffd2f) RTTC (Real Time Timer)
-	AM_RANGE(0xfffffd28, 0xfffffd2b) AM_READ(rtc_r)
+	map(0xfffffd28, 0xfffffd2b).r(this, FUNC(pgm2_state::rtc_r));
 	// AM_RANGE(0xfffffd40, 0xfffffd4b) WDTC (Watch Dog Timer)
 	// custom IGS036 stuff starts here
-	AM_RANGE(0xfffffa08, 0xfffffa0b) AM_WRITE(encryption_do_w) // after uploading encryption? table might actually send it or enable external ROM? when read bits0-1 called FUSE 0 and 1, must be 0
-	AM_RANGE(0xfffffa0c, 0xfffffa0f) AM_READ(unk_startup_r) // written 0, then 0x1c, then expected to return (result&0x180)==0x180, then written 0x7c
-	AM_RANGE(0xfffffc00, 0xfffffcff) AM_READWRITE8(encryption_r, encryption_w, 0xffffffff)
-ADDRESS_MAP_END
+	map(0xfffffa08, 0xfffffa0b).w(this, FUNC(pgm2_state::encryption_do_w)); // after uploading encryption? table might actually send it or enable external ROM? when read bits0-1 called FUSE 0 and 1, must be 0
+	map(0xfffffa0c, 0xfffffa0f).r(this, FUNC(pgm2_state::unk_startup_r)); // written 0, then 0x1c, then expected to return (result&0x180)==0x180, then written 0x7c
+	map(0xfffffc00, 0xfffffcff).rw(this, FUNC(pgm2_state::encryption_r), FUNC(pgm2_state::encryption_w));
+}
 
 
-static ADDRESS_MAP_START( pgm2_rom_map, AS_PROGRAM, 32, pgm2_state )
-	AM_RANGE(0x10000000, 0x10ffffff) AM_ROM AM_REGION("user1", 0) // external ROM
-	AM_IMPORT_FROM(pgm2_map)
-ADDRESS_MAP_END
+void pgm2_state::pgm2_rom_map(address_map &map)
+{
+	pgm2_map(map);
+	map(0x10000000, 0x10ffffff).rom().region("user1", 0); // external ROM
+}
 
-static ADDRESS_MAP_START( pgm2_ram_rom_map, AS_PROGRAM, 32, pgm2_state )
-	AM_RANGE(0x10000000, 0x101fffff) AM_RAM AM_SHARE("romboard_ram") // we should also probably decrypt writes once the encryption is enabled, but the game never writes with it turned on anyway
-	AM_RANGE(0x10200000, 0x103fffff) AM_ROM AM_REGION("user1", 0) // external ROM
-	AM_IMPORT_FROM(pgm2_map)
-ADDRESS_MAP_END
+void pgm2_state::pgm2_ram_rom_map(address_map &map)
+{
+	pgm2_map(map);
+	map(0x10000000, 0x101fffff).ram().share("romboard_ram"); // we should also probably decrypt writes once the encryption is enabled, but the game never writes with it turned on anyway
+	map(0x10200000, 0x103fffff).rom().region("user1", 0); // external ROM
+}
 
-static ADDRESS_MAP_START( pgm2_module_rom_map, AS_PROGRAM, 32, pgm2_state )
-	AM_RANGE(0x10014a40, 0x10014a43) AM_WRITE(module_scramble_w)
-	AM_RANGE(0xfffff430, 0xfffff433) AM_WRITE(pio_sodr_w)
-	AM_RANGE(0xfffff434, 0xfffff437) AM_WRITE(pio_codr_w)
-	AM_RANGE(0xfffff43c, 0xfffff43f) AM_READ(pio_pdsr_r)
-	AM_IMPORT_FROM(pgm2_rom_map)
-ADDRESS_MAP_END
+void pgm2_state::pgm2_module_rom_map(address_map &map)
+{
+	pgm2_rom_map(map);
+	map(0x10000000, 0x107fffff).w(this, FUNC(pgm2_state::module_rom_w));
+	map(0x10000000, 0x1000000f).r(this, FUNC(pgm2_state::module_rom_r));
+	map(0xfffff430, 0xfffff433).w(this, FUNC(pgm2_state::pio_sodr_w));
+	map(0xfffff434, 0xfffff437).w(this, FUNC(pgm2_state::pio_codr_w));
+	map(0xfffff43c, 0xfffff43f).r(this, FUNC(pgm2_state::pio_pdsr_r));
+}
 
 static INPUT_PORTS_START( pgm2 )
 	PORT_START("INPUTS0")
@@ -672,6 +708,7 @@ void pgm2_state::machine_start()
 	save_item(NAME(m_share_bank));
 	save_item(NAME(pio_out_data));
 	save_item(NAME(module_in_latch));
+	save_item(NAME(module_sum_read));
 	save_item(NAME(module_out_latch));
 	save_item(NAME(module_prev_state));
 	save_item(NAME(module_clk_cnt));
@@ -696,6 +733,7 @@ void pgm2_state::machine_reset()
 
 	pio_out_data = 0;
 	module_prev_state = 0;
+	module_sum_read = false;
 	module_clk_cnt = 151; // this needed because of "false" clock pulse happen during gpio init
 }
 
@@ -732,7 +770,7 @@ static GFXDECODE_START( pgm2_bg )
 	GFXDECODE_ENTRY( "bgtile", 0, tiles32x32x8_layout, 0, 0x2000/4/0x80 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( pgm2 )
+MACHINE_CONFIG_START(pgm2_state::pgm2)
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", IGS036, 100000000) // ?? ARM based CPU, has internal ROM.
@@ -780,19 +818,22 @@ static MACHINE_CONFIG_START( pgm2 )
 MACHINE_CONFIG_END
 
 // not strictly needed as the video code supports changing on the fly, but makes recording easier etc.
-static MACHINE_CONFIG_DERIVED( pgm2_lores, pgm2 )
+MACHINE_CONFIG_START(pgm2_state::pgm2_lores)
+	pgm2(config);
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_VISIBLE_AREA(0, 320-1, 0, 240-1)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( pgm2_hires, pgm2 )
+MACHINE_CONFIG_START(pgm2_state::pgm2_hires)
+	pgm2(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(pgm2_module_rom_map)
 	MCFG_SCREEN_MODIFY("screen")
 	MCFG_SCREEN_VISIBLE_AREA(0, 512-1, 0, 240-1)
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_DERIVED( pgm2_ramrom, pgm2 )
+MACHINE_CONFIG_START(pgm2_state::pgm2_ramrom)
+	pgm2(config);
 	MCFG_CPU_MODIFY("maincpu")
 	MCFG_CPU_PROGRAM_MAP(pgm2_ram_rom_map)
 MACHINE_CONFIG_END
@@ -849,7 +890,7 @@ MACHINE_CONFIG_END
 	ROM_LOAD( #prefix "_v101" #extension ".u7",  0x000000, 0x800000, CRC(45805b53) SHA1(f2a8399c821b75fadc53e914f6f318707e70787c) )
 
 /*
-   Internal ROMs for CHINA and OVERSEA are confirmed to differ by just the region byte, other regions not yet verified.
+   Internal ROMs for CHINA, JAPAN and OVERSEA are confirmed to differ by just the region byte, other regions not yet verified.
    label is a localized version of the game title and the country code (see above)
    For OVERSEA this is "O/L2", but we omit the / due to naming rules
    For the CHINA version this uses the Chinese characters
@@ -864,6 +905,10 @@ MACHINE_CONFIG_END
 #define ORLEG2_INTERNAL_OVERSEAS \
 	ROM_REGION( 0x04000, "maincpu", 0 ) \
 	ROM_LOAD( "ol2_fa.igs036", 0x00000000, 0x0004000, CRC(cc4d398a) SHA1(c50bcc81f02cd5aa8ad157d73209dc53bdedc023) )
+
+#define ORLEG2_INTERNAL_JAPAN \
+	ROM_REGION( 0x04000, "maincpu", 0 ) \
+	ROM_LOAD( "ol2_a10.igs036", 0x00000000, 0x0004000, CRC(69375284) SHA1(a120c6a3d8d7898cc3ca508abea78e5e54090c66) )
 
 ROM_START( orleg2 )
 	ORLEG2_INTERNAL_OVERSEAS
@@ -898,6 +943,24 @@ ROM_END
 ROM_START( orleg2_101cn )
 	ORLEG2_INTERNAL_CHINA
 	ORLEG2_PROGRAM_101(xyj2,cn)
+	ORLEG2_VIDEO_SOUND_ROMS
+ROM_END
+
+ROM_START( orleg2_104jp )
+	ORLEG2_INTERNAL_JAPAN
+	ORLEG2_PROGRAM_104(ol2,a10)
+	ORLEG2_VIDEO_SOUND_ROMS
+ROM_END
+
+ROM_START( orleg2_103jp )
+	ORLEG2_INTERNAL_JAPAN
+	ORLEG2_PROGRAM_103(ol2,a10)
+	ORLEG2_VIDEO_SOUND_ROMS
+ROM_END
+
+ROM_START( orleg2_101jp )
+	ORLEG2_INTERNAL_JAPAN
+	ORLEG2_PROGRAM_101(ol2,a10)
 	ORLEG2_VIDEO_SOUND_ROMS
 ROM_END
 
@@ -1089,6 +1152,15 @@ ROM_START( kov3_102 )
 
 	ROM_REGION( 0x1000000, "user1", 0 )
 	ROM_LOAD( "kov3_v102cn_raw.bin",         0x00000000, 0x0800000, CRC(61d0dabd) SHA1(959b22ef4e342ca39c2386549ac7274f9d580ab8) )
+
+	KOV3_VIDEO_SOUND_ROMS
+ROM_END
+
+ROM_START( kov3_101 )
+	KOV3_INTERNAL_CHINA
+
+	ROM_REGION( 0x1000000, "user1", 0 )
+	ROM_LOAD( "kov3_v101.bin",         0x00000000, 0x0800000, BAD_DUMP CRC(d6664449) SHA1(64d912425f018c3531951019b33e909657724547) ) // dump was not raw, manually xored with fake value
 
 	KOV3_VIDEO_SOUND_ROMS
 ROM_END
@@ -1367,9 +1439,11 @@ DRIVER_INIT_MEMBER(pgm2_state,ddpdojt)
 	m_maincpu->space(AS_PROGRAM).install_read_handler(0x20021e04, 0x20021e07, read32_delegate(FUNC(pgm2_state::ddpdojt_speedup2_r), this));
 }
 
-static const uint8_t kov3_100_key[] = { 0xde, 0x29, 0x52, 0x84, 0x71, 0x9e, 0xed, 0x66 };
-static const uint8_t kov3_102_key[] = { 0x0e, 0x49, 0x9f, 0x1b, 0xca, 0x14, 0xec, 0x33 };
-static const uint8_t kov3_104_key[] = { 0xaf, 0x35, 0x5f, 0xf9, 0x63, 0x78, 0xe8, 0xf9 };
+// currently we don't know how to derive address/data xor values from real keys, so we need both
+static const kov3_module_key kov3_104_key = { { 0x40,0xac,0x30,0x00,0x47,0x49,0x00,0x00 } ,{ 0xeb,0x7d,0x8d,0x90,0x2c,0xf4,0x09,0x82 }, 0x18ec71, 0xb89d }; // fake zero-key
+static const kov3_module_key kov3_102_key = { { 0x49,0xac,0xb0,0xec,0x47,0x49,0x95,0x38 } ,{ 0x09,0xbd,0xf1,0x31,0xe6,0xf0,0x65,0x2b }, 0x021d37, 0x81d0 };
+static const kov3_module_key kov3_101_key = { { 0xc1,0x2c,0xc1,0xe5,0x3c,0xc1,0x59,0x9e } ,{ 0xf2,0xb2,0xf0,0x89,0x37,0xf2,0xc7,0x0b }, 0, 0xffff }; // real xor values is unknown
+static const kov3_module_key kov3_100_key = { { 0x40,0xac,0x30,0x00,0x47,0x49,0x00,0x00 } ,{ 0x96,0xf0,0x91,0xe1,0xb3,0xf1,0xef,0x90 }, 0x3e8aa8, 0xc530 }; // fake zero-key
 
 DRIVER_INIT_MEMBER(pgm2_state,kov3)
 {
@@ -1394,23 +1468,25 @@ void pgm2_state::decrypt_kov3_module(uint32_t addrxor, uint16_t dataxor)
 
 DRIVER_INIT_MEMBER(pgm2_state, kov3_104)
 {
-	// currently we don't know how to derive address/data xor values from real keys, so we need both
-	module_addr_xor = 0x18ec71; module_data_xor = 0xb89d;
-	module_key = kov3_104_key;
+	module_key = &kov3_104_key;
 	DRIVER_INIT_CALL(kov3);
 }
 
 DRIVER_INIT_MEMBER(pgm2_state, kov3_102)
 {
-	module_addr_xor = 0x021d37; module_data_xor = 0x81d0;
-	module_key = kov3_102_key;
+	module_key = &kov3_102_key;
+	DRIVER_INIT_CALL(kov3);
+}
+
+DRIVER_INIT_MEMBER(pgm2_state, kov3_101)
+{
+	module_key = &kov3_101_key;
 	DRIVER_INIT_CALL(kov3);
 }
 
 DRIVER_INIT_MEMBER(pgm2_state, kov3_100)
 {
-	module_addr_xor = 0x3e8aa8; module_data_xor = 0xc530;
-	module_key = kov3_100_key;
+	module_key = &kov3_100_key;
 	DRIVER_INIT_CALL(kov3);
 }
 
@@ -1435,6 +1511,10 @@ GAME( 2007, orleg2_104cn, orleg2,    pgm2,    pgm2, pgm2_state,     orleg2,     
 GAME( 2007, orleg2_103cn, orleg2,    pgm2,    pgm2, pgm2_state,     orleg2,       ROT0, "IGS", "Oriental Legend 2 (V103, China)", MACHINE_SUPPORTS_SAVE )
 GAME( 2007, orleg2_101cn, orleg2,    pgm2,    pgm2, pgm2_state,     orleg2,       ROT0, "IGS", "Oriental Legend 2 (V101, China)", MACHINE_SUPPORTS_SAVE )
 
+GAME( 2007, orleg2_104jp, orleg2,    pgm2,    pgm2, pgm2_state,     orleg2,       ROT0, "IGS", "Oriental Legend 2 (V104, Japan)", MACHINE_SUPPORTS_SAVE )
+GAME( 2007, orleg2_103jp, orleg2,    pgm2,    pgm2, pgm2_state,     orleg2,       ROT0, "IGS", "Oriental Legend 2 (V103, Japan)", MACHINE_SUPPORTS_SAVE )
+GAME( 2007, orleg2_101jp, orleg2,    pgm2,    pgm2, pgm2_state,     orleg2,       ROT0, "IGS", "Oriental Legend 2 (V101, Japan)", MACHINE_SUPPORTS_SAVE )
+
 // Knights of Valour 2 New Legend
 GAME( 2008, kov2nl,       0,         pgm2,    pgm2, pgm2_state,     kov2nl,       ROT0, "IGS", "Knights of Valour 2 New Legend (V302, Oversea)", MACHINE_SUPPORTS_SAVE )
 GAME( 2008, kov2nl_301,   kov2nl,    pgm2,    pgm2, pgm2_state,     kov2nl,       ROT0, "IGS", "Knights of Valour 2 New Legend (V301, Oversea)", MACHINE_SUPPORTS_SAVE )
@@ -1451,6 +1531,7 @@ GAME( 2010, ddpdojt,      0,    pgm2_ramrom,    pgm2, pgm2_state,     ddpdojt,  
 // Knights of Valour 3 - should be a V103 and V101 too
 GAME( 2011, kov3,         0,    pgm2_hires, pgm2, pgm2_state,     kov3_104,   ROT0, "IGS", "Knights of Valour 3 (V104, China, Hong Kong, Taiwan)", MACHINE_SUPPORTS_SAVE )
 GAME( 2011, kov3_102,     kov3, pgm2_hires, pgm2, pgm2_state,     kov3_102,   ROT0, "IGS", "Knights of Valour 3 (V102, China, Hong Kong, Taiwan)", MACHINE_SUPPORTS_SAVE )
+GAME( 2011, kov3_101,     kov3, pgm2_hires, pgm2, pgm2_state,     kov3_101,   ROT0, "IGS", "Knights of Valour 3 (V101, China, Hong Kong, Taiwan)", MACHINE_SUPPORTS_SAVE )
 GAME( 2011, kov3_100,     kov3, pgm2_hires, pgm2, pgm2_state,     kov3_100,   ROT0, "IGS", "Knights of Valour 3 (V100, China, Hong Kong, Taiwan)", MACHINE_SUPPORTS_SAVE )
 
 // King of Fighters '98: Ultimate Match Hero

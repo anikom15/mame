@@ -74,6 +74,9 @@ public:
 	I8275_DRAW_CHARACTER_MEMBER(display_pixels);
 	void kbd_put(u8 data);
 
+	void rc702(machine_config &config);
+	void rc702_io(address_map &map);
+	void rc702_mem(address_map &map);
 private:
 	bool m_q_state;
 	bool m_qbar_state;
@@ -94,24 +97,26 @@ private:
 };
 
 
-static ADDRESS_MAP_START(rc702_mem, AS_PROGRAM, 8, rc702_state)
-	AM_RANGE(0x0000, 0x07ff) AM_READ_BANK("bankr0") AM_WRITE_BANK("bankw0")
-	AM_RANGE(0x0800, 0xffff) AM_RAM
-ADDRESS_MAP_END
+void rc702_state::rc702_mem(address_map &map)
+{
+	map(0x0000, 0x07ff).bankr("bankr0").bankw("bankw0");
+	map(0x0800, 0xffff).ram();
+}
 
-static ADDRESS_MAP_START(rc702_io, AS_IO, 8, rc702_state)
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x00, 0x01) AM_DEVREADWRITE("crtc", i8275_device, read, write)
-	AM_RANGE(0x04, 0x05) AM_DEVICE("fdc", upd765a_device, map)
-	AM_RANGE(0x08, 0x0b) AM_DEVREADWRITE("sio1", z80dart_device, cd_ba_r, cd_ba_w) // boot sequence doesn't program this
-	AM_RANGE(0x0c, 0x0f) AM_DEVREADWRITE("ctc1", z80ctc_device, read, write)
-	AM_RANGE(0x10, 0x13) AM_DEVREADWRITE("pio", z80pio_device, read, write)
-	AM_RANGE(0x14, 0x17) AM_READ_PORT("DSW") AM_WRITE(port14_w) // motors
-	AM_RANGE(0x18, 0x1b) AM_WRITE(port18_w) // memory banking
-	AM_RANGE(0x1c, 0x1f) AM_WRITE(port1c_w) // sound
-	AM_RANGE(0xf0, 0xff) AM_DEVREADWRITE("dma", am9517a_device, read, write)
-ADDRESS_MAP_END
+void rc702_state::rc702_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map.unmap_value_high();
+	map(0x00, 0x01).rw("crtc", FUNC(i8275_device::read), FUNC(i8275_device::write));
+	map(0x04, 0x05).m(m_fdc, FUNC(upd765a_device::map));
+	map(0x08, 0x0b).rw("sio1", FUNC(z80dart_device::cd_ba_r), FUNC(z80dart_device::cd_ba_w)); // boot sequence doesn't program this
+	map(0x0c, 0x0f).rw(m_ctc1, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write));
+	map(0x10, 0x13).rw(m_pio, FUNC(z80pio_device::read), FUNC(z80pio_device::write));
+	map(0x14, 0x17).portr("DSW").w(this, FUNC(rc702_state::port14_w)); // motors
+	map(0x18, 0x1b).w(this, FUNC(rc702_state::port18_w)); // memory banking
+	map(0x1c, 0x1f).w(this, FUNC(rc702_state::port1c_w)); // sound
+	map(0xf0, 0xff).rw(m_dma, FUNC(am9517a_device::read), FUNC(am9517a_device::write));
+}
 
 /* Input ports */
 static INPUT_PORTS_START( rc702 )
@@ -321,9 +326,9 @@ static SLOT_INTERFACE_START( floppies )
 	SLOT_INTERFACE( "525qd", FLOPPY_525_QD )
 SLOT_INTERFACE_END
 
-static MACHINE_CONFIG_START( rc702 )
+MACHINE_CONFIG_START(rc702_state::rc702)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", Z80, XTAL_8MHz / 2)
+	MCFG_CPU_ADD("maincpu", Z80, XTAL(8'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(rc702_mem)
 	MCFG_CPU_IO_MAP(rc702_io)
 	MCFG_Z80_DAISY_CHAIN(daisy_chain_intf)
@@ -333,20 +338,20 @@ static MACHINE_CONFIG_START( rc702 )
 	MCFG_DEVICE_ADD("ctc_clock", CLOCK, 614000)
 	MCFG_CLOCK_SIGNAL_HANDLER(WRITELINE(rc702_state, clock_w))
 
-	MCFG_DEVICE_ADD("ctc1", Z80CTC, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("ctc1", Z80CTC, XTAL(8'000'000) / 2)
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE("sio1", z80dart_device, txca_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("sio1", z80dart_device, rxca_w))
 	MCFG_Z80CTC_ZC1_CB(DEVWRITELINE("sio1", z80dart_device, rxtxcb_w))
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("sio1", Z80DART, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("sio1", Z80DART, XTAL(8'000'000) / 2)
 	MCFG_Z80DART_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL(8'000'000) / 2)
 	MCFG_Z80PIO_OUT_INT_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 //  MCFG_Z80PIO_OUT_PB_CB(WRITE8(rc702_state, portxx_w)) // parallel port
 
-	MCFG_DEVICE_ADD("dma", AM9517A, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("dma", AM9517A, XTAL(8'000'000) / 2)
 	MCFG_I8237_OUT_HREQ_CB(WRITELINE(rc702_state, busreq_w))
 	MCFG_I8237_OUT_EOP_CB(WRITELINE(rc702_state, tc_w)) // inverted
 	MCFG_I8237_IN_MEMR_CB(READ8(rc702_state, memory_read_byte))

@@ -91,6 +91,9 @@ public:
 
 	uint32_t screen_update(screen_device &screen, bitmap_rgb32 &bitmap, const rectangle &cliprect);
 
+	void mmagic(machine_config &config);
+	void mmagic_io(address_map &map);
+	void mmagic_mem(address_map &map);
 protected:
 	virtual void machine_start() override;
 
@@ -114,24 +117,26 @@ private:
 //  ADDRESS MAPS
 //**************************************************************************
 
-static ADDRESS_MAP_START( mmagic_mem, AS_PROGRAM, 8, mmagic_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0x17ff) AM_ROM
-	AM_RANGE(0x2000, 0x21ff) AM_RAM
-	AM_RANGE(0x3000, 0x31ff) AM_RAM AM_SHARE("vram")
-	AM_RANGE(0x8002, 0x8002) AM_WRITE(ball_x_w)
-	AM_RANGE(0x8003, 0x8003) AM_WRITE(ball_y_w)
-	AM_RANGE(0x8004, 0x8004) AM_READ(vblank_r)
-ADDRESS_MAP_END
+void mmagic_state::mmagic_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x17ff).rom();
+	map(0x2000, 0x21ff).ram();
+	map(0x3000, 0x31ff).ram().share("vram");
+	map(0x8002, 0x8002).w(this, FUNC(mmagic_state::ball_x_w));
+	map(0x8003, 0x8003).w(this, FUNC(mmagic_state::ball_y_w));
+	map(0x8004, 0x8004).r(this, FUNC(mmagic_state::vblank_r));
+}
 
-static ADDRESS_MAP_START( mmagic_io, AS_IO, 8, mmagic_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x80, 0x80) AM_WRITE(color_w)
-	AM_RANGE(0x81, 0x81) AM_WRITE(audio_w)
-	AM_RANGE(0x85, 0x85) AM_READ_PORT("paddle")
-	AM_RANGE(0x86, 0x86) AM_READ_PORT("buttons")
-	AM_RANGE(0x87, 0x87) AM_READ_PORT("dipswitch")
-ADDRESS_MAP_END
+void mmagic_state::mmagic_io(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x80, 0x80).w(this, FUNC(mmagic_state::color_w));
+	map(0x81, 0x81).w(this, FUNC(mmagic_state::audio_w));
+	map(0x85, 0x85).portr("paddle");
+	map(0x86, 0x86).portr("buttons");
+	map(0x87, 0x87).portr("dipswitch");
+}
 
 
 //**************************************************************************
@@ -299,15 +304,15 @@ void mmagic_state::machine_start()
 //  MACHINE DEFINTIONS
 //**************************************************************************
 
-static MACHINE_CONFIG_START( mmagic )
+MACHINE_CONFIG_START(mmagic_state::mmagic)
 	// basic machine hardware
-	MCFG_CPU_ADD("maincpu", I8085A, XTAL_6_144MHz) // NEC D8085A
+	MCFG_CPU_ADD("maincpu", I8085A, 6.144_MHz_XTAL) // NEC D8085A
 	MCFG_CPU_PROGRAM_MAP(mmagic_mem)
 	MCFG_CPU_IO_MAP(mmagic_io)
 
 	// video hardware
 	MCFG_SCREEN_ADD("screen", RASTER)
-	MCFG_SCREEN_RAW_PARAMS(XTAL_6_144MHz, 384, 0, 256, 264, 0, 192)
+	MCFG_SCREEN_RAW_PARAMS(6.144_MHz_XTAL, 384, 0, 256, 264, 0, 192)
 	MCFG_SCREEN_UPDATE_DRIVER(mmagic_state, screen_update)
 
 	MCFG_PALETTE_ADD_3BIT_RGB("palette")

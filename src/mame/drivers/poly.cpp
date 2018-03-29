@@ -65,6 +65,8 @@ public:
 	DECLARE_WRITE_LINE_MEMBER( ptm_o3_callback );
 	DECLARE_WRITE8_MEMBER(baud_rate_w);
 
+	void poly(machine_config &config);
+	void poly_mem(address_map &map);
 protected:
 	virtual void machine_reset() override;
 
@@ -80,27 +82,28 @@ private:
 };
 
 
-static ADDRESS_MAP_START(poly_mem, AS_PROGRAM, 8, poly_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000,0x9fff) AM_RAM
-	AM_RANGE(0xa000,0xcfff) AM_ROM
-	AM_RANGE(0xd000,0xdfff) AM_RAM
-	AM_RANGE(0xe000,0xe003) AM_DEVREADWRITE("pia0", pia6821_device, read, write) //video control PIA 6821
-	AM_RANGE(0xe004,0xe005) AM_DEVREADWRITE("acia", acia6850_device, read, write)
-	AM_RANGE(0xe006,0xe006) AM_WRITE(baud_rate_w)
-	AM_RANGE(0xe00c,0xe00f) AM_DEVREADWRITE("pia1", pia6821_device, read, write) //keyboard PIA 6821
-	AM_RANGE(0xe020,0xe027) AM_DEVREADWRITE("ptm", ptm6840_device, read, write) //timer 6840
-	AM_RANGE(0xe030,0xe037) AM_DEVREADWRITE("adlc", mc6854_device, read, write) //Data Link Controller 6854
-	AM_RANGE(0xe040,0xe040) AM_NOP //Set protect flip-flop after 1 E-cycle
-	AM_RANGE(0xe050,0xe05f) AM_RAM //Dynamic Address Translater (arranges memory banks)
+void poly_state::poly_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0x9fff).ram();
+	map(0xa000, 0xcfff).rom();
+	map(0xd000, 0xdfff).ram();
+	map(0xe000, 0xe003).rw(m_pia0, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); //video control PIA 6821
+	map(0xe004, 0xe005).rw("acia", FUNC(acia6850_device::read), FUNC(acia6850_device::write));
+	map(0xe006, 0xe006).w(this, FUNC(poly_state::baud_rate_w));
+	map(0xe00c, 0xe00f).rw(m_pia1, FUNC(pia6821_device::read), FUNC(pia6821_device::write)); //keyboard PIA 6821
+	map(0xe020, 0xe027).rw(m_ptm, FUNC(ptm6840_device::read), FUNC(ptm6840_device::write)); //timer 6840
+	map(0xe030, 0xe037).rw("adlc", FUNC(mc6854_device::read), FUNC(mc6854_device::write)); //Data Link Controller 6854
+	map(0xe040, 0xe040).noprw(); //Set protect flip-flop after 1 E-cycle
+	map(0xe050, 0xe05f).ram(); //Dynamic Address Translater (arranges memory banks)
 	// AM_RANGE(0xe060,0xe060) Select Map 1
 	// AM_RANGE(0xe070,0xe070) Select Map 2
-	AM_RANGE(0xe800,0xebbf) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0xebc0,0xebff) AM_RAM
-	AM_RANGE(0xec00,0xefbf) AM_RAM // screen 2 AM_SHARE("videoram")
-	AM_RANGE(0xefc0,0xefff) AM_RAM
-	AM_RANGE(0xf000,0xffff) AM_ROM
-ADDRESS_MAP_END
+	map(0xe800, 0xebbf).ram().share("videoram");
+	map(0xebc0, 0xebff).ram();
+	map(0xec00, 0xefbf).ram(); // screen 2 AM_SHARE("videoram")
+	map(0xefc0, 0xefff).ram();
+	map(0xf000, 0xffff).rom();
+}
 
 
 /* Input ports */
@@ -150,9 +153,9 @@ WRITE8_MEMBER(poly_state::baud_rate_w)
 	m_acia_clock->set_clock_scale((selector <= 5) ? 1.0 / (1 << selector) : 0.0);
 }
 
-static MACHINE_CONFIG_START( poly )
+MACHINE_CONFIG_START(poly_state::poly)
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", MC6809, XTAL_12_0576MHz / 3) // nominally 4 MHz
+	MCFG_CPU_ADD("maincpu", MC6809, XTAL(12'057'600) / 3) // nominally 4 MHz
 	MCFG_CPU_PROGRAM_MAP(poly_mem)
 
 	/* video hardware */
@@ -169,7 +172,7 @@ static MACHINE_CONFIG_START( poly )
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.50)
 
 	/* Devices */
-	MCFG_DEVICE_ADD("saa5050", SAA5050, XTAL_12_0576MHz / 2)
+	MCFG_DEVICE_ADD("saa5050", SAA5050, XTAL(12'057'600) / 2)
 	MCFG_SAA5050_D_CALLBACK(READ8(poly_state, videoram_r))
 	MCFG_SAA5050_SCREEN_SIZE(40, 24, 40)
 
@@ -183,10 +186,10 @@ static MACHINE_CONFIG_START( poly )
 	MCFG_PIA_IRQA_HANDLER(INPUTLINE("maincpu", M6809_IRQ_LINE))
 	MCFG_PIA_IRQB_HANDLER(INPUTLINE("maincpu", M6809_IRQ_LINE))
 
-	MCFG_DEVICE_ADD("ptm", PTM6840, XTAL_12_0576MHz / 3)
+	MCFG_DEVICE_ADD("ptm", PTM6840, XTAL(12'057'600) / 3)
 	MCFG_PTM6840_EXTERNAL_CLOCKS(0, 0, 0)
-	MCFG_PTM6840_OUT1_CB(WRITELINE(poly_state, ptm_o2_callback))
-	MCFG_PTM6840_OUT2_CB(WRITELINE(poly_state, ptm_o3_callback))
+	MCFG_PTM6840_O2_CB(WRITELINE(poly_state, ptm_o2_callback))
+	MCFG_PTM6840_O3_CB(WRITELINE(poly_state, ptm_o3_callback))
 	MCFG_PTM6840_IRQ_CB(INPUTLINE("maincpu", M6809_IRQ_LINE))
 
 	MCFG_DEVICE_ADD("acia", ACIA6850, 0)

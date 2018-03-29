@@ -18,17 +18,15 @@ public:
 //      , m_maincpu(*this, "maincpu")
 	{ }
 
+void solbourne(machine_config &config);
 private:
 //  required_device<cpu_device> m_maincpu;
 };
 
-//static ADDRESS_MAP_START( mem_map, AS_PROGRAM, 8, solbourne_state )
-//ADDRESS_MAP_END
-
 static INPUT_PORTS_START( solbourne )
 INPUT_PORTS_END
 
-static MACHINE_CONFIG_START( solbourne )
+MACHINE_CONFIG_START(solbourne_state::solbourne)
 MACHINE_CONFIG_END
 
 ROM_START( sols5e )

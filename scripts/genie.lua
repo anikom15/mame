@@ -387,6 +387,11 @@ newoption {
 }
 
 newoption {
+	trigger = "SANITIZE",
+	description = "Specifies the santizer(s) to use."
+}
+
+newoption {
 	trigger = "PROJECT",
 	description = "Select projects to be built. Will look into project folder for files.",
 }
@@ -666,6 +671,16 @@ if not _OPTIONS["with-system-flac"]~=nil then
 	}
 end
 
+if not _OPTIONS["with-system-pugixml"] then
+	defines {
+		"PUGIXML_HEADER_ONLY",
+	}
+else
+	links {
+		ext_lib("pugixml"),
+	}
+end
+
 if _OPTIONS["NOASM"]=="1" then
 	defines {
 		"MAME_NOASM"
@@ -758,7 +773,7 @@ if (_OPTIONS["SHADOW_CHECK"]=="1") then
 end
 
 -- only show deprecation warnings when enabled
-if _OPTIONS["DEPRECATED"]~="1" then
+if _OPTIONS["DEPRECATED"]=="0" then
 	buildoptions {
 		"-Wno-deprecated-declarations"
 	}
@@ -928,6 +943,7 @@ end
 		"-Wwrite-strings",
 		"-Wno-sign-compare",
 		"-Wno-conversion",
+		"-Wno-error=deprecated-declarations",
 	}
 -- warnings only applicable to C compiles
 	buildoptions_c {
@@ -951,12 +967,37 @@ end
 		"-Woverloaded-virtual",
 	}
 
---ifdef SANITIZE
---CCOMFLAGS += -fsanitize=$(SANITIZE)
+if _OPTIONS["SANITIZE"] then
+	buildoptions {
+		"-fsanitize=".. _OPTIONS["SANITIZE"]
+	}
+	linkoptions {
+		"-fsanitize=".. _OPTIONS["SANITIZE"]
+	}
+	if string.find(_OPTIONS["SANITIZE"], "address") then
+		buildoptions {
+			"-fsanitize-address-use-after-scope"
+		}
+		linkoptions {
+			"-fsanitize-address-use-after-scope"
+		}
+	end
+	if string.find(_OPTIONS["SANITIZE"], "undefined") then
+		-- 'function' produces errors without delegates by design
+		-- 'alignment' produces a lot of errors which we are not interested in
+		buildoptions {
+			"-fno-sanitize=function",
+			"-fno-sanitize=alignment"
+		}
+		linkoptions {
+			"-fno-sanitize=function",
+			"-fno-sanitize=alignment"
+		}
+	end
+end
 
 --ifneq (,$(findstring thread,$(SANITIZE)))
 --CCOMFLAGS += -fPIE
---endif
 --endif
 
 
@@ -1043,6 +1084,9 @@ configuration { "asmjs" }
 	buildoptions_cpp {
 		"-x c++",
 		"-std=c++14",
+	}
+	linkoptions {
+		"-Wl,--start-group",
 	}
 	archivesplit_size "20"
 

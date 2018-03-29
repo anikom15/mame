@@ -44,6 +44,8 @@ public:
 	void kbd_put(u8 data);
 	MC6845_UPDATE_ROW(crtc_update_row);
 
+	void ec65(machine_config &config);
+	void ec65_mem(address_map &map);
 private:
 	virtual void machine_reset() override;
 	required_device<via6522_device> m_via_0;
@@ -61,29 +63,33 @@ public:
 		: driver_device(mconfig, type, tag)
 	{
 	}
+	void ec65k(machine_config &config);
+	void ec65k_mem(address_map &map);
 };
 
-static ADDRESS_MAP_START(ec65_mem, AS_PROGRAM, 8, ec65_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xdfff) AM_RAM
-	AM_RANGE(0xe000, 0xe003) AM_DEVREADWRITE(PIA6821_TAG, pia6821_device, read, write)
-	AM_RANGE(0xe010, 0xe011) AM_DEVREADWRITE(ACIA6850_TAG, acia6850_device, read, write)
-	AM_RANGE(0xe100, 0xe10f) AM_DEVREADWRITE(VIA6522_0_TAG, via6522_device, read, write)
-	AM_RANGE(0xe110, 0xe11f) AM_DEVREADWRITE(VIA6522_1_TAG, via6522_device, read, write)
-	AM_RANGE(0xe130, 0xe133) AM_DEVREADWRITE(ACIA6551_TAG,  mos6551_device, read, write)
-	AM_RANGE(0xe140, 0xe140) AM_DEVWRITE(MC6845_TAG, mc6845_device, address_w)
-	AM_RANGE(0xe141, 0xe141) AM_DEVREADWRITE(MC6845_TAG, mc6845_device, register_r , register_w)
-	AM_RANGE(0xe400, 0xe7ff) AM_RAM // 1KB on-board RAM
-	AM_RANGE(0xe800, 0xefff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0xf000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void ec65_state::ec65_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xdfff).ram();
+	map(0xe000, 0xe003).rw(PIA6821_TAG, FUNC(pia6821_device::read), FUNC(pia6821_device::write));
+	map(0xe010, 0xe011).rw(ACIA6850_TAG, FUNC(acia6850_device::read), FUNC(acia6850_device::write));
+	map(0xe100, 0xe10f).rw(m_via_0, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0xe110, 0xe11f).rw(m_via_1, FUNC(via6522_device::read), FUNC(via6522_device::write));
+	map(0xe130, 0xe133).rw(ACIA6551_TAG, FUNC(mos6551_device::read), FUNC(mos6551_device::write));
+	map(0xe140, 0xe140).w(MC6845_TAG, FUNC(mc6845_device::address_w));
+	map(0xe141, 0xe141).rw(MC6845_TAG, FUNC(mc6845_device::register_r), FUNC(mc6845_device::register_w));
+	map(0xe400, 0xe7ff).ram(); // 1KB on-board RAM
+	map(0xe800, 0xefff).ram().share("videoram");
+	map(0xf000, 0xffff).rom();
+}
 
-static ADDRESS_MAP_START(ec65k_mem, AS_PROGRAM, 8, ec65_state)
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x0000, 0xe7ff) AM_RAM
-	AM_RANGE(0xe800, 0xefff) AM_RAM AM_SHARE("videoram")
-	AM_RANGE(0xf000, 0xffff) AM_ROM
-ADDRESS_MAP_END
+void ec65k_state::ec65k_mem(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x0000, 0xe7ff).ram();
+	map(0xe800, 0xefff).ram().share("videoram");
+	map(0xf000, 0xffff).rom();
+}
 
 /* Input ports */
 static INPUT_PORTS_START( ec65 )
@@ -164,10 +170,10 @@ static GFXDECODE_START( ec65 )
 	GFXDECODE_ENTRY( "chargen", 0x0000, ec65_charlayout, 0, 1 )
 GFXDECODE_END
 
-static MACHINE_CONFIG_START( ec65 )
+MACHINE_CONFIG_START(ec65_state::ec65)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",M6502, XTAL_4MHz / 4)
+	MCFG_CPU_ADD("maincpu",M6502, XTAL(4'000'000) / 4)
 	MCFG_CPU_PROGRAM_MAP(ec65_mem)
 
 	/* video hardware */
@@ -181,7 +187,7 @@ static MACHINE_CONFIG_START( ec65 )
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", ec65)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_MC6845_ADD(MC6845_TAG, MC6845, "screen", XTAL_16MHz / 8)
+	MCFG_MC6845_ADD(MC6845_TAG, MC6845, "screen", XTAL(16'000'000) / 8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8) /*?*/
 	MCFG_MC6845_UPDATE_ROW_CB(ec65_state, crtc_update_row)
@@ -191,21 +197,21 @@ static MACHINE_CONFIG_START( ec65 )
 
 	MCFG_DEVICE_ADD(ACIA6850_TAG, ACIA6850, 0)
 
-	MCFG_DEVICE_ADD(VIA6522_0_TAG, VIA6522, XTAL_4MHz / 4)
+	MCFG_DEVICE_ADD(VIA6522_0_TAG, VIA6522, XTAL(4'000'000) / 4)
 
-	MCFG_DEVICE_ADD(VIA6522_1_TAG, VIA6522, XTAL_4MHz / 4)
+	MCFG_DEVICE_ADD(VIA6522_1_TAG, VIA6522, XTAL(4'000'000) / 4)
 
 	MCFG_DEVICE_ADD(ACIA6551_TAG, MOS6551, 0)
-	MCFG_MOS6551_XTAL(XTAL_1_8432MHz)
+	MCFG_MOS6551_XTAL(XTAL(1'843'200))
 
 	MCFG_DEVICE_ADD(KEYBOARD_TAG, GENERIC_KEYBOARD, 0)
 	MCFG_GENERIC_KEYBOARD_CB(PUT(ec65_state, kbd_put))
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( ec65k )
+MACHINE_CONFIG_START(ec65k_state::ec65k)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu",G65816, XTAL_4MHz) // can use 4,2 or 1 MHz
+	MCFG_CPU_ADD("maincpu",G65816, XTAL(4'000'000)) // can use 4,2 or 1 MHz
 	MCFG_CPU_PROGRAM_MAP(ec65k_mem)
 
 	/* video hardware */
@@ -219,7 +225,7 @@ static MACHINE_CONFIG_START( ec65k )
 	MCFG_GFXDECODE_ADD("gfxdecode", "palette", ec65)
 	MCFG_PALETTE_ADD_MONOCHROME("palette")
 
-	MCFG_MC6845_ADD(MC6845_TAG, MC6845, "screen", XTAL_16MHz / 8)
+	MCFG_MC6845_ADD(MC6845_TAG, MC6845, "screen", XTAL(16'000'000) / 8)
 	MCFG_MC6845_SHOW_BORDER_AREA(false)
 	MCFG_MC6845_CHAR_WIDTH(8) /*?*/
 MACHINE_CONFIG_END

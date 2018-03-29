@@ -445,28 +445,31 @@ WRITE8_MEMBER(cvs_state::audio_command_w)
  *
  *************************************/
 
-static ADDRESS_MAP_START( cvs_main_cpu_map, AS_PROGRAM, 8, cvs_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x13ff) AM_ROM
-	AM_RANGE(0x1400, 0x14ff) AM_MIRROR(0x6000) AM_READWRITE(cvs_bullet_ram_or_palette_r, cvs_bullet_ram_or_palette_w) AM_SHARE("bullet_ram")
-	AM_RANGE(0x1500, 0x15ff) AM_MIRROR(0x6000) AM_READWRITE(cvs_s2636_2_or_character_ram_r, cvs_s2636_2_or_character_ram_w)
-	AM_RANGE(0x1600, 0x16ff) AM_MIRROR(0x6000) AM_READWRITE(cvs_s2636_1_or_character_ram_r, cvs_s2636_1_or_character_ram_w)
-	AM_RANGE(0x1700, 0x17ff) AM_MIRROR(0x6000) AM_READWRITE(cvs_s2636_0_or_character_ram_r, cvs_s2636_0_or_character_ram_w)
-	AM_RANGE(0x1800, 0x1bff) AM_MIRROR(0x6000) AM_READWRITE(cvs_video_or_color_ram_r, cvs_video_or_color_ram_w) AM_SHARE("video_ram")
-	AM_RANGE(0x1c00, 0x1fff) AM_MIRROR(0x6000) AM_RAM
-	AM_RANGE(0x2000, 0x33ff) AM_ROM
-	AM_RANGE(0x4000, 0x53ff) AM_ROM
-	AM_RANGE(0x6000, 0x73ff) AM_ROM
-ADDRESS_MAP_END
+void cvs_state::cvs_main_cpu_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x13ff).rom();
+	map(0x1400, 0x14ff).mirror(0x6000).rw(this, FUNC(cvs_state::cvs_bullet_ram_or_palette_r), FUNC(cvs_state::cvs_bullet_ram_or_palette_w)).share("bullet_ram");
+	map(0x1500, 0x15ff).mirror(0x6000).rw(this, FUNC(cvs_state::cvs_s2636_2_or_character_ram_r), FUNC(cvs_state::cvs_s2636_2_or_character_ram_w));
+	map(0x1600, 0x16ff).mirror(0x6000).rw(this, FUNC(cvs_state::cvs_s2636_1_or_character_ram_r), FUNC(cvs_state::cvs_s2636_1_or_character_ram_w));
+	map(0x1700, 0x17ff).mirror(0x6000).rw(this, FUNC(cvs_state::cvs_s2636_0_or_character_ram_r), FUNC(cvs_state::cvs_s2636_0_or_character_ram_w));
+	map(0x1800, 0x1bff).mirror(0x6000).rw(this, FUNC(cvs_state::cvs_video_or_color_ram_r), FUNC(cvs_state::cvs_video_or_color_ram_w)).share("video_ram");
+	map(0x1c00, 0x1fff).mirror(0x6000).ram();
+	map(0x2000, 0x33ff).rom();
+	map(0x4000, 0x53ff).rom();
+	map(0x6000, 0x73ff).rom();
+}
 
-static ADDRESS_MAP_START( cvs_main_cpu_io_map, AS_IO, 8, cvs_state )
-	AM_RANGE(0x00, 0xff) AM_READWRITE(cvs_input_r, cvs_scroll_w)
-ADDRESS_MAP_END
+void cvs_state::cvs_main_cpu_io_map(address_map &map)
+{
+	map(0x00, 0xff).rw(this, FUNC(cvs_state::cvs_input_r), FUNC(cvs_state::cvs_scroll_w));
+}
 
-static ADDRESS_MAP_START( cvs_main_cpu_data_map, AS_DATA, 8, cvs_state )
-	AM_RANGE(S2650_CTRL_PORT, S2650_CTRL_PORT) AM_READWRITE(cvs_collision_r, audio_command_w)
-	AM_RANGE(S2650_DATA_PORT, S2650_DATA_PORT) AM_READWRITE(cvs_collision_clear, cvs_video_fx_w)
-ADDRESS_MAP_END
+void cvs_state::cvs_main_cpu_data_map(address_map &map)
+{
+	map(S2650_CTRL_PORT, S2650_CTRL_PORT).rw(this, FUNC(cvs_state::cvs_collision_r), FUNC(cvs_state::audio_command_w));
+	map(S2650_DATA_PORT, S2650_DATA_PORT).rw(this, FUNC(cvs_state::cvs_collision_clear), FUNC(cvs_state::cvs_video_fx_w));
+}
 
 /*************************************
  *
@@ -474,15 +477,16 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( cvs_dac_cpu_map, AS_PROGRAM, 8, cvs_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x0fff) AM_ROM
-	AM_RANGE(0x1000, 0x107f) AM_RAM
-	AM_RANGE(0x1800, 0x1800) AM_DEVREAD("soundlatch", generic_latch_8_device, read)
-	AM_RANGE(0x1840, 0x1840) AM_DEVWRITE("dac1", dac_byte_interface, write)
-	AM_RANGE(0x1880, 0x1883) AM_WRITE(cvs_4_bit_dac_data_w) AM_SHARE("4bit_dac")
-	AM_RANGE(0x1884, 0x1887) AM_WRITE(cvs_unknown_w)    AM_SHARE("dac3_state")  /* ???? not connected to anything */
-ADDRESS_MAP_END
+void cvs_state::cvs_dac_cpu_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x0fff).rom();
+	map(0x1000, 0x107f).ram();
+	map(0x1800, 0x1800).r(m_soundlatch, FUNC(generic_latch_8_device::read));
+	map(0x1840, 0x1840).w("dac1", FUNC(dac_byte_interface::write));
+	map(0x1880, 0x1883).w(this, FUNC(cvs_state::cvs_4_bit_dac_data_w)).share("4bit_dac");
+	map(0x1884, 0x1887).w(this, FUNC(cvs_state::cvs_unknown_w)).share("dac3_state");  /* ???? not connected to anything */
+}
 
 
 
@@ -492,15 +496,16 @@ ADDRESS_MAP_END
  *
  *************************************/
 
-static ADDRESS_MAP_START( cvs_speech_cpu_map, AS_PROGRAM, 8, cvs_state )
-	ADDRESS_MAP_GLOBAL_MASK(0x7fff)
-	AM_RANGE(0x0000, 0x07ff) AM_ROM
-	AM_RANGE(0x1d00, 0x1d00) AM_WRITE(cvs_speech_rom_address_lo_w)
-	AM_RANGE(0x1d40, 0x1d40) AM_WRITE(cvs_speech_rom_address_hi_w)
-	AM_RANGE(0x1d80, 0x1d80) AM_READ(cvs_speech_command_r)
-	AM_RANGE(0x1ddc, 0x1dde) AM_WRITE(cvs_tms5110_ctl_w) AM_SHARE("tms5110_ctl")
-	AM_RANGE(0x1ddf, 0x1ddf) AM_WRITE(cvs_tms5110_pdc_w)
-ADDRESS_MAP_END
+void cvs_state::cvs_speech_cpu_map(address_map &map)
+{
+	map.global_mask(0x7fff);
+	map(0x0000, 0x07ff).rom();
+	map(0x1d00, 0x1d00).w(this, FUNC(cvs_state::cvs_speech_rom_address_lo_w));
+	map(0x1d40, 0x1d40).w(this, FUNC(cvs_state::cvs_speech_rom_address_hi_w));
+	map(0x1d80, 0x1d80).r(this, FUNC(cvs_state::cvs_speech_command_r));
+	map(0x1ddc, 0x1dde).w(this, FUNC(cvs_state::cvs_tms5110_ctl_w)).share("tms5110_ctl");
+	map(0x1ddf, 0x1ddf).w(this, FUNC(cvs_state::cvs_tms5110_pdc_w));
+}
 
 
 /*************************************
@@ -957,10 +962,10 @@ MACHINE_RESET_MEMBER(cvs_state,cvs)
 }
 
 
-static MACHINE_CONFIG_START( cvs )
+MACHINE_CONFIG_START(cvs_state::cvs)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", S2650, XTAL_14_31818MHz/16)
+	MCFG_CPU_ADD("maincpu", S2650, XTAL(14'318'181)/16)
 	MCFG_CPU_PROGRAM_MAP(cvs_main_cpu_map)
 	MCFG_CPU_IO_MAP(cvs_main_cpu_io_map)
 	MCFG_CPU_DATA_MAP(cvs_main_cpu_data_map)
@@ -968,12 +973,12 @@ static MACHINE_CONFIG_START( cvs )
 	MCFG_S2650_SENSE_INPUT(DEVREADLINE("screen", screen_device, vblank))
 	MCFG_S2650_FLAG_OUTPUT(WRITELINE(cvs_state, write_s2650_flag))
 
-	MCFG_CPU_ADD("audiocpu", S2650, XTAL_14_31818MHz/16)
+	MCFG_CPU_ADD("audiocpu", S2650, XTAL(14'318'181)/16)
 	MCFG_CPU_PROGRAM_MAP(cvs_dac_cpu_map)
 	/* doesn't look like it is used at all */
 	//MCFG_S2650_SENSE_INPUT(READLINE(cvs_state, cvs_393hz_clock_r))
 
-	MCFG_CPU_ADD("speechcpu", S2650, XTAL_14_31818MHz/16)
+	MCFG_CPU_ADD("speechcpu", S2650, XTAL(14'318'181)/16)
 	MCFG_CPU_PROGRAM_MAP(cvs_speech_cpu_map)
 	/* romclk is much more probable, 393 Hz results in timing issues */
 	//MCFG_S2650_SENSE_INPUT(READLINE(cvs_state, cvs_393hz_clock_r))
@@ -1022,7 +1027,7 @@ static MACHINE_CONFIG_START( cvs )
 	MCFG_SOUND_ROUTE_EX(0, "dac2", 1.0, DAC_VREF_POS_INPUT) MCFG_SOUND_ROUTE_EX(0, "dac2", -1.0, DAC_VREF_NEG_INPUT)
 	MCFG_SOUND_ROUTE_EX(0, "dac3", 1.0, DAC_VREF_POS_INPUT)
 
-	MCFG_SOUND_ADD("tms", TMS5100, XTAL_640kHz)
+	MCFG_SOUND_ADD("tms", TMS5100, XTAL(640'000))
 	MCFG_TMS5110_DATA_CB(READLINE(cvs_state, speech_rom_read_bit))
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "speaker", 1.0)
 MACHINE_CONFIG_END

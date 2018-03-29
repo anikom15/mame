@@ -156,7 +156,7 @@
 #include "screen.h"
 #include "speaker.h"
 
-#define MAIN_CLOCK XTAL_8MHz
+#define MAIN_CLOCK XTAL(8'000'000)
 
 
 /***********************************
@@ -250,37 +250,41 @@ WRITE8_MEMBER(_4enraya_state::fenraya_custom_map_w)
 *      Memory Map Information      *
 ***********************************/
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, _4enraya_state )
-	AM_RANGE(0x0000, 0xffff) AM_READWRITE(fenraya_custom_map_r, fenraya_custom_map_w)
-ADDRESS_MAP_END
+void _4enraya_state::main_map(address_map &map)
+{
+	map(0x0000, 0xffff).rw(this, FUNC(_4enraya_state::fenraya_custom_map_r), FUNC(_4enraya_state::fenraya_custom_map_w));
+}
 
-static ADDRESS_MAP_START( main_portmap, AS_IO, 8, _4enraya_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("DSW")
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("INPUTS")
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("SYSTEM")
-	AM_RANGE(0x23, 0x23) AM_WRITE(sound_data_w)
-	AM_RANGE(0x33, 0x33) AM_WRITE(sound_control_w)
-ADDRESS_MAP_END
+void _4enraya_state::main_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("DSW");
+	map(0x01, 0x01).portr("INPUTS");
+	map(0x02, 0x02).portr("SYSTEM");
+	map(0x23, 0x23).w(this, FUNC(_4enraya_state::sound_data_w));
+	map(0x33, 0x33).w(this, FUNC(_4enraya_state::sound_control_w));
+}
 
 
-static ADDRESS_MAP_START( unkpacg_main_map, AS_PROGRAM, 8, _4enraya_state )
-	AM_RANGE(0x0000, 0x1fff) AM_ROM
-	AM_RANGE(0x6000, 0x67ff) AM_RAM AM_SHARE("nvram")
-	AM_RANGE(0x7000, 0x7fff) AM_WRITE(fenraya_videoram_w)
-	AM_RANGE(0x8000, 0x9fff) AM_ROM
-ADDRESS_MAP_END
+void _4enraya_state::unkpacg_main_map(address_map &map)
+{
+	map(0x0000, 0x1fff).rom();
+	map(0x6000, 0x67ff).ram().share("nvram");
+	map(0x7000, 0x7fff).w(this, FUNC(_4enraya_state::fenraya_videoram_w));
+	map(0x8000, 0x9fff).rom();
+}
 
-static ADDRESS_MAP_START( unkpacg_main_portmap, AS_IO, 8, _4enraya_state )
-	ADDRESS_MAP_GLOBAL_MASK(0xff)
-	AM_RANGE(0x00, 0x00) AM_READ_PORT("DSW1")
-	AM_RANGE(0x01, 0x01) AM_READ_PORT("IN1")
-	AM_RANGE(0x02, 0x02) AM_READ_PORT("IN2")
+void _4enraya_state::unkpacg_main_portmap(address_map &map)
+{
+	map.global_mask(0xff);
+	map(0x00, 0x00).portr("DSW1");
+	map(0x01, 0x01).portr("IN1");
+	map(0x02, 0x02).portr("IN2");
 //  AM_RANGE(0x03, 0x03) AM_WRITE("out_w")  // to investigate...
-	AM_RANGE(0x17, 0x17) AM_DEVWRITE("aysnd", ay8910_device, data_w)
-	AM_RANGE(0x27, 0x27) AM_DEVREAD("aysnd", ay8910_device, data_r)
-	AM_RANGE(0x37, 0x37) AM_DEVWRITE("aysnd", ay8910_device, address_w)
-ADDRESS_MAP_END
+	map(0x17, 0x17).w(m_ay, FUNC(ay8910_device::data_w));
+	map(0x27, 0x27).r(m_ay, FUNC(ay8910_device::data_r));
+	map(0x37, 0x37).w(m_ay, FUNC(ay8910_device::address_w));
+}
 
 
 /***********************************
@@ -466,7 +470,7 @@ void _4enraya_state::machine_reset()
 *         Machine Drivers          *
 ***********************************/
 
-static MACHINE_CONFIG_START( 4enraya )
+MACHINE_CONFIG_START(_4enraya_state::_4enraya )
 
 	/* basic machine hardware */
 	MCFG_CPU_ADD("maincpu", Z80, MAIN_CLOCK/2)
@@ -494,7 +498,8 @@ static MACHINE_CONFIG_START( 4enraya )
 MACHINE_CONFIG_END
 
 
-static MACHINE_CONFIG_DERIVED( unkpacg, 4enraya )
+MACHINE_CONFIG_START(_4enraya_state::unkpacg)
+	_4enraya(config);
 
 	/* basic machine hardware */
 	MCFG_CPU_MODIFY("maincpu")
@@ -645,8 +650,8 @@ DRIVER_INIT_MEMBER(_4enraya_state, unkpacg)
 ***********************************/
 
 /*    YEAR  NAME      PARENT   MACHINE   INPUT    STATE           INIT     ROT    COMPANY      FULLNAME                                         FLAGS  */
-GAME( 1990, 4enraya,  0,       4enraya,  4enraya, _4enraya_state, 0,       ROT0, "IDSA",      "4 En Raya (set 1)",                              MACHINE_SUPPORTS_SAVE )
-GAME( 1990, 4enrayaa, 4enraya, 4enraya,  4enraya, _4enraya_state, 0,       ROT0, "IDSA",      "4 En Raya (set 2)",                              MACHINE_SUPPORTS_SAVE )
+GAME( 1990, 4enraya,  0,       _4enraya, 4enraya, _4enraya_state, 0,       ROT0, "IDSA",      "4 En Raya (set 1)",                              MACHINE_SUPPORTS_SAVE )
+GAME( 1990, 4enrayaa, 4enraya, _4enraya, 4enraya, _4enraya_state, 0,       ROT0, "IDSA",      "4 En Raya (set 2)",                              MACHINE_SUPPORTS_SAVE )
 GAME( 199?, unkpacg,  0,       unkpacg,  unkpacg, _4enraya_state, unkpacg, ROT0, "<unknown>", "unknown 'Pac-Man' gambling game",                MACHINE_SUPPORTS_SAVE )
 GAME( 199?, unksig,   0,       unkpacg,  unkfr,   _4enraya_state, unkpacg, ROT0, "<unknown>", "unknown 'Space Invaders' gambling game (set 1)", MACHINE_SUPPORTS_SAVE )
 GAME( 199?, unksiga,  unksig,  unkpacg,  unkfr,   _4enraya_state, unkpacg, ROT0, "<unknown>", "unknown 'Space Invaders' gambling game (set 2)", MACHINE_SUPPORTS_SAVE )

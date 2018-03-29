@@ -115,6 +115,9 @@ public:
 	DECLARE_DEVICE_IMAGE_LOAD_MEMBER(ti74_cartridge);
 	HD44780_PIXEL_UPDATE(ti74_pixel_update);
 	HD44780_PIXEL_UPDATE(ti95_pixel_update);
+	void ti74(machine_config &config);
+	void ti95(machine_config &config);
+	void main_map(address_map &map);
 };
 
 
@@ -263,13 +266,14 @@ WRITE8_MEMBER(ti74_state::bankswitch_w)
 	// d3: N/C
 }
 
-static ADDRESS_MAP_START( main_map, AS_PROGRAM, 8, ti74_state )
-	ADDRESS_MAP_UNMAP_HIGH
-	AM_RANGE(0x1000, 0x1001) AM_DEVREADWRITE("hd44780", hd44780_device, read, write)
-	AM_RANGE(0x2000, 0x3fff) AM_RAM AM_SHARE("sysram.ic3")
+void ti74_state::main_map(address_map &map)
+{
+	map.unmap_value_high();
+	map(0x1000, 0x1001).rw("hd44780", FUNC(hd44780_device::read), FUNC(hd44780_device::write));
+	map(0x2000, 0x3fff).ram().share("sysram.ic3");
 	//AM_RANGE(0x4000, 0xbfff) // mapped by the cartslot
-	AM_RANGE(0xc000, 0xdfff) AM_ROMBANK("sysbank")
-ADDRESS_MAP_END
+	map(0xc000, 0xdfff).bankr("sysbank");
+}
 
 
 
@@ -503,10 +507,10 @@ void ti74_state::machine_start()
 	save_item(NAME(m_power));
 }
 
-static MACHINE_CONFIG_START( ti74 )
+MACHINE_CONFIG_START(ti74_state::ti74)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS70C46, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu", TMS70C46, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_TMS7000_IN_PORTA_CB(READ8(ti74_state, keyboard_r))
 	MCFG_TMS7000_OUT_PORTB_CB(WRITE8(ti74_state, bankswitch_w))
@@ -539,10 +543,10 @@ static MACHINE_CONFIG_START( ti74 )
 	MCFG_SOFTWARE_LIST_ADD("cart_list", "ti74_cart")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( ti95 )
+MACHINE_CONFIG_START(ti74_state::ti95)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", TMS70C46, XTAL_4MHz)
+	MCFG_CPU_ADD("maincpu", TMS70C46, XTAL(4'000'000))
 	MCFG_CPU_PROGRAM_MAP(main_map)
 	MCFG_TMS7000_IN_PORTA_CB(READ8(ti74_state, keyboard_r))
 	MCFG_TMS7000_OUT_PORTB_CB(WRITE8(ti74_state, bankswitch_w))

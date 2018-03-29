@@ -428,11 +428,12 @@ uint32_t _20pacgal_state::screen_update_20pacgal(screen_device &screen, bitmap_r
  *
  *************************************/
 
-MACHINE_CONFIG_START( 20pacgal_video )
+MACHINE_CONFIG_START(_20pacgal_state::_20pacgal_video)
 	MCFG_SCREEN_ADD("screen", RASTER)
 	MCFG_SCREEN_REFRESH_RATE(60)
 	MCFG_SCREEN_VBLANK_TIME(ATTOSECONDS_IN_USEC(0))
 	MCFG_SCREEN_SIZE(SCREEN_WIDTH, SCREEN_HEIGHT)
 	MCFG_SCREEN_VISIBLE_AREA(0, SCREEN_WIDTH - 1, 0, SCREEN_HEIGHT - 1)
 	MCFG_SCREEN_UPDATE_DRIVER(_20pacgal_state, screen_update_20pacgal)
+	MCFG_SCREEN_VBLANK_CALLBACK(WRITELINE(_20pacgal_state, vblank_irq))
 MACHINE_CONFIG_END

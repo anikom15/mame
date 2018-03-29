@@ -61,7 +61,7 @@
  *    - and probably lots more I've forgotten, too.
  *    - improve Z80-8086 comms on the 8:16, saving a file to the RAM disk under CP/M often ends in deadlock.
  *    - add Z8530 SCC and TMS9914A GPIB to the 8:16.  These are optional devices, so aren't strictly required at this stage.
- *
+ *    - connect dma and sio (channel 3)
  */
 
 #include "emu.h"
@@ -180,7 +180,10 @@ public:
 	void keyboard_clock_w(bool state);
 	uint8_t keyboard_data_r();
 	uint16_t get_key();
-private:
+	void attache(machine_config &config);
+	void attache_io(address_map &map);
+	void attache_map(address_map &map);
+protected:
 	required_device<cpu_device> m_maincpu;
 	required_memory_region m_rom;
 	required_device<ram_device> m_ram;
@@ -257,6 +260,10 @@ public:
 
 	virtual void machine_reset() override;
 
+	void attache816(machine_config &config);
+	void attache816_io(address_map &map);
+	void attache_x86_io(address_map &map);
+	void attache_x86_map(address_map &map);
 private:
 	required_device<cpu_device> m_extcpu;
 	required_device<i8255_device> m_ppi;
@@ -893,55 +900,60 @@ WRITE_LINE_MEMBER(attache816_state::x86_dsr)
 	// TODO: /DSR to Z8530 SCC
 }
 
-static ADDRESS_MAP_START( attache_map, AS_PROGRAM, 8, attache_state)
-	AM_RANGE(0x0000,0x1fff) AM_RAMBANK("bank1")
-	AM_RANGE(0x2000,0x3fff) AM_RAMBANK("bank2")
-	AM_RANGE(0x4000,0x5fff) AM_RAMBANK("bank3")
-	AM_RANGE(0x6000,0x7fff) AM_RAMBANK("bank4")
-	AM_RANGE(0x8000,0x9fff) AM_RAMBANK("bank5")
-	AM_RANGE(0xa000,0xbfff) AM_RAMBANK("bank6")
-	AM_RANGE(0xc000,0xdfff) AM_RAMBANK("bank7")
-	AM_RANGE(0xe000,0xffff) AM_RAMBANK("bank8")
-ADDRESS_MAP_END
+void attache_state::attache_map(address_map &map)
+{
+	map(0x0000, 0x1fff).bankrw("bank1");
+	map(0x2000, 0x3fff).bankrw("bank2");
+	map(0x4000, 0x5fff).bankrw("bank3");
+	map(0x6000, 0x7fff).bankrw("bank4");
+	map(0x8000, 0x9fff).bankrw("bank5");
+	map(0xa000, 0xbfff).bankrw("bank6");
+	map(0xc000, 0xdfff).bankrw("bank7");
+	map(0xe000, 0xffff).bankrw("bank8");
+}
 
-static ADDRESS_MAP_START( attache_io, AS_IO, 8, attache_state)
-	AM_RANGE(0xe0, 0xed) AM_DEVREADWRITE("dma",am9517a_device,read,write) AM_MIRROR(0xff00)
-	AM_RANGE(0xee, 0xee) AM_WRITE(display_command_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xef, 0xef) AM_READWRITE(dma_mask_r, dma_mask_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xe6, 0xe7) AM_DEVREADWRITE("sio",z80sio_device,ba_cd_r, ba_cd_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xf4, 0xf7) AM_DEVREADWRITE("ctc",z80ctc_device,read,write) AM_MIRROR(0xff00)
-	AM_RANGE(0xf8, 0xfb) AM_DEVREADWRITE("pio",z80pio_device,read_alt,write_alt) AM_MIRROR(0xff00)
-	AM_RANGE(0xfc, 0xfd) AM_DEVICE("fdc",upd765a_device,map) AM_MIRROR(0xff00)
-	AM_RANGE(0xfe, 0xfe) AM_READWRITE(display_data_r, display_data_w) AM_SELECT(0xff00)
-	AM_RANGE(0xff, 0xff) AM_READWRITE(memmap_r, memmap_w) AM_MIRROR(0xff00)
-ADDRESS_MAP_END
+void attache_state::attache_io(address_map &map)
+{
+	map(0xe0, 0xed).rw(m_dma, FUNC(am9517a_device::read), FUNC(am9517a_device::write)).mirror(0xff00);
+	map(0xee, 0xee).w(this, FUNC(attache_state::display_command_w)).mirror(0xff00);
+	map(0xef, 0xef).rw(this, FUNC(attache_state::dma_mask_r), FUNC(attache_state::dma_mask_w)).mirror(0xff00);
+	map(0xf0, 0xf1).rw(m_sio, FUNC(z80sio_device::ba_cd_r), FUNC(z80sio_device::ba_cd_w)).mirror(0xff00);
+	map(0xf4, 0xf7).rw(m_ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write)).mirror(0xff00);
+	map(0xf8, 0xfb).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt)).mirror(0xff00);
+	map(0xfc, 0xfd).m(m_fdc, FUNC(upd765a_device::map)).mirror(0xff00);
+	map(0xfe, 0xfe).rw(this, FUNC(attache_state::display_data_r), FUNC(attache_state::display_data_w)).select(0xff00);
+	map(0xff, 0xff).rw(this, FUNC(attache_state::memmap_r), FUNC(attache_state::memmap_w)).mirror(0xff00);
+}
 
-static ADDRESS_MAP_START( attache816_io, AS_IO, 8, attache816_state)
-	AM_RANGE(0xb8, 0xb8) AM_READWRITE(z80_comms_status_r, z80_comms_ctrl_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xb9, 0xb9) AM_READWRITE(z80_comms_r, z80_comms_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xe0, 0xed) AM_DEVREADWRITE("dma",am9517a_device,read,write) AM_MIRROR(0xff00)
-	AM_RANGE(0xee, 0xee) AM_WRITE(display_command_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xef, 0xef) AM_READWRITE(dma_mask_r, dma_mask_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xe6, 0xe7) AM_DEVREADWRITE("sio",z80sio_device,ba_cd_r, ba_cd_w) AM_MIRROR(0xff00)
-	AM_RANGE(0xf4, 0xf7) AM_DEVREADWRITE("ctc",z80ctc_device,read,write) AM_MIRROR(0xff00)
-	AM_RANGE(0xf8, 0xfb) AM_DEVREADWRITE("pio",z80pio_device,read_alt,write_alt) AM_MIRROR(0xff00)
-	AM_RANGE(0xfc, 0xfd) AM_DEVICE("fdc",upd765a_device,map) AM_MIRROR(0xff00)
-	AM_RANGE(0xfe, 0xfe) AM_READWRITE(display_data_r, display_data_w) AM_SELECT(0xff00)
-	AM_RANGE(0xff, 0xff) AM_READWRITE(memmap_r, memmap_w) AM_MIRROR(0xff00)
-ADDRESS_MAP_END
+void attache816_state::attache816_io(address_map &map)
+{
+	map(0xb8, 0xb8).rw(this, FUNC(attache816_state::z80_comms_status_r), FUNC(attache816_state::z80_comms_ctrl_w)).mirror(0xff00);
+	map(0xb9, 0xb9).rw(this, FUNC(attache816_state::z80_comms_r), FUNC(attache816_state::z80_comms_w)).mirror(0xff00);
+	map(0xe0, 0xed).rw(m_dma, FUNC(am9517a_device::read), FUNC(am9517a_device::write)).mirror(0xff00);
+	map(0xee, 0xee).w(this, FUNC(attache816_state::display_command_w)).mirror(0xff00);
+	map(0xef, 0xef).rw(this, FUNC(attache816_state::dma_mask_r), FUNC(attache816_state::dma_mask_w)).mirror(0xff00);
+	map(0xf0, 0xf1).rw(m_sio, FUNC(z80sio_device::ba_cd_r), FUNC(z80sio_device::ba_cd_w)).mirror(0xff00);
+	map(0xf4, 0xf7).rw(m_ctc, FUNC(z80ctc_device::read), FUNC(z80ctc_device::write)).mirror(0xff00);
+	map(0xf8, 0xfb).rw(m_pio, FUNC(z80pio_device::read_alt), FUNC(z80pio_device::write_alt)).mirror(0xff00);
+	map(0xfc, 0xfd).m(m_fdc, FUNC(upd765a_device::map)).mirror(0xff00);
+	map(0xfe, 0xfe).rw(this, FUNC(attache816_state::display_data_r), FUNC(attache816_state::display_data_w)).select(0xff00);
+	map(0xff, 0xff).rw(this, FUNC(attache816_state::memmap_r), FUNC(attache816_state::memmap_w)).mirror(0xff00);
+}
 
-static ADDRESS_MAP_START( attache_x86_map, AS_PROGRAM, 16, attache816_state)
-	AM_RANGE(0x00000, 0x3ffff) AM_RAM
-	AM_RANGE(0xb0000, 0xbffff) AM_NOP  // triggers IRQ?
-	AM_RANGE(0xfe000, 0xfffff) AM_ROM AM_REGION("x86bios",0x0000)
-ADDRESS_MAP_END
+void attache816_state::attache_x86_map(address_map &map)
+{
+	map(0x00000, 0x3ffff).ram();
+	map(0xb0000, 0xbffff).noprw();  // triggers IRQ?
+	map(0xfe000, 0xfffff).rom().region("x86bios", 0x0000);
+}
 
-static ADDRESS_MAP_START( attache_x86_io, AS_IO, 16, attache816_state)
-	AM_RANGE(0x100, 0x107) AM_DEVREADWRITE8("ppi",i8255_device,read,write,0x00ff)
-	AM_RANGE(0x108, 0x10d) AM_WRITE8(x86_iobf_enable_w,0xffff);
+void attache816_state::attache_x86_io(address_map &map)
+{
+	map(0x100, 0x107).rw(m_ppi, FUNC(i8255_device::read), FUNC(i8255_device::write)).umask16(0x00ff);
+	map(0x108, 0x10d).w(this, FUNC(attache816_state::x86_iobf_enable_w));
 // 0x140/2/4/6 - Z8530 SCC serial
 // 0x180/2/4/6/8/a/c/e - GPIB (TMS9914A)
-ADDRESS_MAP_END
+}
 
 static INPUT_PORTS_START(attache)
 	PORT_START("row0")
@@ -1094,8 +1106,8 @@ void attache816_state::machine_reset()
 	attache_state::machine_reset();
 }
 
-static MACHINE_CONFIG_START( attache )
-	MCFG_CPU_ADD("maincpu",Z80,XTAL_8MHz / 2)
+MACHINE_CONFIG_START(attache_state::attache)
+	MCFG_CPU_ADD("maincpu",Z80,XTAL(8'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(attache_map)
 	MCFG_CPU_IO_MAP(attache_io)
 	MCFG_Z80_DAISY_CHAIN(attache_daisy_chain)
@@ -1103,24 +1115,24 @@ static MACHINE_CONFIG_START( attache )
 	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
-	MCFG_SCREEN_RAW_PARAMS(XTAL_12_324MHz, 784, 0, 640, 262, 0, 240)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(12'324'000), 784, 0, 640, 262, 0, 240)
 	MCFG_SCREEN_UPDATE_DRIVER(attache_state, screen_update)
 
 	MCFG_PALETTE_ADD_MONOCHROME_HIGHLIGHT("palette")
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("psg", AY8912, XTAL_8MHz / 4)
+	MCFG_SOUND_ADD("psg", AY8912, XTAL(8'000'000) / 4)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_MSM5832_ADD("rtc",XTAL_32_768kHz)
+	MCFG_MSM5832_ADD("rtc",XTAL(32'768))
 
-	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL(8'000'000) / 2)
 	MCFG_Z80PIO_IN_PA_CB(READ8(attache_state, pio_portA_r))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(attache_state, pio_portA_w))
 	MCFG_Z80PIO_IN_PB_CB(READ8(attache_state, pio_portB_r))
 	MCFG_Z80PIO_OUT_PB_CB(WRITE8(attache_state, pio_portB_w))
 
-	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL(8'000'000) / 2)
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_RTSA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_rts))
 	MCFG_Z80SIO_OUT_TXDB_CB(DEVWRITELINE("rs232b", rs232_port_device, write_txd))
@@ -1135,17 +1147,17 @@ static MACHINE_CONFIG_START( attache )
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("sio", z80sio_device, rxb_w))
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("sio", z80sio_device, ctsb_w))
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(8'000'000) / 2)
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE("sio", z80sio_device, rxca_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("sio", z80sio_device, txca_w))
 	MCFG_Z80CTC_ZC1_CB(DEVWRITELINE("sio", z80sio_device, rxtxcb_w))
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("brc", CLOCK, XTAL_8MHz / 26) // 307.692 KHz
+	MCFG_DEVICE_ADD("brc", CLOCK, XTAL(8'000'000) / 26) // 307.692 KHz
 	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("ctc", z80ctc_device, trg0))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("ctc", z80ctc_device, trg1))
 
-	MCFG_DEVICE_ADD("dma", AM9517A, XTAL_8MHz / 4)
+	MCFG_DEVICE_ADD("dma", AM9517A, XTAL(8'000'000) / 4)
 	MCFG_AM9517A_OUT_HREQ_CB(WRITELINE(attache_state, hreq_w))
 	MCFG_AM9517A_OUT_EOP_CB(WRITELINE(attache_state, eop_w))
 	MCFG_AM9517A_IN_MEMR_CB(READ8(attache_state, dma_mem_r))
@@ -1160,7 +1172,7 @@ static MACHINE_CONFIG_START( attache )
 	MCFG_FLOPPY_DRIVE_ADD("fdc:0", attache_floppies, "525dd", floppy_image_device::default_floppy_formats)
 	MCFG_FLOPPY_DRIVE_ADD("fdc:1", attache_floppies, "525dd", floppy_image_device::default_floppy_formats)
 
-	MCFG_DEVICE_ADD("crtc", TMS9927, 12324000)
+	MCFG_DEVICE_ADD("crtc", TMS9927, 12324000 / 8)
 	MCFG_TMS9927_CHAR_WIDTH(8)
 	MCFG_TMS9927_VSYN_CALLBACK(DEVWRITELINE("ctc", z80ctc_device, trg2))
 
@@ -1172,38 +1184,38 @@ static MACHINE_CONFIG_START( attache )
 	MCFG_SOFTWARE_LIST_ADD("disk_list","attache")
 MACHINE_CONFIG_END
 
-static MACHINE_CONFIG_START( attache816 )
-	MCFG_CPU_ADD("maincpu",Z80,XTAL_8MHz / 2)
+MACHINE_CONFIG_START(attache816_state::attache816)
+	MCFG_CPU_ADD("maincpu",Z80,XTAL(8'000'000) / 2)
 	MCFG_CPU_PROGRAM_MAP(attache_map)
 	MCFG_CPU_IO_MAP(attache816_io)
 	MCFG_Z80_DAISY_CHAIN(attache_daisy_chain)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(60))
 
-	MCFG_CPU_ADD("extcpu",I8086,XTAL_24MHz / 3)
+	MCFG_CPU_ADD("extcpu",I8086,XTAL(24'000'000) / 3)
 	MCFG_CPU_PROGRAM_MAP(attache_x86_map)
 	MCFG_CPU_IO_MAP(attache_x86_io)
 	MCFG_QUANTUM_PERFECT_CPU("extcpu")
 
 	MCFG_SCREEN_ADD_MONOCHROME("screen", RASTER, rgb_t::green())
-	MCFG_SCREEN_RAW_PARAMS(XTAL_12_324MHz, 784, 0, 640, 262, 0, 240)
+	MCFG_SCREEN_RAW_PARAMS(XTAL(12'324'000), 784, 0, 640, 262, 0, 240)
 	MCFG_SCREEN_UPDATE_DRIVER(attache_state, screen_update)
 
 	MCFG_PALETTE_ADD_MONOCHROME_HIGHLIGHT("palette")
 
 	MCFG_SPEAKER_STANDARD_MONO("mono")
-	MCFG_SOUND_ADD("psg", AY8912, XTAL_8MHz / 4)
+	MCFG_SOUND_ADD("psg", AY8912, XTAL(8'000'000) / 4)
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.25)
 
-	MCFG_MSM5832_ADD("rtc",XTAL_32_768kHz)
+	MCFG_MSM5832_ADD("rtc",XTAL(32'768))
 
-	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("pio", Z80PIO, XTAL(8'000'000) / 2)
 	MCFG_Z80PIO_IN_PA_CB(READ8(attache_state, pio_portA_r))
 	MCFG_Z80PIO_OUT_PA_CB(WRITE8(attache_state, pio_portA_w))
 	MCFG_Z80PIO_IN_PB_CB(READ8(attache_state, pio_portB_r))
 	MCFG_Z80PIO_OUT_PB_CB(WRITE8(attache_state, pio_portB_w))
 
-	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("sio", Z80SIO, XTAL(8'000'000) / 2)
 	MCFG_Z80SIO_OUT_TXDA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_txd))
 	MCFG_Z80SIO_OUT_RTSA_CB(DEVWRITELINE("rs232a", rs232_port_device, write_rts))
 	MCFG_Z80SIO_OUT_TXDB_CB(DEVWRITELINE("rs232b", rs232_port_device, write_txd))
@@ -1218,13 +1230,13 @@ static MACHINE_CONFIG_START( attache816 )
 	MCFG_RS232_RXD_HANDLER(DEVWRITELINE("sio", z80sio_device, rxb_w))
 	MCFG_RS232_CTS_HANDLER(DEVWRITELINE("sio", z80sio_device, ctsb_w))
 
-	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL_8MHz / 2)
+	MCFG_DEVICE_ADD("ctc", Z80CTC, XTAL(8'000'000) / 2)
 	MCFG_Z80CTC_ZC0_CB(DEVWRITELINE("sio", z80sio_device, rxca_w))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("sio", z80sio_device, txca_w))
 	MCFG_Z80CTC_ZC1_CB(DEVWRITELINE("sio", z80sio_device, rxtxcb_w))
 	MCFG_Z80CTC_INTR_CB(INPUTLINE("maincpu", INPUT_LINE_IRQ0))
 
-	MCFG_DEVICE_ADD("brc", CLOCK, XTAL_8MHz / 26) // 307.692 KHz
+	MCFG_DEVICE_ADD("brc", CLOCK, XTAL(8'000'000) / 26) // 307.692 KHz
 	MCFG_CLOCK_SIGNAL_HANDLER(DEVWRITELINE("ctc", z80ctc_device, trg0))
 	MCFG_DEVCB_CHAIN_OUTPUT(DEVWRITELINE("ctc", z80ctc_device, trg1))
 
@@ -1235,7 +1247,7 @@ static MACHINE_CONFIG_START( attache816 )
 	MCFG_I8255_OUT_PORTC_CB(WRITELINE(attache816_state, x86_dsr)) MCFG_DEVCB_BIT(0)
 	MCFG_DEVCB_CHAIN_OUTPUT(WRITELINE(attache816_state, ppi_irq)) MCFG_DEVCB_BIT(7) MCFG_DEVCB_INVERT
 
-	MCFG_DEVICE_ADD("dma", AM9517A, XTAL_8MHz / 4)
+	MCFG_DEVICE_ADD("dma", AM9517A, XTAL(8'000'000) / 4)
 	MCFG_AM9517A_OUT_HREQ_CB(WRITELINE(attache_state, hreq_w))
 	MCFG_AM9517A_OUT_EOP_CB(WRITELINE(attache_state, eop_w))
 	MCFG_AM9517A_IN_MEMR_CB(READ8(attache_state, dma_mem_r))
