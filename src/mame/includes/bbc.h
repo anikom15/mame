@@ -130,8 +130,6 @@ public:
 	DECLARE_READ8_MEMBER(bbcm_acccon_r);
 	DECLARE_WRITE8_MEMBER(bbcm_acccon_w);
 	DECLARE_WRITE8_MEMBER(page_selectbm_w);
-	DECLARE_READ8_MEMBER(bbc_memorybm2_r);
-	DECLARE_WRITE8_MEMBER(bbc_memorybm2_w);
 	DECLARE_WRITE8_MEMBER(bbc_memorybm4_w);
 	DECLARE_WRITE8_MEMBER(bbc_memorybm5_w);
 	DECLARE_WRITE8_MEMBER(bbc_memorybm7_w);
@@ -146,7 +144,7 @@ public:
 	DECLARE_WRITE8_MEMBER(bbc_videoULA_w);
 	DECLARE_READ8_MEMBER(bbc_fe_r);
 
-	DECLARE_DRIVER_INIT(bbc);
+	void init_bbc();
 	DECLARE_VIDEO_START(bbc);
 
 	DECLARE_MACHINE_START(bbca);

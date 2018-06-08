@@ -200,11 +200,11 @@ void magmax_state::magmax_map(address_map &map)
 	map(0x030002, 0x030003).portr("P2");
 	map(0x030004, 0x030005).portr("SYSTEM");
 	map(0x030006, 0x030007).portr("DSW");
-	map(0x030010, 0x030011).w(this, FUNC(magmax_state::magmax_vreg_w)).share("vreg");
+	map(0x030010, 0x030011).w(FUNC(magmax_state::magmax_vreg_w)).share("vreg");
 	map(0x030012, 0x030013).writeonly().share("scroll_x");
 	map(0x030014, 0x030015).writeonly().share("scroll_y");
 	map(0x03001d, 0x03001d).w(m_soundlatch, FUNC(generic_latch_8_device::write));
-	map(0x03001e, 0x03001f).w(this, FUNC(magmax_state::cpu_irq_ack_w));
+	map(0x03001e, 0x03001f).w(FUNC(magmax_state::cpu_irq_ack_w));
 }
 
 void magmax_state::magmax_sound_map(address_map &map)
@@ -221,7 +221,7 @@ void magmax_state::magmax_sound_io_map(address_map &map)
 	map(0x00, 0x01).w("ay1", FUNC(ay8910_device::address_data_w));
 	map(0x02, 0x03).w("ay2", FUNC(ay8910_device::address_data_w));
 	map(0x04, 0x05).w("ay3", FUNC(ay8910_device::address_data_w));
-	map(0x06, 0x06).r(this, FUNC(magmax_state::magmax_sound_r));
+	map(0x06, 0x06).r(FUNC(magmax_state::magmax_sound_r));
 }
 
 
@@ -232,7 +232,7 @@ static INPUT_PORTS_START( magmax )
 	PORT_BIT( 0x04, IP_ACTIVE_LOW, IPT_JOYSTICK_LEFT )  PORT_8WAY
 	PORT_BIT( 0x08, IP_ACTIVE_LOW, IPT_JOYSTICK_RIGHT ) PORT_8WAY
 	PORT_BIT( 0x10, IP_ACTIVE_LOW, IPT_BUTTON1 )
-	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_SPECIAL ) PORT_NAME("Speed") PORT_CODE(KEYCODE_F1) PORT_TOGGLE   /* see notes */
+	PORT_BIT( 0x20, IP_ACTIVE_LOW, IPT_OTHER ) PORT_NAME("Speed") PORT_CODE(KEYCODE_F1) PORT_TOGGLE   /* see notes */
 	PORT_BIT( 0x40, IP_ACTIVE_LOW, IPT_UNKNOWN )
 	PORT_BIT( 0x80, IP_ACTIVE_LOW, IPT_UNKNOWN )
 
@@ -322,7 +322,7 @@ static const gfx_layout spritelayout =
 	64*8
 };
 
-static GFXDECODE_START( magmax )
+static GFXDECODE_START( gfx_magmax )
 	GFXDECODE_ENTRY( "gfx1", 0, charlayout,           0,  1 ) /*no color codes*/
 	GFXDECODE_ENTRY( "gfx2", 0, spritelayout,      1*16, 16 ) /*16 color codes*/
 GFXDECODE_END
@@ -331,13 +331,13 @@ GFXDECODE_END
 MACHINE_CONFIG_START(magmax_state::magmax)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", M68000, XTAL(16'000'000)/2)   /* verified on pcb */
-	MCFG_CPU_PROGRAM_MAP(magmax_map)
-	MCFG_CPU_VBLANK_INT_DRIVER("screen", magmax_state,  irq1_line_assert)
+	MCFG_DEVICE_ADD("maincpu", M68000, XTAL(16'000'000)/2)   /* verified on pcb */
+	MCFG_DEVICE_PROGRAM_MAP(magmax_map)
+	MCFG_DEVICE_VBLANK_INT_DRIVER("screen", magmax_state,  irq1_line_assert)
 
-	MCFG_CPU_ADD("audiocpu", Z80,XTAL(20'000'000)/8) /* verified on pcb */
-	MCFG_CPU_PROGRAM_MAP(magmax_sound_map)
-	MCFG_CPU_IO_MAP(magmax_sound_io_map)
+	MCFG_DEVICE_ADD("audiocpu", Z80,XTAL(20'000'000)/8) /* verified on pcb */
+	MCFG_DEVICE_PROGRAM_MAP(magmax_sound_map)
+	MCFG_DEVICE_IO_MAP(magmax_sound_io_map)
 
 	MCFG_QUANTUM_TIME(attotime::from_hz(600))
 
@@ -350,23 +350,23 @@ MACHINE_CONFIG_START(magmax_state::magmax)
 	MCFG_SCREEN_UPDATE_DRIVER(magmax_state, screen_update_magmax)
 	MCFG_SCREEN_PALETTE("palette")
 
-	MCFG_GFXDECODE_ADD("gfxdecode", "palette", magmax)
+	MCFG_DEVICE_ADD("gfxdecode", GFXDECODE, "palette", gfx_magmax)
 	MCFG_PALETTE_ADD("palette", 1*16 + 16*16 + 256)
 	MCFG_PALETTE_INDIRECT_ENTRIES(256)
 	MCFG_PALETTE_INIT_OWNER(magmax_state, magmax)
 
 	/* sound hardware */
-	MCFG_SPEAKER_STANDARD_MONO("mono")
+	SPEAKER(config, "mono").front_center();
 
-	MCFG_SOUND_ADD("ay1", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
-	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(magmax_state, ay8910_portA_0_w))  /*write port A*/
-	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(magmax_state, ay8910_portB_0_w))  /*write port B*/
+	MCFG_DEVICE_ADD("ay1", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
+	MCFG_AY8910_PORT_A_WRITE_CB(WRITE8(*this, magmax_state, ay8910_portA_0_w))  /*write port A*/
+	MCFG_AY8910_PORT_B_WRITE_CB(WRITE8(*this, magmax_state, ay8910_portB_0_w))  /*write port B*/
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MCFG_SOUND_ADD("ay2", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
+	MCFG_DEVICE_ADD("ay2", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
-	MCFG_SOUND_ADD("ay3", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
+	MCFG_DEVICE_ADD("ay3", AY8910, XTAL(20'000'000)/16) /* verified on pcb */
 	MCFG_SOUND_ROUTE(ALL_OUTPUTS, "mono", 0.40)
 
 	MCFG_GENERIC_LATCH_8_ADD("soundlatch")
@@ -424,4 +424,4 @@ ROM_START( magmax )
 ROM_END
 
 
-GAME( 1985, magmax, 0, magmax, magmax, magmax_state, 0, ROT0, "Nichibutsu", "Mag Max", MACHINE_SUPPORTS_SAVE )
+GAME( 1985, magmax, 0, magmax, magmax, magmax_state, empty_init, ROT0, "Nichibutsu", "Mag Max", MACHINE_SUPPORTS_SAVE )

@@ -57,7 +57,7 @@ public:
 	DECLARE_WRITE32_MEMBER(pnp_config_w);
 	DECLARE_WRITE32_MEMBER(pnp_data_w);
 	DECLARE_WRITE32_MEMBER(bios_ram_w);
-	DECLARE_DRIVER_INIT(taitowlf);
+	void init_taitowlf();
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
 	#if !ENABLE_VGA
@@ -119,7 +119,7 @@ uint8_t taitowlf_state::mtxc_config_r(int function, int reg)
 
 void taitowlf_state::mtxc_config_w(int function, int reg, uint8_t data)
 {
-//  osd_printf_debug("%s:MTXC: write %d, %02X, %02X\n", machine().describe_context(), function, reg, data);
+//  osd_printf_debug("%s:MTXC: write %d, %02X, %02X\n", machine().describe_context().c_str(), function, reg, data);
 
 	switch(reg)
 	{
@@ -202,7 +202,7 @@ uint8_t taitowlf_state::piix4_config_r(int function, int reg)
 
 void taitowlf_state::piix4_config_w(int function, int reg, uint8_t data)
 {
-//  osd_printf_debug("%s:PIIX4: write %d, %02X, %02X\n", machine().describe_context(), function, reg, data);
+//  osd_printf_debug("%s:PIIX4: write %d, %02X, %02X\n", machine().describe_context().c_str(), function, reg, data);
 	m_piix4_config_reg[function][reg] = data;
 }
 
@@ -291,7 +291,7 @@ void taitowlf_state::taitowlf_map(address_map &map)
 	#endif
 	map(0x000e0000, 0x000effff).ram();
 	map(0x000f0000, 0x000fffff).bankr("bank1");
-	map(0x000f0000, 0x000fffff).w(this, FUNC(taitowlf_state::bios_ram_w));
+	map(0x000f0000, 0x000fffff).w(FUNC(taitowlf_state::bios_ram_w));
 	map(0x00100000, 0x01ffffff).ram();
 //  AM_RANGE(0xf8000000, 0xf83fffff) AM_ROM AM_REGION("user3", 0)
 	map(0xfffc0000, 0xffffffff).rom().region("bios", 0);   /* System BIOS */
@@ -304,13 +304,13 @@ void taitowlf_state::taitowlf_io(address_map &map)
 	map(0x00e8, 0x00eb).noprw();
 	map(0x0300, 0x03af).noprw();
 	map(0x03b0, 0x03df).noprw();
-	map(0x0278, 0x027b).w(this, FUNC(taitowlf_state::pnp_config_w));
+	map(0x0278, 0x027b).w(FUNC(taitowlf_state::pnp_config_w));
 	#if ENABLE_VGA
 	map(0x03b0, 0x03bf).rw("vga", FUNC(vga_device::port_03b0_r), FUNC(vga_device::port_03b0_w));
 	map(0x03c0, 0x03cf).rw("vga", FUNC(vga_device::port_03c0_r), FUNC(vga_device::port_03c0_w));
 	map(0x03d0, 0x03df).rw("vga", FUNC(vga_device::port_03d0_r), FUNC(vga_device::port_03d0_w));
 	#endif
-	map(0x0a78, 0x0a7b).w(this, FUNC(taitowlf_state::pnp_data_w));
+	map(0x0a78, 0x0a7b).w(FUNC(taitowlf_state::pnp_data_w));
 	map(0x0cf8, 0x0cff).rw("pcibus", FUNC(pci_bus_legacy_device::read), FUNC(pci_bus_legacy_device::write));
 }
 
@@ -378,10 +378,10 @@ PALETTE_INIT_MEMBER(taitowlf_state, taitowlf)
 MACHINE_CONFIG_START(taitowlf_state::taitowlf)
 
 	/* basic machine hardware */
-	MCFG_CPU_ADD("maincpu", PENTIUM, 200000000)
-	MCFG_CPU_PROGRAM_MAP(taitowlf_map)
-	MCFG_CPU_IO_MAP(taitowlf_io)
-	MCFG_CPU_IRQ_ACKNOWLEDGE_DEVICE("pic8259_1", pic8259_device, inta_cb)
+	MCFG_DEVICE_ADD("maincpu", PENTIUM, 200000000)
+	MCFG_DEVICE_PROGRAM_MAP(taitowlf_map)
+	MCFG_DEVICE_IO_MAP(taitowlf_io)
+	MCFG_DEVICE_IRQ_ACKNOWLEDGE_DEVICE("pic8259_1", pic8259_device, inta_cb)
 
 
 	MCFG_PCI_BUS_LEGACY_ADD("pcibus", 0)
@@ -406,7 +406,7 @@ MACHINE_CONFIG_START(taitowlf_state::taitowlf)
 	#endif
 MACHINE_CONFIG_END
 
-DRIVER_INIT_MEMBER(taitowlf_state,taitowlf)
+void taitowlf_state::init_taitowlf()
 {
 	m_bios_ram = std::make_unique<uint32_t[]>(0x10000/4);
 
@@ -458,4 +458,4 @@ ROM_END
 
 /*****************************************************************************/
 
-GAME(1997, pf2012, 0,   taitowlf, pc_keyboard, taitowlf_state, taitowlf,    ROT0,   "Taito",  "Psychic Force 2012", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)
+GAME(1997, pf2012, 0,   taitowlf, pc_keyboard, taitowlf_state, init_taitowlf, ROT0, "Taito",  "Psychic Force 2012", MACHINE_NOT_WORKING | MACHINE_NO_SOUND)

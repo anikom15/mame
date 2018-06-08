@@ -157,7 +157,7 @@ READ8_MEMBER(hp82937_io_card_device::dio_r)
 	if (m_dio_out) {
 		return 0xff;
 	} else {
-		return m_ieee488->dio_r();
+		return m_ieee488->read_dio();
 	}
 }
 
@@ -253,7 +253,7 @@ void hp82937_io_card_device::device_reset()
 
 void hp82937_io_card_device::update_data_out()
 {
-	m_ieee488->dio_w(m_dio_out ? m_cpu->p2_r(machine().dummy_space() , 0) : 0xff);
+	m_ieee488->write_dio(m_dio_out ? m_cpu->p2_r(machine().dummy_space() , 0) : 0xff);
 }
 
 void hp82937_io_card_device::update_signals()
@@ -320,7 +320,7 @@ void hp82937_io_card_device::cpu_io_map(address_map &map)
 {
 	map.unmap_value_high();
 	map(0x00, 0x01).rw("xlator", FUNC(hp_1mb5_device::uc_r), FUNC(hp_1mb5_device::uc_w));
-	map(0x03, 0x03).rw(this, FUNC(hp82937_io_card_device::switch_r), FUNC(hp82937_io_card_device::latch_w));
+	map(0x03, 0x03).rw(FUNC(hp82937_io_card_device::switch_r), FUNC(hp82937_io_card_device::latch_w));
 }
 
 const tiny_rom_entry *hp82937_io_card_device::device_rom_region() const
@@ -329,27 +329,27 @@ const tiny_rom_entry *hp82937_io_card_device::device_rom_region() const
 }
 
 MACHINE_CONFIG_START(hp82937_io_card_device::device_add_mconfig)
-	MCFG_CPU_ADD("cpu" , I8049 , XTAL(11'000'000))
-	MCFG_CPU_IO_MAP(cpu_io_map)
-	MCFG_MCS48_PORT_T0_IN_CB(READLINE(hp82937_io_card_device , t0_r))
-	MCFG_MCS48_PORT_T1_IN_CB(DEVREADLINE("xlator" , hp_1mb5_device , int_r))
-	MCFG_MCS48_PORT_P1_IN_CB(READ8(hp82937_io_card_device , p1_r))
-	MCFG_MCS48_PORT_P1_OUT_CB(WRITE8(hp82937_io_card_device , p1_w))
-	MCFG_MCS48_PORT_P2_IN_CB(READ8(hp82937_io_card_device , dio_r))
-	MCFG_MCS48_PORT_P2_OUT_CB(WRITE8(hp82937_io_card_device , dio_w))
+	MCFG_DEVICE_ADD("cpu" , I8049 , XTAL(11'000'000))
+	MCFG_DEVICE_IO_MAP(cpu_io_map)
+	MCFG_MCS48_PORT_T0_IN_CB(READLINE(*this, hp82937_io_card_device , t0_r))
+	MCFG_MCS48_PORT_T1_IN_CB(READLINE("xlator" , hp_1mb5_device , int_r))
+	MCFG_MCS48_PORT_P1_IN_CB(READ8(*this, hp82937_io_card_device , p1_r))
+	MCFG_MCS48_PORT_P1_OUT_CB(WRITE8(*this, hp82937_io_card_device , p1_w))
+	MCFG_MCS48_PORT_P2_IN_CB(READ8(*this, hp82937_io_card_device , dio_r))
+	MCFG_MCS48_PORT_P2_OUT_CB(WRITE8(*this, hp82937_io_card_device , dio_w))
 
 	MCFG_DEVICE_ADD("xlator" , HP_1MB5 , 0)
-	MCFG_1MB5_IRL_HANDLER(WRITELINE(hp82937_io_card_device , irl_w))
-	MCFG_1MB5_HALT_HANDLER(WRITELINE(hp82937_io_card_device , halt_w))
-	MCFG_1MB5_RESET_HANDLER(WRITELINE(hp82937_io_card_device , reset_w))
+	MCFG_1MB5_IRL_HANDLER(WRITELINE(*this, hp82937_io_card_device , irl_w))
+	MCFG_1MB5_HALT_HANDLER(WRITELINE(*this, hp82937_io_card_device , halt_w))
+	MCFG_1MB5_RESET_HANDLER(WRITELINE(*this, hp82937_io_card_device , reset_w))
 
 	MCFG_IEEE488_SLOT_ADD("ieee_dev" , 0 , hp_ieee488_devices , nullptr)
 	MCFG_IEEE488_SLOT_ADD("ieee_rem" , 0 , remote488_devices , nullptr)
 	MCFG_IEEE488_BUS_ADD()
-	MCFG_IEEE488_IFC_CALLBACK(WRITELINE(hp82937_io_card_device , ieee488_ctrl_w))
-	MCFG_IEEE488_ATN_CALLBACK(WRITELINE(hp82937_io_card_device , ieee488_ctrl_w))
-	MCFG_IEEE488_REN_CALLBACK(WRITELINE(hp82937_io_card_device , ieee488_ctrl_w))
-	MCFG_IEEE488_EOI_CALLBACK(WRITELINE(hp82937_io_card_device , ieee488_ctrl_w))
+	MCFG_IEEE488_IFC_CALLBACK(WRITELINE(*this, hp82937_io_card_device , ieee488_ctrl_w))
+	MCFG_IEEE488_ATN_CALLBACK(WRITELINE(*this, hp82937_io_card_device , ieee488_ctrl_w))
+	MCFG_IEEE488_REN_CALLBACK(WRITELINE(*this, hp82937_io_card_device , ieee488_ctrl_w))
+	MCFG_IEEE488_EOI_CALLBACK(WRITELINE(*this, hp82937_io_card_device , ieee488_ctrl_w))
 MACHINE_CONFIG_END
 
 // device type definition

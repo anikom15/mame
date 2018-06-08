@@ -7,6 +7,7 @@
 ******************************************************************************/
 
 #include "cpu/z80/tmpz84c011.h"
+#include "machine/nb1413m3.h"      // needed for mahjong input controller
 #include "machine/gen_latch.h"
 #include "screen.h"
 
@@ -96,7 +97,7 @@ public:
 	DECLARE_WRITE8_MEMBER(dipswbitsel_w);
 	DECLARE_WRITE8_MEMBER(mscoutm_inputportsel_w);
 
-	DECLARE_DRIVER_INIT(nbmj9195);
+	void init_nbmj9195();
 	virtual void machine_start() override;
 	virtual void machine_reset() override;
 	virtual void video_start() override;
