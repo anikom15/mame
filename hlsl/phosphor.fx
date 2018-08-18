@@ -225,7 +225,7 @@ float4 ps_main(PS_INPUT Input) : COLOR
 		PrevPix = float3(r, g, b);
 	}
 
-	float3 OutRGB = max(CurrPix.rgb, PrevPix);
+	float3 OutRGB = CurrPix.rgb + PrevPix;
 
 	return Passthrough ?
 	       CurrPix : float4(OutRGB, CurrPix.a);

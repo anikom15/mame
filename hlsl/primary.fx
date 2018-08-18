@@ -112,11 +112,13 @@ VS_OUTPUT vs_ui_main(VS_INPUT Input)
 // Primary Pixel Shaders
 //-----------------------------------------------------------------------------
 
+static const float3 INVERSE_GAMMA = { 1.0f / 2.4f, 1.0f / 2.4f, 1.0f / 2.4f };
+
 float4 ps_screen_main(PS_INPUT Input) : COLOR
 {
 	float4 BaseTexel = tex2D(DiffuseSampler, Input.TexCoord);
 
-	return BaseTexel;
+	return float4(pow(BaseTexel.rgb, INVERSE_GAMMA), BaseTexel.a);
 }
 
 float4 ps_vector_buffer_main(PS_INPUT Input) : COLOR
@@ -151,7 +153,7 @@ technique ScreenTechnique
 	pass Pass0
 	{
 		Lighting = FALSE;
-		SRGBWriteEnable = TRUE;
+		//SRGBWriteEnable = TRUE;
 
 		VertexShader = compile vs_2_0 vs_screen_main();
 		PixelShader  = compile ps_2_0 ps_screen_main();
