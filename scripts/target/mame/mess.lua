@@ -3445,6 +3445,10 @@ files {
 	MAME_DIR .. "src/mame/machine/xavix.cpp",
 	MAME_DIR .. "src/mame/audio/xavix.cpp",
 	MAME_DIR .. "src/mame/includes/xavix.h",
+	MAME_DIR .. "src/mame/machine/xavix_mtrk_wheel.cpp",
+	MAME_DIR .. "src/mame/machine/xavix_mtrk_wheel.h",
+	MAME_DIR .. "src/mame/machine/xavix_madfb_ball.cpp",
+	MAME_DIR .. "src/mame/machine/xavix_madfb_ball.h",
 }
 
 createMESSProjects(_target, _subtarget, "ultimachine")

@@ -725,7 +725,7 @@ bool m68000_base_device::memory_translate(int space, int intention, offs_t &addr
 			}
 			else
 			{
-				address = pmmu_translate_addr_with_fc<false, false>(address, mode, (intention & TRANSLATE_TYPE_MASK) == TRANSLATE_READ);
+				address = pmmu_translate_addr_with_fc<false, false>(address, mode, 1);
 			}
 
 			if ((m_mmu_tmp_sr & M68K_MMU_SR_INVALID) != 0) {
@@ -1519,12 +1519,12 @@ void m68000_base_device::set_reset_callback(write_line_delegate callback)
 }
 
 // fault_addr = address to indicate fault at
-// rw = 0 for read, 1 for write
+// rw = 1 for read, 0 for write
 // fc = 3-bit function code of access (usually you'd just put what m68k_get_fc() returns here)
 void m68000_base_device::set_buserror_details(uint32_t fault_addr, uint8_t rw, uint8_t fc)
 {
 	m_aerr_address = fault_addr;
-	m_aerr_write_mode = rw;
+	m_aerr_write_mode = (rw << 4);
 	m_aerr_fc = fc;
 	m_mmu_tmp_buserror_address = fault_addr; // Hack for x68030
 }
